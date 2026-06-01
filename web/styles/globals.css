@@ -38,6 +38,10 @@ body {
 /* The design's .screen-body padding, reused as-is for app screens. */
 .screen-body { padding: 8px 18px 12px; }
 
+/* Stack the appbar title over its subtitle (name / age · day). */
+.appbar .ttl { display: block; }
+.appbar .sub { display: block; }
+
 /* Bottom-sheet screens (Eat) sit on a dimmed scrim and slide up. */
 .sheet-screen {
   position: fixed; inset: 0; z-index: 50;
