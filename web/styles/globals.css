@@ -1,0 +1,103 @@
+/* ============================================================
+   MiNom app — global shell. Tokens + components + states are
+   lifted verbatim from the design (tokens.css / components.css /
+   states.css). This file only adapts the design's phone-frame
+   scoping to a real full-viewport mobile-web app.
+   ============================================================ */
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Mobile-first app frame: full width on phones, centered card on desktop. */
+.app {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+}
+@media (min-width: 481px) {
+  body { background: var(--surface-sunken); }
+  .app { box-shadow: var(--shadow-lg); }
+}
+
+/* The scrollable region above the fixed tab bar. */
+.app-main { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+/* The design's .screen-body padding, reused as-is for app screens. */
+.screen-body { padding: 8px 18px 12px; }
+
+/* Bottom-sheet screens (Eat) sit on a dimmed scrim and slide up. */
+.sheet-screen {
+  position: fixed; inset: 0; z-index: 50;
+  background: color-mix(in oklch, var(--fg) 32%, transparent);
+  display: flex; align-items: flex-end; justify-content: center;
+  animation: fade var(--dur-base) ease;
+}
+.sheet-screen .sheet-panel {
+  width: 100%; max-width: 480px; background: var(--bg);
+  border-radius: 22px 22px 0 0; box-shadow: var(--shadow-lg);
+  max-height: 94dvh; overflow-y: auto;
+  animation: sheet-up var(--dur-slow) var(--ease-out);
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+/* Auth + setup centered layouts */
+.center-screen { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px 22px; gap: 16px; }
+.brand-mark { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 8px; }
+.brand-mark .dot { width: 44px; height: 44px; border-radius: 50%; background: var(--primary);
+  box-shadow: 0 0 0 8px color-mix(in oklch, var(--primary) 18%, transparent); }
+.brand-mark .wm { font-weight: 800; font-size: 26px; letter-spacing: -0.02em; }
+.brand-mark .wm .n { color: var(--primary); }
+.muted-link { background: none; border: none; color: var(--fg-muted); font-weight: 600; font-size: 14px; font-family: inherit; }
+.muted-link b, .text-link { color: var(--primary); font-weight: 700; }
+.text-link { background: none; border: none; font-family: inherit; font-size: 14px; cursor: pointer; }
+.form-error { font-size: 13px; color: var(--danger); display: flex; align-items: center; gap: 7px;
+  background: color-mix(in oklch, var(--danger) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--danger) 30%, transparent);
+  border-radius: var(--r-md); padding: 11px 13px; }
+
+/* Sticky offline banner across the top of the app */
+.offline-banner { display: flex; align-items: center; gap: 8px; justify-content: center;
+  font-size: 12.5px; font-weight: 700; padding: 7px 12px;
+  background: color-mix(in oklch, var(--warn) 18%, var(--surface)); color: color-mix(in oklch, var(--warn) 78%, var(--fg)); }
+
+/* Fixed tab bar pinned to the app frame bottom */
+.tabbar { position: sticky; bottom: 0; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); z-index: 20; }
+.tab { background: none; cursor: pointer; }
+
+/* A11y: visible focus ring on keyboard nav */
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
+
+/* Bump primary tap targets to >=48px (brief: icon buttons 40 -> 48 for primary actions) */
+.iconbtn.primary-target { width: 48px; height: 48px; }
+
+/* The "live" pulse dot reused for the Eat "just synced" affordance, neutral color */
+.toast-wrap { position: fixed; left: 0; right: 0; top: 0; display: flex; justify-content: center; z-index: 60; pointer-events: none; }
+.toast-wrap > * { pointer-events: auto; max-width: 460px; width: calc(100% - 24px); margin-top: calc(8px + env(safe-area-inset-top, 0px)); position: static; }
+.snackbar-wrap { position: fixed; left: 0; right: 0; bottom: 76px; display: flex; justify-content: center; z-index: 60; pointer-events: none; }
+.snackbar-wrap > * { pointer-events: auto; max-width: 460px; width: calc(100% - 24px); position: static; }
+
+.skeleton-rows { display: flex; flex-direction: column; gap: 11px; }
+
+/* Honor reduced-motion: kill all decorative motion, keep instant state. (Gate) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .sk::after { animation: none !important; }
+  .pulse-dot { animation: none !important; }
+}

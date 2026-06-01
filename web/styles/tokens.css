@@ -1,0 +1,128 @@
+/* ============================================================
+   MiNom — Design tokens & base
+   Warm & soft: gentle but adult. Light + dark.
+   ============================================================ */
+
+/* ---- Fonts ---- */
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Type families */
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+
+  /* Type scale (px values in rem, 16px base) */
+  --t-display: 2.25rem;   /* 36 */
+  --t-h1: 1.75rem;        /* 28 */
+  --t-h2: 1.375rem;       /* 22 */
+  --t-h3: 1.125rem;       /* 18 */
+  --t-body: 1rem;         /* 16 */
+  --t-sm: 0.875rem;       /* 14 */
+  --t-cap: 0.75rem;       /* 12 */
+  --t-num: 2.5rem;        /* 40 — big "last X ago" numerals */
+
+  /* Spacing scale */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 40px;
+  --s9: 48px; --s10: 64px;
+
+  /* Radii */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 22px; --r-pill: 999px;
+
+  /* ---- LIGHT THEME (default) ---- */
+  --bg: oklch(0.984 0.008 76);          /* warm paper */
+  --surface: oklch(1 0 0);              /* card white */
+  --surface-2: oklch(0.965 0.012 78);   /* subtle warm fill */
+  --surface-sunken: oklch(0.945 0.014 78);
+  --border: oklch(0.90 0.012 76);
+  --border-strong: oklch(0.82 0.015 74);
+
+  --fg: oklch(0.28 0.014 64);           /* warm near-black */
+  --fg-muted: oklch(0.52 0.013 66);
+  --fg-faint: oklch(0.66 0.012 68);
+
+  /* Brand / primary — warm clay */
+  --primary: oklch(0.66 0.115 47);
+  --primary-press: oklch(0.60 0.12 46);
+  --on-primary: oklch(0.99 0.006 80);
+  --primary-tint: oklch(0.94 0.03 56);
+
+  /* Verb hues — same L/C, hue varies. Soft. */
+  --eat: oklch(0.70 0.10 62);
+  --eat-tint: oklch(0.945 0.032 66);
+  --sleep: oklch(0.66 0.075 277);
+  --sleep-tint: oklch(0.945 0.028 282);
+  --diaper: oklch(0.68 0.075 178);
+  --diaper-tint: oklch(0.945 0.03 180);
+  --grow: oklch(0.68 0.10 18);
+  --grow-tint: oklch(0.95 0.03 22);
+
+  /* States */
+  --good: oklch(0.62 0.10 155);
+  --warn: oklch(0.72 0.11 70);
+  --danger: oklch(0.58 0.16 25);
+
+  --shadow-sm: 0 1px 2px oklch(0.4 0.02 60 / 0.06), 0 1px 3px oklch(0.4 0.02 60 / 0.05);
+  --shadow-md: 0 2px 6px oklch(0.4 0.02 60 / 0.07), 0 6px 18px oklch(0.4 0.02 60 / 0.07);
+  --shadow-lg: 0 8px 30px oklch(0.4 0.02 60 / 0.12);
+
+  /* Wireframe (grayscale lo-fi) tokens */
+  --wf-ink: oklch(0.42 0.004 70);
+  --wf-line: oklch(0.74 0.004 70);
+  --wf-fill: oklch(0.93 0.004 70);
+  --wf-fill-2: oklch(0.88 0.004 70);
+  --wf-paper: oklch(0.975 0.003 75);
+}
+
+[data-theme="dark"] {
+  --bg: oklch(0.205 0.012 64);          /* warm near-black */
+  --surface: oklch(0.255 0.014 66);
+  --surface-2: oklch(0.295 0.015 66);
+  --surface-sunken: oklch(0.185 0.011 64);
+  --border: oklch(0.345 0.016 66);
+  --border-strong: oklch(0.44 0.018 66);
+
+  --fg: oklch(0.945 0.01 78);
+  --fg-muted: oklch(0.74 0.012 72);
+  --fg-faint: oklch(0.58 0.012 70);
+
+  --primary: oklch(0.76 0.11 52);
+  --primary-press: oklch(0.71 0.115 50);
+  --on-primary: oklch(0.22 0.02 60);
+  --primary-tint: oklch(0.36 0.05 52);
+
+  --eat: oklch(0.79 0.10 66);
+  --eat-tint: oklch(0.34 0.045 64);
+  --sleep: oklch(0.76 0.085 280);
+  --sleep-tint: oklch(0.33 0.04 280);
+  --diaper: oklch(0.78 0.08 180);
+  --diaper-tint: oklch(0.33 0.04 182);
+  --grow: oklch(0.77 0.10 22);
+  --grow-tint: oklch(0.34 0.045 22);
+
+  --good: oklch(0.74 0.11 158);
+  --warn: oklch(0.80 0.10 74);
+  --danger: oklch(0.70 0.15 26);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-md: 0 2px 8px oklch(0 0 0 / 0.35), 0 8px 24px oklch(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 36px oklch(0 0 0 / 0.45);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--page-bg, oklch(0.955 0.01 80));
+  color: var(--page-fg, oklch(0.30 0.012 64));
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tabular figures for all numerals */
+.mono, .tnum { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+button { font-family: inherit; cursor: pointer; }
+
+::selection { background: oklch(0.66 0.115 47 / 0.22); }

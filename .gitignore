@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+web/node_modules/
+
+# next.js
+web/.next/
+web/out/
+web/build/
+web/next-env.d.ts
+
+# env / secrets — never commit
+.env
+.env.local
+.env*.local
+web/.env
+web/.env.local
+web/.env*.local
+
+# supabase local
+web/supabase/.branches/
+web/supabase/.temp/
+
+# misc
+.DS_Store
+*.log
+npm-debug.log*
+.vercel
+
+# CPO delivery inbox — duplicates of root files; not the source of truth
+handoff_drop/

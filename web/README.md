@@ -1,0 +1,73 @@
+# MiNom — web app
+
+**Phase 2 — Walking Skeleton.** The smallest end-to-end slice that proves the
+architecture: **auth + storage + real-time sync + offline**, wired on the
+**Eat** verb only. Sleep / Diaper / Growth / Family are Phase 3 (the UI shows
+them, but they route to a "coming soon" stub).
+
+Built from the Phase 1 design: tokens are lifted verbatim into
+[`styles/`](styles/), and the screens match the Home + Eat hi-fi in light and
+dark. Behaviors follow section 05 of the design (optimistic write + 5s undo,
+skeleton loading, offline Queued→Synced pills, real-time arrival, concurrency
+soft-prompt, inline validation, delete confirm).
+
+## Stack & why
+
+- **Next.js 14 (App Router) + TypeScript + React 18** — mobile-web first, one deploy target (Vercel), no install.
+- **Supabase** — Postgres + Auth (email/password) + Realtime + Row-Level Security in one managed service. RLS is what enforces "a caregiver only sees babies they're linked to."
+- **No CSS framework** — the design's own tokens/components CSS is used directly, so the build can't drift from the hi-fi.
+
+The data layer is a single interface ([`lib/sync/repo.ts`](lib/sync/repo.ts)) with two implementations, so the entire UI/sync layer is identical in both modes:
+
+| Mode | When | Backed by |
+|---|---|---|
+| **Demo** | no Supabase env vars | `localStorage` + `BroadcastChannel` (cross-*tab* sync) |
+| **Real** | env vars present | Supabase auth + Postgres + Realtime + RLS |
+
+## Quick start (demo mode — zero setup)
+
+```bash
+cd web
+npm install
+npm run dev          # http://localhost:3000
+```
+
+No backend needed. Create an account (stored only in this browser), add a baby,
+log an Eat. **Open a second tab** signed into the same account to watch
+real-time arrival and the concurrency prompt. Use the **Online/Offline** chip in
+the Home header to exercise the offline outbox without DevTools.
+
+> Demo mode is for design review and UX/QA of the section-05 behaviors. It is
+> not real auth or real multi-device. The Supabase path below is the
+> architecture proof.
+
+## Real mode (Supabase)
+
+1. **Create a Supabase project** → [supabase.com](https://supabase.com) (region: see Q4 in the journal — recommend Singapore/`ap-southeast-1`).
+2. **Run the migration**: open the project's **SQL Editor**, paste the contents of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), run it. (Creates tables, RLS policies, the auth→profile trigger, and adds `activity` to the realtime publication.)
+3. **Auth settings** → Authentication → Providers → Email: enable. For the skeleton you can turn **off** "Confirm email" so sign-up logs in immediately.
+4. **Env**: copy `.env.example` to `.env.local` and fill in:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=...        # Project Settings → API
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...   # Project Settings → API (anon public)
+   ```
+5. `npm run dev` — now using real Supabase. Sign up on two **devices**, share the baby (Phase 3 adds the invite UI; for now both can sign in to the same account), and confirm Eat entries cross within 5s.
+
+### Deploy to Vercel
+- New Project → import the GitHub repo → set **Root Directory = `web`**.
+- Add the two `NEXT_PUBLIC_*` env vars. Deploy. That URL is the staging URL.
+
+## QA checklist (maps to Phase 2 exit criteria)
+
+- [ ] **Cross-device sync < 5s** — log Eat on device/tab A, see it on B (real mode; demo mode = two tabs).
+- [ ] **Offline-safe** — toggle offline, log Eat → row shows **Queued**; reconnect → flips to **Synced** and persists (survives reload while queued).
+- [ ] **Optimistic + undo** — Save feed commits instantly; 5s **UNDO** snackbar reverses it (deletes server-side if it already synced).
+- [ ] **Skeleton** on cold load (clear site data first); warm nav uses cache.
+- [ ] **Concurrency** — another caregiver logs an Eat within 60s → soft, dismissible sheet (not a block).
+- [ ] **Validation** — sign-up/baby-setup validate on blur; CTA disabled until valid; errors are icon+text.
+- [ ] **Delete confirm** — trash on a Timeline row asks once.
+- [ ] **A11y** — both themes AA; tap targets ≥48px; `prefers-reduced-motion` kills animations; 200% zoom doesn't break.
+- [ ] **Data isolation** — a user only sees babies they're a caregiver of (RLS).
+
+## Scripts
+`npm run dev` · `npm run build` · `npm run start` · `npm run typecheck`
