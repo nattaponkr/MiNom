@@ -16,6 +16,37 @@
 
 ---
 
+## 2026-06-01 — Dev — Phase 2 deployed to Railway (staging live)
+
+**What happened**
+The Phase 2 skeleton is now **live on a public URL** the team can hit:
+
+> **https://minom-production.up.railway.app** — running in **demo mode** (no backend yet): create an account (stored in your own browser), add a baby, log an Eat. Open a **second tab** to see real-time sync; use the **Online/Offline** chip in the header to try the offline queue.
+
+CPO drove the Railway dashboard (I can't touch the Railway account); I fixed the code-side blockers and guided the config. Verified live: HTTP 200, app renders.
+
+**Three deploy blockers hit + fixed (notes for whoever deploys next)**
+1. **Repo not visible in Railway** → Railway's GitHub App didn't have access to the new `MiNom` repo. Fixed via *Configure GitHub App* → grant access.
+2. **Build failed (no app at root)** → the app lives in `web/`, so Railway's **Root Directory** must be **`/web`**. Without it the builder scans the repo root (just docs) and exits.
+3. **Build blocked on security CVEs** → Railway refuses HIGH-severity dependency advisories. `next@14.2.15` carried several (DoS, SSRF, proxy bypass) only patched at `≥15.5.x`. **Bumped Next 14.2.15 → 15.5.18** (kept React 18; App Router SPA needed no code changes; typecheck + build + serve all green). 0 high/critical remain.
+4. **502 after build** → app bound to Railway's injected `PORT=8080` (via custom start `next start -p $PORT`) but the public domain was routed to `3000`. Fixed by pointing the domain at **8080**.
+
+**Railway config of record (for Phase 3 / redeploys)**
+- Root Directory: `/web` · Custom Start Command: `next start -p $PORT` · Public domain → port **8080** · Region: Southeast Asia (matches my Q4 rec).
+
+**What this does / doesn't change for the exit criteria**
+- ✅ There is now a **live staging URL** (was the main gap). The full UX + all section-05 behaviors are clickable in demo mode, cross-tab sync included.
+- ⏳ Still pending: the literal **two real devices over the network within 5s** + **RLS data-isolation across two real accounts**. Demo mode is per-browser (localStorage), so it can't prove cross-device or auth isolation. That needs the **real Supabase** wiring — create project, run `web/supabase/migrations/0001_init.sql`, set the two `NEXT_PUBLIC_SUPABASE_*` vars in Railway. Same code path; ~30 min.
+
+**Handoff → PM (Claude)**
+- Phase 2 is now **deployed + demo-verifiable live**; share the URL with anyone who wants to click the product.
+- The one remaining step to fully close the Phase 2 exit criteria is **provisioning Supabase** (CPO decision/credentials) so I can flip it from demo to real and run the two-device + RLS verification. Until then: *live, but demo-backed.*
+- **For Designer (please route):** the 5 design-clarification items in my "Phase 2 complete" entry below still stand (concurrency copy for instant-log Eat, Synced-pill persistence, first-run Home treatment, Eat time-edit affordance, and the Online/Offline QA chip that's currently mine, not in the design) — worth resolving before Phase 3 copies Eat to Sleep/Diaper.
+- README updated: deploy section now documents Railway (Root Dir `/web`, start command, port 8080) instead of Vercel.
+- CPO: please route this to PM, and the design items to Designer.
+
+---
+
 ## 2026-06-01 — Dev — Phase 2 complete: Eat vertical walking skeleton
 
 **What shipped**

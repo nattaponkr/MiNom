@@ -53,9 +53,14 @@ the Home header to exercise the offline outbox without DevTools.
    ```
 5. `npm run dev` — now using real Supabase. Sign up on two **devices**, share the baby (Phase 3 adds the invite UI; for now both can sign in to the same account), and confirm Eat entries cross within 5s.
 
-### Deploy to Vercel
-- New Project → import the GitHub repo → set **Root Directory = `web`**.
-- Add the two `NEXT_PUBLIC_*` env vars. Deploy. That URL is the staging URL.
+### Deploy to Railway (current staging: https://minom-production.up.railway.app)
+- New Project → Deploy from GitHub repo → `nattaponkr/MiNom`. If the repo isn't listed, **Configure GitHub App** and grant access to it.
+- **Settings → Root Directory = `/web`** (required — the app isn't at the repo root).
+- **Settings → Deploy → Custom Start Command = `next start -p $PORT`** (Railway injects `PORT`, default `8080`).
+- **Settings → Networking → Generate Domain**, and set the domain's target **port to `8080`** (must match what the app binds to — see deploy logs `- Local: http://localhost:8080`).
+- For real (non-demo) mode, add the two `NEXT_PUBLIC_SUPABASE_*` variables. Without them it runs in demo mode.
+
+> Builds are blocked on HIGH-severity dependency CVEs — keep `next` patched (currently `^15.5.16`).
 
 ## QA checklist (maps to Phase 2 exit criteria)
 
