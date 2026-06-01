@@ -16,6 +16,48 @@
 
 ---
 
+## 2026-06-01 — Dev — Phase 2 complete: Eat vertical walking skeleton
+
+**What shipped**
+The smallest end-to-end slice that proves the architecture, on the **Eat** verb only — built from the Phase 1 design (tokens lifted verbatim; Home + Eat hi-fi matched in light + dark). Code is on `main`.
+
+- **Repo:** https://github.com/nattaponkr/MiNom — app in [`web/`](web/), run/deploy/QA in [`web/README.md`](web/README.md).
+- **Screens (exactly the brief, no more):** Sign in/up → Baby setup (name + birthdate only) → Home (all three cards; only Eat live, Sleep/Diaper route to a "coming soon" stub) → Quick-Log Eat (defaults to "now", one-tap save, optional inline Details) → Timeline (today, with who-logged-it attribution).
+- **Section-05 behaviors, all implemented:** optimistic write + 5s undo · skeleton cold-load · offline banner + per-row Queued→Synced pills · realtime arrival w/ quiet toast (never steals focus) · concurrency soft-prompt (dismissible sheet) · inline validation (on blur, disabled CTA, icon+text errors) · delete confirm.
+- **Gates:** AA tokens kept; tap targets ≥48px (icon buttons bumped); `prefers-reduced-motion` kills motion; zoom not blocked; quick-log is optimistic (no network on the happy path).
+
+**Stack chosen + why**
+**Next.js 14 (App Router) + TypeScript + Supabase** (PM rec, taken). One deploy target, mobile-web first, and Supabase bundles the four things this phase must prove — Auth, Postgres, Realtime, and **Row-Level Security** (RLS is what enforces caregiver data isolation). No CSS framework: the design's own token/component CSS is used directly so the build can't drift from the hi-fi.
+
+**Architecture note (my call):** the data layer is one interface with two implementations — real **Supabase** (the architecture proof, incl. RLS + the realtime publication) and a zero-backend **demo** store (localStorage + BroadcastChannel) that activates when no env vars are set. Same UI/sync code both ways. This lets the app run and demo with **zero setup**, and let me QA the behaviors locally without Docker/cloud. Auth is client-side (supabase-js session in localStorage) rather than SSR cookies — simpler for an SPA and identical across modes; SSR cookie hardening noted for later if we add server-protected routes.
+
+**Q4 (data residency) — recommendation:** single region **`ap-southeast-1` (Singapore)** — lowest latency for a Thai-first audience; baby data is health-adjacent so keep it in one region, encrypted at rest (Supabase default) + RLS. Do **not** build multi-region / GDPR region-tagging yet (no EU/US cohort) — revisit when one appears. (Defers the PM's "region tag from day one" rec as YAGNI; flagging so PM/CPO can overrule.)
+
+**Q5 (auth provider) — recommendation:** **Supabase Auth, email + password.** It's bundled with the DB we're already on, integrates with RLS via `auth.uid()`, no extra vendor/cost, and gives us password-reset + OAuth for free later. For production: **enable email confirmation** (off in the skeleton for convenience) and add the password-reset screen in Phase 3 (currently stubbed).
+
+**QA — verified vs pending (honest split)**
+- ✅ **Verified now** (automated headless-Chrome run against demo mode, **15/15 passing**, plus `tsc` + prod build green, plus light/dark screenshots checked against the hi-fi): signup→setup→Home→Eat→Timeline; optimistic + 5s undo; offline → **Queued** → reconnect → **flush/Synced** (survives reload while queued); **cross-tab realtime arrival** (B's entry lands in A within ~1s); second-tab session restore; attribution; theme toggle; visual match in both themes.
+- ⏳ **Pending cloud provisioning** (I can't self-serve — needs a Supabase project + Vercel, i.e. CPO accounts/secrets; I don't touch `.env`): the literal exit-criteria of **two real devices over the network within 5s** and **RLS data-isolation across two real accounts**, and the email auth flows. These run the *same* UI/sync code the demo exercises; the Supabase impl + RLS policies + realtime publication are written and in the migration, but **not yet exercised against a live DB**. Step-by-step to light this up (create project → run `0001_init.sql` → set 2 env vars → deploy, Root Directory `web`) is in `web/README.md`. ~30–45 min of provisioning.
+
+**Design under-specified (for Designer before Phase 3 copies this to Sleep/Diaper)**
+1. Concurrency prompt: the design demo is timer-framed (Sleep). Eat is an instant log, so I adapted the copy ("X logged a feed Ns ago — view theirs / log another"). Please confirm the instant-log variant.
+2. "Synced" pill: I flash it ~2.2s after a queued row syncs, then hide. Confirm desired persistence.
+3. First-run Home: I used the normal Eat card with a "No feeds yet — tap to log" hint rather than the dashed ghost `EmptyHome`. Confirm which you want.
+4. Eat "When": design shows an **Edit** affordance; I defaulted to "now" and deferred time-editing to Phase 3. Confirm.
+5. The Online/Offline chip in the Home header is **mine** (a QA/demo affordance, not in the design) — formalize or remove for production.
+
+**Housekeeping**
+- Reconciled `JOURNAL.md` into one canonical file (my onboarding/blocked entries + the Designer/PM entries had diverged across threads).
+- The CPO's `handoff_drop/` inbox is **git-ignored, not committed** — it held a *duplicate* `JOURNAL.md` that would have created a second source of truth. The unique brief (`HANDOFF_dev_01.md`) was promoted to repo root with the other handoffs. Safe to delete `handoff_drop/` whenever.
+
+**Handoff → PM (Claude)**
+- Review against the exit criteria. Everything front-end/sync is verified in demo mode + screenshots; the only gap to "Done" is lighting up cloud Supabase for the literal two-device/RLS test.
+- **Decision needed from CPO (via PM):** provision Supabase + Vercel (or authorize me with the keys) so I can finish the live two-device + RLS verification and hand you a staging URL. Until then Phase 2 is **code-complete + locally verified**, not **live-verified**.
+- Please also route the 5 design-clarification items above to the Designer so Phase 3 (Sleep/Diaper copy-paste) starts unblocked.
+- CPO: please route this to PM.
+
+---
+
 ## 2026-05-31 — PM — Phase 1 accepted, routing to Dev
 
 **What happened**
