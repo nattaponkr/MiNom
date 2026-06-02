@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { Button } from "./ui";
 import { IcTrash } from "@/lib/icons";
+import { t } from "@/i18n";
 
 // Full-viewport bottom sheet (fixed) reusing the design's .sheet visuals.
 function BottomSheet({ title, body, children, onDismiss }: { title: string; body: ReactNode; children: ReactNode; onDismiss: () => void }) {
@@ -42,20 +43,12 @@ export function ConcurrencySheet({
   onDismiss: () => void;
 }) {
   return (
-    <BottomSheet
-      title="Someone’s already on it"
-      body={
-        <>
-          <b style={{ color: "var(--fg)" }}>{name}</b> logged a feed {agoText} ago. View it, or log another?
-        </>
-      }
-      onDismiss={onDismiss}
-    >
+    <BottomSheet title={t("concurrency.title")} body={t("concurrency.body", { name, dur: agoText })} onDismiss={onDismiss}>
       <Button kind="primary" block onClick={onViewTheirs}>
-        View theirs
+        {t("concurrency.view")}
       </Button>
       <Button kind="ghost" block onClick={onLogAnyway}>
-        Log another anyway
+        {t("concurrency.logAnyway")}
       </Button>
     </BottomSheet>
   );
@@ -73,20 +66,12 @@ export function ConfirmDeleteSheet({
   onCancel: () => void;
 }) {
   return (
-    <BottomSheet
-      title="Delete this entry?"
-      body={
-        <>
-          This removes the {timeText} feed for everyone caring for {babyName}. It can’t be undone.
-        </>
-      }
-      onDismiss={onCancel}
-    >
+    <BottomSheet title={t("delete.title")} body={t("delete.body", { time: timeText, baby: babyName })} onDismiss={onCancel}>
       <Button kind="danger" block icon={<IcTrash size={18} />} onClick={onConfirm}>
-        Delete entry
+        {t("delete.confirm")}
       </Button>
       <Button kind="ghost" block onClick={onCancel}>
-        Keep it
+        {t("delete.keep")}
       </Button>
     </BottomSheet>
   );

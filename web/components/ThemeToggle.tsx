@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { IcSun, IcMoon } from "@/lib/icons";
+import { t } from "@/i18n";
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -25,8 +26,9 @@ export default function ThemeToggle() {
     <button
       className="iconbtn primary-target"
       onClick={toggle}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={t("a11y.themeToggle")}
       type="button"
+      data-theme-toggle
     >
       {theme === "dark" ? <IcSun size={20} /> : <IcMoon size={20} />}
     </button>

@@ -1,0 +1,6 @@
+{
+  "_meta": {
+    "locale": "en",
+    "note": "Empty stub for a future English locale. v1 ships Thai-only (PRD v0.3 §11.1). When EN is added, mirror the keys in th.json here and introduce a locale-selecting provider in web/i18n."
+  }
+}

@@ -2,10 +2,11 @@
 import type { VerbType } from "@/lib/types";
 import { VERB_ICON } from "@/lib/icons";
 import { Button } from "./ui";
+import { t } from "@/i18n";
 
 export function ComingSoonSheet({ verb, onClose }: { verb: VerbType; onClose: () => void }) {
   const Ic = VERB_ICON[verb];
-  const label = verb.charAt(0).toUpperCase() + verb.slice(1);
+  const verbLabel = t(`verb.${verb}`);
   return (
     <div className="overlay" style={{ position: "fixed", zIndex: 70 }} onClick={onClose} role="dialog" aria-modal="true">
       <div
@@ -19,16 +20,15 @@ export function ComingSoonSheet({ verb, onClose }: { verb: VerbType; onClose: ()
             <Ic size={28} />
           </span>
           <div className="st" style={{ textAlign: "center" }}>
-            {label} is coming in Phase 3
+            {t("comingSoon.title", { verb: verbLabel })}
           </div>
           <div className="sd" style={{ textAlign: "center" }}>
-            This skeleton proves the architecture on <b style={{ color: "var(--fg)" }}>Eat</b> first. Once sync &amp; offline are
-            solid, {label} is a quick copy of the same pattern.
+            {t("comingSoon.body", { verb: verbLabel })}
           </div>
         </div>
         <div className="sheet-actions">
           <Button kind="ghost" block onClick={onClose}>
-            Got it
+            {t("comingSoon.gotIt")}
           </Button>
         </div>
       </div>

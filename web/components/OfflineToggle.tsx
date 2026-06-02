@@ -1,7 +1,9 @@
 "use client";
-// A small affordance to simulate going offline without browser DevTools — used
-// to demo/QA the offline outbox (the design's DemoOffline had explicit
-// Go-offline / Reconnect buttons). Effective-offline = real offline OR this.
+import { t } from "@/i18n";
+// Dev/QA-only (rendered only behind the debug flag, per Designer clarification
+// #5). Simulates going offline without DevTools to exercise the offline outbox.
+// Effective-offline = real offline OR this. Production shows only the automatic
+// read-only offline banner (in Main).
 export default function OfflineToggle({
   online,
   forceOffline,
@@ -21,7 +23,7 @@ export default function OfflineToggle({
       title={forceOffline ? "Simulating offline — tap to reconnect" : "Tap to simulate going offline (test)"}
     >
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: "currentColor" }} />
-      {online ? "Online" : "Offline"}
+      {online ? t("sync.online.chip") : t("sync.offline.chip")}
     </button>
   );
 }

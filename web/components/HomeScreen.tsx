@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import type { Activity, Baby, Profile, VerbType } from "@/lib/types";
 import { ago, ageLabel, todayWeekday } from "@/lib/format";
-import { IcChevR, IcEat, IcSleep, IcDiaper, VERB_ICON } from "@/lib/icons";
+import { IcChevR, VERB_ICON } from "@/lib/icons";
 import { Avatar } from "./ui";
 import ThemeToggle from "./ThemeToggle";
 import OfflineToggle from "./OfflineToggle";
+import { t } from "@/i18n";
+import { isDebug } from "@/lib/debug";
 
 function VerbCard({
   verb,
@@ -38,7 +40,7 @@ function VerbCard({
         {by && (
           <span className="who">
             <Avatar name={by} color={byColor} />
-            <span className="nm">by {by}</span>
+            <span className="nm">{t("home.by", { name: by })}</span>
           </span>
         )}
       </span>
@@ -83,9 +85,11 @@ export default function HomeScreen({
   onComingSoon: (verb: VerbType) => void;
 }) {
   const [now, setNow] = useState(Date.now());
+  const [debug, setDebug] = useState(false);
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(t);
+    setDebug(isDebug());
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
   }, []);
 
   const lastEat = activities.find((a) => a.type === "eat");
@@ -100,7 +104,7 @@ export default function HomeScreen({
           </span>
         </span>
         <span className="spacer" />
-        <OfflineToggle online={online} forceOffline={forceOffline} onToggle={onToggleOffline} />
+        {debug && <OfflineToggle online={online} forceOffline={forceOffline} onToggle={onToggleOffline} />}
         <ThemeToggle />
         {profile && (
           <span style={{ marginLeft: 4 }}>
@@ -119,20 +123,20 @@ export default function HomeScreen({
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           <VerbCard
             verb="eat"
-            name="Eat"
-            stat={lastEat ? ago(lastEat.started_at, now) : "No feeds"}
-            unit={lastEat ? "ago" : "yet — tap to log"}
+            name={t("home.eat.name")}
+            stat={lastEat ? ago(lastEat.started_at, now) : t("home.eat.empty.stat")}
+            unit={lastEat ? t("home.ago") : t("home.eat.empty.unit")}
             by={lastEat && !lastEat._mine ? lastEat.logged_by_name : null}
             byColor={lastEat?.logged_by_color}
             onClick={onLogEat}
           />
-          <VerbCard verb="sleep" name="Sleep" stat="—" unit="coming soon" onClick={() => onComingSoon("sleep")} />
-          <VerbCard verb="diaper" name="Diaper" stat="—" unit="coming soon" onClick={() => onComingSoon("diaper")} />
+          <VerbCard verb="sleep" name={t("home.sleep.name")} stat="—" unit={t("home.comingSoon")} onClick={() => onComingSoon("sleep")} />
+          <VerbCard verb="diaper" name={t("home.diaper.name")} stat="—" unit={t("home.comingSoon")} onClick={() => onComingSoon("diaper")} />
         </div>
       )}
 
-      <div className="note" style={{ marginTop: 16, fontSize: 12.5 }}>
-        <b>Phase 2 skeleton:</b> only <b>Eat</b> is wired end-to-end. Sleep, Diaper, Growth &amp; Family arrive in Phase 3.
+      <div className="note" style={{ marginTop: 16, fontSize: 12.5 }} lang="th">
+        {t("home.tip")}
       </div>
     </div>
   );

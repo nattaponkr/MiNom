@@ -2,7 +2,10 @@
 import { useState } from "react";
 import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
+import { LamoonWordmark } from "./Brand";
 import { IcX } from "@/lib/icons";
+import { t } from "@/i18n";
+import { isDebug } from "@/lib/debug";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -40,35 +43,34 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
     <div className="app">
       <form className="center-screen" onSubmit={submit} noValidate>
         <div className="brand-mark">
-          <span className="dot" />
-          <span className="wm">
-            Mi<span className="n">Nom</span>
+          <LamoonWordmark size={42} />
+          <span style={{ fontSize: 14, color: "var(--fg-muted)" }} lang="th">
+            {t("auth.tagline")}
           </span>
-          <span style={{ fontSize: 14, color: "var(--fg-muted)" }}>The simplest baby tracker</span>
         </div>
 
         {mode === "up" && (
           <div className="field">
-            <label htmlFor="name">Your name</label>
+            <label htmlFor="name">{t("auth.name.label")}</label>
             <input
               id="name"
               className={"input" + (touched.name && !nameValid ? " err" : "")}
               value={name}
               autoComplete="name"
               onChange={(e) => setName(e.target.value)}
-              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-              placeholder="e.g. Mom, Dad, Nanny"
+              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+              placeholder={t("auth.name.placeholder")}
             />
             {touched.name && !nameValid && (
               <span className="input-help err">
-                <IcX size={13} /> Tell us what to call you.
+                <IcX size={13} /> {t("auth.name.error")}
               </span>
             )}
           </div>
         )}
 
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t("auth.email.label")}</label>
           <input
             id="email"
             type="email"
@@ -77,18 +79,18 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
             className={"input" + (touched.email && !emailValid ? " err" : "")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-            placeholder="you@email.com"
+            onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+            placeholder={t("auth.email.placeholder")}
           />
           {touched.email && !emailValid && (
             <span className="input-help err">
-              <IcX size={13} /> Enter a valid email (e.g. anna@email.com)
+              <IcX size={13} /> {t("auth.email.error")}
             </span>
           )}
         </div>
 
         <div className="field">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t("auth.password.label")}</label>
           <input
             id="password"
             type="password"
@@ -96,12 +98,12 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
             className={"input" + (touched.password && !passwordValid ? " err" : "")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, password: true }))}
-            placeholder="At least 6 characters"
+            onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
+            placeholder={t("auth.password.placeholder")}
           />
           {touched.password && !passwordValid && (
             <span className="input-help err">
-              <IcX size={13} /> Use at least 6 characters.
+              <IcX size={13} /> {t("auth.password.error")}
             </span>
           )}
         </div>
@@ -113,7 +115,7 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
         )}
 
         <Button kind="primary" size="lg" type="submit" loading={submitting} disabled={!canSubmit}>
-          {mode === "in" ? "Sign in" : "Create account"}
+          {mode === "in" ? t("auth.signIn") : t("auth.createAccount")}
         </Button>
 
         <div style={{ textAlign: "center" }}>
@@ -127,21 +129,20 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
           >
             {mode === "in" ? (
               <>
-                New here? <b>Create account</b>
+                {t("auth.toSignUp")} <b>{t("auth.toSignUp.cta")}</b>
               </>
             ) : (
               <>
-                Have an account? <b>Sign in</b>
+                {t("auth.toSignIn")} <b>{t("auth.toSignIn.cta")}</b>
               </>
             )}
           </button>
         </div>
 
-        {isDemo && (
+        {isDemo && isDebug() && (
           <div className="note" style={{ fontSize: 12.5 }}>
-            <b>Demo mode</b> — no backend configured. Accounts and data are stored only in this browser. Open a second tab
-            (or window) signed into the same baby to see real-time sync. Add Supabase keys to <code>.env.local</code> for
-            real multi-device.
+            <b>Demo mode</b> (debug) — no backend; data lives in this browser only. Open a second tab signed into the same
+            baby to see real-time sync. Add Supabase env vars for real multi-device.
           </div>
         )}
       </form>

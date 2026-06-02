@@ -1,32 +1,47 @@
-// Small formatters. All clock/duration output uses the mono font per the design.
+// Formatters — all locale-aware via Intl('th-TH'). Times are 24-hour; clock /
+// duration / amount glyphs render in the Latin mono face. Numerals stay Arabic.
+import { t, LOCALE } from "@/i18n";
+
+const clockFmt = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hour12: false });
+const weekdayFmt = new Intl.DateTimeFormat(LOCALE, { weekday: "long" });
+const dateFmt = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", year: "numeric" });
+const numFmt = new Intl.NumberFormat(LOCALE);
 
 export function clockTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return clockFmt.format(new Date(iso));
 }
 
-// "1h 12m", "22m", "just now"
+export function formatDate(iso: string | number | Date): string {
+  return dateFmt.format(new Date(iso));
+}
+
+export function num(n: number): string {
+  return numFmt.format(n);
+}
+
+// Duration since `iso`, in Thai units. "เพิ่งเมื่อกี้" / "22 นาที" / "1 ชม. 12 นาที"
 export function ago(iso: string, now = Date.now()): string {
   const ms = now - new Date(iso).getTime();
   const min = Math.floor(ms / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min}m`;
+  if (min < 1) return t("units.justNow");
+  if (min < 60) return `${min} ${t("units.m")}`;
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m ? `${h}h ${String(m).padStart(2, "0")}m` : `${h}h`;
+  return m ? `${h} ${t("units.h")} ${m} ${t("units.m")}` : `${h} ${t("units.h")}`;
 }
 
+// Baby age in Thai. Uses age.* keys (added for Dev — flagged for Designer review).
 export function ageLabel(birthdateISO: string, now = Date.now()): string {
   const b = new Date(birthdateISO);
   const days = Math.floor((now - b.getTime()) / 86400000);
   if (days < 0) return "";
-  if (days < 14) return `${days} day${days === 1 ? "" : "s"}`;
-  if (days < 60) return `${Math.floor(days / 7)} weeks`;
+  if (days < 14) return t("age.days", { n: days });
+  if (days < 60) return t("age.weeks", { n: Math.floor(days / 7) });
   const months = Math.floor(days / 30.44);
-  if (months < 24) return `${months} month${months === 1 ? "" : "s"}`;
-  return `${Math.floor(months / 12)} years`;
+  if (months < 24) return t("age.months", { n: months });
+  return t("age.years", { n: Math.floor(months / 12) });
 }
 
 export function todayWeekday(now = Date.now()): string {
-  return new Date(now).toLocaleDateString(undefined, { weekday: "long" });
+  return weekdayFmt.format(new Date(now));
 }

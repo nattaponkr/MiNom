@@ -1,32 +1,33 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
-import { clockTime } from "@/lib/format";
+import { clockTime, num } from "@/lib/format";
 import { IcCheck, IcList, IcTrash, VERB_ICON } from "@/lib/icons";
 import { Avatar } from "./ui";
+import { t } from "@/i18n";
 
 function detailSummary(a: Activity): string {
   const d = a.details_json as { amount_ml?: number; what?: string; source?: string };
   if (a.type === "eat") {
-    if (typeof d.amount_ml === "number") return `Eat · ${d.amount_ml} ml`;
-    if (d.what === "food") return "Eat · food";
-    return "Eat";
+    if (typeof d.amount_ml === "number") return t("timeline.eat.amount", { n: num(d.amount_ml) });
+    if (d.what === "food") return t("timeline.eat.food");
+    return t("timeline.eat.plain");
   }
-  return a.type.charAt(0).toUpperCase() + a.type.slice(1);
+  return t(`verb.${a.type}`);
 }
 
 function Pill({ status, justSynced }: { status: Activity["_sync"]; justSynced: boolean }) {
   if (status === "queued") {
     return (
       <span className="queued-pill">
-        <span className="spin-sm" /> Queued
+        <span className="spin-sm" /> {t("sync.queued")}
       </span>
     );
   }
   if (justSynced) {
     return (
       <span className="queued-pill synced-pill">
-        <IcCheck size={11} /> Synced
+        <IcCheck size={11} /> {t("sync.synced")}
       </span>
     );
   }
@@ -68,8 +69,8 @@ export default function Timeline({
     <div className="screen-body">
       <div className="appbar">
         <span>
-          <span className="ttl">Timeline</span>
-          <span className="sub">Today</span>
+          <span className="ttl">{t("timeline.title")}</span>
+          <span className="sub">{t("timeline.today")}</span>
         </span>
       </div>
 
@@ -109,14 +110,14 @@ export default function Timeline({
           >
             <IcList size={30} />
           </span>
-          <div style={{ fontWeight: 800, fontSize: 17 }}>Nothing logged today</div>
+          <div style={{ fontWeight: 800, fontSize: 17 }}>{t("timeline.empty.title")}</div>
           <div style={{ fontSize: 13.5, color: "var(--fg-muted)", lineHeight: 1.5, maxWidth: 240 }}>
-            Activities you and other caregivers log will appear here, newest first.
+            {t("timeline.empty.body")}
           </div>
         </div>
       ) : (
         <>
-          <div className="tl-day">Today</div>
+          <div className="tl-day">{t("timeline.today")}</div>
           {activities.map((a) => {
             const Ic = VERB_ICON[a.type];
             return (
@@ -127,8 +128,8 @@ export default function Timeline({
                 <span className="act-main">
                   <span className="act-title">{detailSummary(a)}</span>
                   <span className="who">
-                    <Avatar name={a._mine ? "You" : a.logged_by_name} color={a.logged_by_color} />
-                    <span className="nm">{a._mine ? "You" : a.logged_by_name}</span>
+                    <Avatar name={a._mine ? t("timeline.you") : a.logged_by_name} color={a.logged_by_color} />
+                    <span className="nm">{a._mine ? t("timeline.you") : a.logged_by_name}</span>
                   </span>
                 </span>
                 <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
@@ -139,7 +140,7 @@ export default function Timeline({
                   className="iconbtn"
                   style={{ color: "var(--danger)", width: 48, height: 48 }}
                   onClick={() => onDelete(a.id)}
-                  aria-label="Delete entry"
+                  aria-label={t("a11y.deleteEntry")}
                   type="button"
                 >
                   <IcTrash size={18} />

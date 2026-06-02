@@ -12,6 +12,7 @@ import { ComingSoonSheet } from "./ComingSoon";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
 import { Avatar, Button } from "./ui";
+import { t } from "@/i18n";
 
 export default function Main({
   me,
@@ -34,7 +35,7 @@ export default function Main({
   const openEat = async () => {
     setEatOpen(true);
     const hit = await log.checkConcurrent("eat");
-    if (hit) setConcurrency({ name: hit._mine ? "You" : hit.logged_by_name, agoText: ago(hit.started_at) });
+    if (hit) setConcurrency({ name: hit._mine ? t("timeline.you") : hit.logged_by_name, agoText: ago(hit.started_at) });
   };
 
   const saveEat = (d: EatDetails) => {
@@ -55,7 +56,7 @@ export default function Main({
 
   return (
     <div className="app">
-      {!log.online && <div className="offline-banner">Offline · changes saved on this device</div>}
+      {!log.online && <div className="offline-banner">{t("sync.offline.banner")}</div>}
 
       <main className="app-main">
         {tab === "home" && (
@@ -77,11 +78,10 @@ export default function Main({
         {(tab === "grow" || tab === "care") && (
           <div className="screen-body">
             <div className="appbar">
-              <span className="ttl">{tab === "grow" ? "Growth" : "Family"}</span>
+              <span className="ttl">{tab === "grow" ? t("tab.grow") : t("tab.care")}</span>
             </div>
-            <div className="note" style={{ marginTop: 12 }}>
-              <b>Phase 3.</b> {tab === "grow" ? "Growth charts" : "Caregiver management"} isn’t part of the walking
-              skeleton — this phase proves the architecture on Eat only.
+            <div className="note" style={{ marginTop: 12 }} lang="th">
+              {t("phase3.soon")}
             </div>
           </div>
         )}
@@ -89,29 +89,29 @@ export default function Main({
         {tab === "settings" && (
           <div className="screen-body">
             <div className="appbar">
-              <span className="ttl">Settings</span>
+              <span className="ttl">{t("tab.settings")}</span>
             </div>
             <div className="list" style={{ marginTop: 8 }}>
               <div className="list-row">
                 {profile && <Avatar name={profile.display_name} color={profile.avatar_color} size="lg" />}
                 <span className="lr-main">
-                  <span className="lr-t">{profile?.display_name ?? "You"}</span>
+                  <span className="lr-t">{profile?.display_name ?? t("timeline.you")}</span>
                   <span className="lr-d">{me.email}</span>
                 </span>
               </div>
               <div className="list-row">
                 <span className="lr-main">
-                  <span className="lr-t">Baby</span>
+                  <span className="lr-t">{t("settings.baby")}</span>
                   <span className="lr-d">{baby.name}</span>
                 </span>
               </div>
             </div>
             <div style={{ height: 16 }} />
             <Button kind="ghost" block onClick={signOut}>
-              Sign out
+              {t("settings.signOut")}
             </Button>
-            <div className="note" style={{ marginTop: 16, fontSize: 12 }}>
-              Units, data export, caregivers &amp; account deletion are Phase 3.
+            <div className="note" style={{ marginTop: 16, fontSize: 12 }} lang="th">
+              {t("phase3.soon")}
             </div>
           </div>
         )}

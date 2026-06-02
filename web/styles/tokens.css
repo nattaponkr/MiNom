@@ -3,13 +3,16 @@
    Warm & soft: gentle but adult. Light + dark.
    ============================================================ */
 
-/* ---- Fonts ---- */
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+/* ---- Fonts ----
+   Thai-first (PRD v0.3): Anuphan + Spline Sans Mono load via next/font in
+   app/layout.tsx (subset + preload for the mobile-4G first-paint budget),
+   exposed as --font-anuphan / --font-spline-mono. The old Latin @import
+   (Hanken Grotesk) was removed — Anuphan is the single UI face. */
 
 :root {
-  /* Type families */
-  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Spline Sans Mono', ui-monospace, monospace;
+  /* Type families (next/font vars; Thai fallbacks per Designer) */
+  --font-sans: var(--font-anuphan), 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
 
   /* Type scale (px values in rem, 16px base) */
   --t-display: 2.25rem;   /* 36 */

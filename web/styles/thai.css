@@ -1,0 +1,40 @@
+/* ============================================================
+   ละมุน — Thai localization layer (from design/thai.css)
+   Anuphan loads via next/font; this file carries the Designer's
+   [lang="th"] overrides only (the @import was dropped — next/font
+   handles the face + preload). Whole app is <html lang="th">.
+   ============================================================ */
+
+/* Thai needs more leading — tone marks + vowels stack up to 3 levels. */
+[lang="th"] {
+  --font-sans: var(--font-anuphan), 'IBM Plex Sans Thai', 'Noto Sans Thai', system-ui, sans-serif;
+  font-family: var(--font-sans);
+}
+[lang="th"], [lang="th"] .screen-body, [lang="th"] .verb-stat, [lang="th"] .st {
+  line-height: 1.45;
+}
+
+/* Thai has no caps / word-spacing tricks — neutralise Latin micro-typography */
+[lang="th"] .verb-name,
+[lang="th"] .wflbl,
+[lang="th"] .k,
+[lang="th"] .hero .k,
+[lang="th"] .tl-day { text-transform: none; letter-spacing: 0; }
+
+/* Appbar: stack title + subtitle; Thai titles want a touch more room */
+[lang="th"] .appbar .ttl { display: block; line-height: 1.35; letter-spacing: 0; }
+[lang="th"] .appbar .sub { display: block; white-space: nowrap; }
+[lang="th"] .who .nm { white-space: nowrap; }
+
+[lang="th"] .ttl { line-height: 1.35; letter-spacing: 0; }
+[lang="th"] .verb-stat { line-height: 1.3; }
+[lang="th"] .seg-opt { letter-spacing: 0; }
+[lang="th"] .input, [lang="th"] .btn { letter-spacing: 0; }
+
+/* Consent block (PDPA signup notice) */
+.consent { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-md); padding: 13px 15px; }
+.consent .ct { font-family: var(--font-sans); font-size: 12.5px; line-height: 1.6; color: var(--fg-muted); }
+.consent .ct a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+/* Back-dating time-edit affordance (Phase 3 pattern) */
+.edit-aff { color: var(--primary); font-weight: 700; font-size: 14px; font-family: var(--font-sans); background: none; border: none; cursor: pointer; }

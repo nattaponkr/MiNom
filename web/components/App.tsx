@@ -5,6 +5,7 @@ import type { Baby, Profile, SessionUser } from "@/lib/types";
 import AuthScreen from "./AuthScreen";
 import BabySetup from "./BabySetup";
 import Main from "./Main";
+import { LamoonWordmark } from "./Brand";
 
 type Status = "loading" | "auth" | "setup" | "app";
 
@@ -51,10 +52,7 @@ export default function App() {
       <div className="app">
         <div className="center-screen" aria-busy="true">
           <div className="brand-mark">
-            <span className="dot" />
-            <span className="wm">
-              Mi<span className="n">Nom</span>
-            </span>
+            <LamoonWordmark size={42} />
           </div>
         </div>
       </div>

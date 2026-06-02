@@ -4,6 +4,7 @@
 // NOT real multi-device or real auth — see README. The Supabase impl is the
 // architecture proof; this exists so `npm run dev` works with no setup.
 import { colorFromSeed } from "@/components/ui";
+import { t } from "@/i18n";
 import type { Activity, ActivityRow, Baby, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
@@ -90,7 +91,7 @@ export class DemoRepo implements Repo {
   async signUp(email: string, password: string, displayName: string): Promise<AuthResult> {
     email = email.trim().toLowerCase();
     const users = this.users();
-    if (users.some((u) => u.email === email)) return { error: "An account with that email already exists." };
+    if (users.some((u) => u.email === email)) return { error: t("auth.error.exists") };
     const user: DemoUser = {
       id: crypto.randomUUID(),
       email,
@@ -107,7 +108,7 @@ export class DemoRepo implements Repo {
   async signIn(email: string, password: string): Promise<AuthResult> {
     email = email.trim().toLowerCase();
     const user = this.users().find((u) => u.email === email);
-    if (!user || user.password !== password) return { error: "Wrong email or password." };
+    if (!user || user.password !== password) return { error: t("auth.error.badCredentials") };
     write(K.session, user.id);
     this.emitAuth();
     return { error: null };

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
 import { IcX } from "@/lib/icons";
+import { t } from "@/i18n";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -27,8 +28,8 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
       const repo = await getRepo();
       await repo.createBaby(name, birthdate);
       onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't create the baby profile.");
+    } catch {
+      setError(t("setup.createError"));
       setSaving(false);
     }
   };
@@ -40,32 +41,32 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
           <div className="appbar">
             <span>
               <span className="ttl" style={{ fontSize: 22 }}>
-                Add your baby
+                {t("setup.title")}
               </span>
-              <span className="sub">Just a name and birthday to start.</span>
+              <span className="sub">{t("setup.subtitle")}</span>
             </span>
           </div>
 
           <div className="field" style={{ marginTop: 12 }}>
-            <label htmlFor="bname">Baby&apos;s name</label>
+            <label htmlFor="bname">{t("setup.name.label")}</label>
             <input
               id="bname"
               className={"input" + (touched.name && !nameValid ? " err" : "")}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-              placeholder="e.g. Mina"
+              onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
+              placeholder={t("setup.name.placeholder")}
               autoFocus
             />
             {touched.name && !nameValid && (
               <span className="input-help err">
-                <IcX size={13} /> A name (or nickname) is required.
+                <IcX size={13} /> {t("setup.name.error")}
               </span>
             )}
           </div>
 
           <div className="field">
-            <label htmlFor="bdate">Birthday</label>
+            <label htmlFor="bdate">{t("setup.birthday.label")}</label>
             <input
               id="bdate"
               type="date"
@@ -73,17 +74,17 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
               className={"input" + (touched.birthdate && !dateValid ? " err" : "")}
               value={birthdate}
               onChange={(e) => setBirthdate(e.target.value)}
-              onBlur={() => setTouched((t) => ({ ...t, birthdate: true }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, birthdate: true }))}
             />
             {touched.birthdate && !dateValid && (
               <span className="input-help err">
-                <IcX size={13} /> Pick a birthday (today or earlier).
+                <IcX size={13} /> {t("setup.birthday.error")}
               </span>
             )}
           </div>
 
           <div className="note" style={{ fontSize: 12.5, marginTop: 4 }}>
-            Sex, birth weight &amp; length, and a photo are optional — add them later in Settings.
+            {t("setup.photoHint")}
           </div>
 
           {error && (
@@ -94,7 +95,7 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
 
           <div style={{ height: 16 }} />
           <Button kind="primary" size="lg" type="submit" loading={saving} disabled={!canSubmit}>
-            Continue
+            {t("setup.continue")}
           </Button>
         </form>
       </div>
