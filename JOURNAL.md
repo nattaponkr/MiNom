@@ -18,6 +18,134 @@
 
 ---
 
+## 2026-06-02 — Dev — Pre-beta enablement complete (Phase 3.5) → Handoff → PM
+
+All five items from `HANDOFF_dev_03.md` are built, on `main`, and verified to the extent possible without CPO secrets. Migration to run: **`0004_invites.sql`** (0001–0003 already live).
+
+**Shipped (commits on `main`)**
+1. **Thai copy patch** — applied all `TH_PATCH` keys; killed 3 internal-jargon leaks (เฟส 3 / ทีม PM / eng-narrative); softened error copy; removed `phase3.soon`.
+2. **Sleep-timer concurrency** (option A) — peer timer within 60s → non-blocking sheet, default "open the running timer" (seeds the sheet with the peer's activity), alt "start new". `concurrency.sleep.*`.
+3. **Caregiver invites by email** (beta blocker) — `caregiver_invites` + RLS + RPCs (create/accept/revoke, owner-check, 10-cap, 14-day expiry); `/api/invite` Resend sender (Thai template) that degrades to a copyable link without a key; `/invite/[token]` accept page (signup/signin → auto-link); Caregivers UI shows pending invites + revoke.
+4. **PostHog analytics** — privacy-first wrapper (UUID-only identify, no autocapture, masked inputs, EU host), no-ops without a key. All **12 BETA_PLAN §5 events** wired, no PII.
+5. **Privacy page + feedback** — `/privacy` parses `content/privacy_th.md` (single source, synced from root `PRIVACY_TH.md`) → summary card + sticky TOC + sections via react-markdown; strips the internal note; **blocks the full policy while §1 entity placeholders are unfilled**. Feedback row in Settings → mailto with user/route context (no content captured).
+
+**Verification vs the 7 success criteria**
+1. ✅ TH_PATCH applied, no `phase3.soon`, **35/35 headless Thai QA** green.
+2. ✅ Sleep concurrency soft-prompt wired (mirrors the verified Eat pattern; a real 2-caregiver collision is exercised live once the cohort exists).
+3. ⏳ Invite→signup-via-link→accept→**shared baby verified** (seeded headless run links the new user and lands them on the owner's baby). The literal "**real email to a fresh address over the network**" needs `RESEND_API_KEY` + email-confirmations-off — **CPO deps**.
+4. ⏳ 12 events wired, no PII (verified by construction; `track()` no-ops without a key). Live dashboard needs `NEXT_PUBLIC_POSTHOG_KEY` — **CPO dep**.
+5. ✅ `/privacy` renders summary+TOC+sections; internal note and §1 placeholders do **not** leak; full sections unlock once §1 is filled.
+6. ✅ Feedback button opens a mail draft to support@lamoon.app.
+7. ⏳ Full beta dry-run on staging — gated on the CPO items below.
+
+**Decisions I own (logged)**
+- Invites route **all** new emails through the token+link flow (existing-user instant-link kept in the repo but unused by the UI) — one model, works for a grandma/nanny without an account.
+- `caregiver_invited` channel logged as `email-new`; `activity_edited` mapped to **sleep-stop** (the only edit surface); `sync_failed` fires only on a failure while believed-online (not on normal offline).
+
+**CPO dependencies (PM to route; none are code)**
+- **Run `web/supabase/migrations/0004_invites.sql`** in the Supabase SQL editor.
+- **Email confirmations OFF** for the beta window (self-serve signup); until then dashboard-pre-confirm works.
+- **Resend**: account + verified sender (or onboarding domain for beta) → set `RESEND_API_KEY` (+ optional `RESEND_FROM`) in Railway; also set **`NEXT_PUBLIC_APP_URL`** = staging URL so invite links resolve.
+- **PostHog**: EU project → `NEXT_PUBLIC_POSTHOG_KEY` (+ `NEXT_PUBLIC_POSTHOG_HOST`) in Railway.
+- **Privacy §1**: legal entity name + address → unlocks the full policy page.
+
+**Deferred (logged, not beta blockers):** account hard-delete edge function; WHO LMS reference data; re-enable email confirmation before *public* launch; EN locale; push; LINE login.
+
+**Handoff → PM (Claude)**
+- Pre-beta engineering is done; flipping the beta live now hinges on the **CPO provisioning checklist above** (run 0004, confirmations-off, Resend + PostHog keys + `APP_URL`, privacy §1). Once those land I'll run the live beta dry-run (criteria #3/#4/#7) and post results.
+- Suggest PM finalize the cohort + comms (`BETA_PLAN` §6/§11) in parallel.
+- CPO: please route to PM.
+
+---
+
+## 2026-06-02 — PM — Designer polish accepted; routing to Dev for beta enablement
+
+**What happened**
+- Designer returned a focused pre-beta copy polish (no canonical journal entry from Designer this round — recording the result here so the audit trail stays clean). Deliverables in `design/`: `th-strings-patch.js` (the diff), `section_polish.jsx` (rendered diff + Sleep concurrency mock + privacy layout mock), updated `MiNom Design — Thai Localization.html`, `thai.css`, `thai_app.jsx`.
+- Reviewed the diff + both mocks. Quality is high — and **caught three real bugs that would have shipped to beta**, not just polish:
+  1. `comingSoon.title` had "เฟส 3" (internal phase name) leaking to users.
+  2. `comingSoon.body` told an engineering narrative ("sync proven first, then copy the pattern") to parents.
+  3. `privacy.body` referenced "ทีม PM" (internal role) in user copy.
+- Plus voice improvements on errors (softer cadence with "นะ"; offering the next step instead of dead-ending), Settings clarity (`settings.baby` → "ข้อมูลลูก"), and complete SR sentences for a11y.
+
+**Decisions accepted**
+1. **Sleep-timer concurrency = A.** Designer added `concurrency.sleep.{title,body,view,logAnyway}` mirroring the Eat pattern. Primary action = open the running timer (safest default; no duplicate timers). Confirmed.
+2. **Privacy page layout = approved.** Summary card at top, sticky TOC for the 12 sections, plain-Thai section bodies. Mocked in `section_polish.jsx` → `PrivacyLayoutMock`. Confirmed.
+3. **All `TH_PATCH` keys accepted, `phase3.soon` removed.**
+
+**Reflection (worth logging)**
+- The three "internal jargon leak" bugs got past Phase 3 QA because Dev wrote the strings to avoid English leaks, not against the voice filter. The filter only existed *for* Designer-written copy. Going forward: any Dev-written user-facing string passes through Designer voice review before merge — bake it into the next cycle's definition-of-done. Not pointing fingers; it's a process gap, fix it once.
+
+**Routing to Dev (next baton): `HANDOFF_dev_03.md`**
+Five work items, in order:
+1. **Merge the copy patch** (small) — apply `TH_PATCH`, remove `phase3.soon`, regression QA in Thai.
+2. **Wire Sleep concurrency** (small) — mirror the Eat soft-prompt with the new keys.
+3. **Invite tokens + email for new-user caregivers** ⚠️ **beta blocker** — `caregiver_invites` table, owner invite flow, email send (Resend wired), token-based signup/auto-link, 14-day expiration, owner revoke.
+4. **PostHog analytics** ⚠️ **beta blocker** — all 12 events from `BETA_PLAN.md` §5, EU region, no PII in payloads, masked autocapture.
+5. **Privacy page + in-app feedback** (medium) — wire full `PRIVACY_TH.md` into `/privacy` per Designer's layout; "ส่งฟีดแบ็ค" row in Settings opens a mailto draft.
+
+**Deferred (recorded for the future)**
+- Hard-delete edge function — build when first user actually requests.
+- WHO LMS data — chart captioned as estimates during beta; data work before public.
+- Re-enabling Supabase email confirmations — do before public launch, not before beta.
+
+**Process note for Dev**
+- The "definition of done" for Phase 3.5 includes a Thai-copy review by Designer for any new user-facing string (lesson from the polish bugs above). Any new keys you add to `th.json` during this phase should be flagged in your close-out entry so Designer can vet before they ship.
+
+**CPO-side asks (parallel-safe, won't block Dev from starting)**
+- `BETA_PLAN.md` §12 sign-offs (5 items) — still pending.
+- `PRIVACY_TH.md` §1: legal entity name + address.
+- Supabase: flip email confirmations **OFF** (small dashboard toggle).
+- **Resend account** + domain verification for `noreply@lamoon.app` (or use Resend's onboarding domain temporarily and migrate once `lamoon.app` is registered).
+- **PostHog account** + project key.
+- Start informal beta recruitment from your network.
+
+CPO: please route `HANDOFF_dev_03.md` to Claude Code.
+
+---
+
+## 2026-06-02 — PM — Phase 3 accepted; opening Phase 4 (Beta); routing to Designer
+
+**What happened**
+- Reviewed Dev's Phase 3 close-out: 8/8 live verification on real Supabase; 0.6s cross-device realtime (target <5s); RLS isolation proven across two real accounts. Full new-parent loop works in Thai end-to-end on staging.
+- **Phase 3 accepted.** Closes Phase 2's long-standing two-device + RLS carry-over and PRD-v0.3 in Thai is now a real, live thing.
+
+**Calls I made on Dev's 5 follow-ups (flag to override)**
+1. **Self-serve signup for beta** → **Turn email confirmations OFF in Supabase for the beta window.** PRD says enable confirmation before *public* launch; off-for-beta is consistent. Wire a real email sender (Resend recommended) as a separate task before public launch. Beta is invite-only; bot signups are not a real risk at this scale.
+2. **Privacy policy full text** → drafted as `PRIVACY_TH.md`. Comprehensive PDPA-aligned Thai policy, flagged "draft pending legal review before public launch." CPO needs to fill in legal entity name + address (§1) and arrange Thai-lawyer review before going public; beta is OK with this draft.
+3. **Designer routing** → next baton (see `HANDOFF_designer_03.md`). Small, focused: review Dev-added Thai keys + decide Sleep-concurrency copy.
+4. **Phase-3.x backlog triage:**
+   - **New-user caregiver email invites** → **blocks beta.** Many families will add grandma/nanny who don't have accounts yet. Sequenced into the next Dev handoff.
+   - **Account hard-delete edge function** → **not blocking.** 30-day grace UI is enough; build when first user actually requests deletion.
+   - **WHO LMS reference data** → **not blocking beta.** Caption the chart "ค่าประมาณการณ์ — รอข้อมูล WHO ฉบับเต็ม" during beta; do the data work before public.
+5. **Phase 4 open** → wrote `BETA_PLAN.md`: cohort sizing (15–20 households), recruitment channels, pre-beta gates, PostHog instrumentation, feedback loops, the "go public?" criteria.
+
+**Pre-beta gates (sequenced for Dev's next baton)**
+- Merge Designer's Thai-copy patch (after Designer returns).
+- Turn Supabase email confirmations OFF.
+- Implement invite tokens + email for new-user caregiver invites. **(Blocker.)**
+- Wire **PostHog** analytics for the success metrics (PRD §8).
+- Wire full `PRIVACY_TH.md` into `/privacy`.
+- Add in-app feedback button in Settings.
+
+**Open questions for CPO**
+- BETA_PLAN.md §12 has 5 sign-off items: (1) lifetime-free for beta cohort, (2) PostHog as analytics, (3) Resend deferred to pre-public, (4) cohort target 15–20, (5) Q1 monetization still open. PM recommendations attached; will proceed on those unless flagged.
+- Legal: who's the registered entity for ละมุน? Needed in `PRIVACY_TH.md` §1 before any user sees it on the live site.
+
+**Files produced this turn**
+- `PRIVACY_TH.md` — Thai privacy policy draft (PDPA-aligned, ~12 sections + internal team notes).
+- `BETA_PLAN.md` — Phase 4 plan (goals, cohort, gates, metrics, cadence, success criteria).
+- `HANDOFF_designer_03.md` — small focused brief.
+- PLAN.md updated.
+
+**Handoff → Designer (Claude Design)**
+- Brief: `HANDOFF_designer_03.md`. Short pass — Dev-added Thai key polish + Sleep-concurrency decision + optional privacy-page layout note.
+- After Designer returns, PM writes `HANDOFF_dev_03.md` for the pre-beta enablement work above. Then beta opens.
+
+CPO: please route to Claude Design. While that's in flight, **two parallel-safe asks**: (a) decide BETA_PLAN.md §12 sign-offs at your convenience, (b) tell PM the registered entity name + address for the privacy policy.
+
+---
+
 ## 2026-06-02 — Dev — 2.8 VERIFIED on live Supabase → Phase 3 COMPLETE → Handoff → PM
 
 **The last gate is closed.** Real Supabase backend is provisioned (CPO) and the literal two-device + RLS exit criteria now pass against it. **Phase 3 is done and live-verified.**
