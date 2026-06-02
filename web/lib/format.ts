@@ -63,3 +63,12 @@ export function ageLabel(birthdateISO: string, now = Date.now()): string {
 export function todayWeekday(now = Date.now()): string {
   return weekdayFmt.format(new Date(now));
 }
+
+// Fixed-length duration in Thai units, e.g. "1 ชม. 32 นาที" (for a completed sleep).
+export function duration(ms: number): string {
+  const min = Math.max(0, Math.floor(ms / 60000));
+  if (min < 60) return `${min} ${t("units.m")}`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h} ${t("units.h")} ${m} ${t("units.m")}` : `${h} ${t("units.h")}`;
+}

@@ -16,6 +16,7 @@ function VerbCard({
   unit,
   by,
   byColor,
+  isLive,
   onClick,
 }: {
   verb: VerbType;
@@ -24,17 +25,19 @@ function VerbCard({
   unit: string;
   by?: string | null;
   byColor?: string | null;
+  isLive?: boolean;
   onClick: () => void;
 }) {
   const Ic = VERB_ICON[verb];
   return (
-    <button className="verb-card" onClick={onClick} aria-label={`${name}: ${stat} ${unit}`}>
+    <button className={"verb-card" + (isLive ? " live" : "")} onClick={onClick} aria-label={`${name}: ${stat} ${unit}`}>
       <span className={"verb-ic " + verb}>
         <Ic size={28} />
       </span>
       <span className="verb-meta">
         <span className="verb-name">{name}</span>
         <span className="verb-stat" style={{ display: "block" }}>
+          {isLive && <span className="pulse-dot" />}
           <span className="tnum">{stat}</span> <span className="u">{unit}</span>
         </span>
         {by && (
@@ -72,8 +75,9 @@ export default function HomeScreen({
   forceOffline,
   onToggleOffline,
   onLogEat,
+  onLogSleep,
   onLogDiaper,
-  onComingSoon,
+  runningSleep,
 }: {
   baby: Baby;
   profile: Profile | null;
@@ -83,8 +87,9 @@ export default function HomeScreen({
   forceOffline: boolean;
   onToggleOffline: () => void;
   onLogEat: () => void;
+  onLogSleep: () => void;
   onLogDiaper: () => void;
-  onComingSoon: (verb: VerbType) => void;
+  runningSleep: Activity | null;
 }) {
   const [now, setNow] = useState(Date.now());
   const [debug, setDebug] = useState(false);
@@ -96,6 +101,7 @@ export default function HomeScreen({
 
   const lastEat = activities.find((a) => a.type === "eat");
   const lastDiaper = activities.find((a) => a.type === "diaper");
+  const lastEndedSleep = activities.find((a) => a.type === "sleep" && a.ended_at);
 
   return (
     <div className="screen-body">
@@ -133,7 +139,14 @@ export default function HomeScreen({
             byColor={lastEat?.logged_by_color}
             onClick={onLogEat}
           />
-          <VerbCard verb="sleep" name={t("home.sleep.name")} stat="—" unit={t("home.comingSoon")} onClick={() => onComingSoon("sleep")} />
+          <VerbCard
+            verb="sleep"
+            name={t("home.sleep.name")}
+            stat={runningSleep ? ago(runningSleep.started_at, now) : lastEndedSleep ? ago(lastEndedSleep.ended_at!, now) : t("home.eat.empty.stat")}
+            unit={runningSleep ? t("home.sleep.asleep") : lastEndedSleep ? t("home.ago") : t("home.eat.empty.unit")}
+            isLive={!!runningSleep}
+            onClick={onLogSleep}
+          />
           <VerbCard
             verb="diaper"
             name={t("home.diaper.name")}

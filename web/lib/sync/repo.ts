@@ -15,8 +15,15 @@ export type ActivityInsert = {
   details_json: EatDetails | Record<string, unknown>;
 };
 
+export type ActivityPatch = {
+  started_at?: string;
+  ended_at?: string | null;
+  details_json?: Record<string, unknown>;
+};
+
 export type RealtimeHandlers = {
   onInsert: (row: ActivityRow & { logged_by_name: string; logged_by_color: string | null }) => void;
+  onUpdate: (row: ActivityRow & { logged_by_name: string; logged_by_color: string | null }) => void;
   onDelete: (id: string) => void;
 };
 
@@ -40,6 +47,7 @@ export interface Repo {
   // activity
   listToday(babyId: string): Promise<Activity[]>;
   insertActivity(a: ActivityInsert): Promise<Activity>; // rejects when offline
+  updateActivity(id: string, patch: ActivityPatch): Promise<Activity>; // e.g. stop a sleep timer
   deleteActivity(id: string): Promise<void>;
   // returns the most recent in-progress/just-started activity of a type within
   // `withinSec` seconds, by another caregiver — drives the concurrency prompt.

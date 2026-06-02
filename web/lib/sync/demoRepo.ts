@@ -6,10 +6,11 @@
 import { colorFromSeed } from "@/components/ui";
 import { t } from "@/i18n";
 import type { Activity, ActivityRow, Baby, Profile, SessionUser, VerbType } from "@/lib/types";
-import type { ActivityInsert, AuthResult, RealtimeHandlers, Repo } from "./repo";
+import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 type DemoUser = { id: string; email: string; password: string; display_name: string; avatar_color: string };
 type Link = { baby_id: string; user_id: string; role: string };
+type BcMsg = { kind: "insert"; row: ActivityRow } | { kind: "update"; row: ActivityRow } | { kind: "delete"; id: string };
 
 const K = {
   users: "minom_demo_users",
@@ -169,6 +170,17 @@ export class DemoRepo implements Repo {
     return this.map(row);
   }
 
+  async updateActivity(id: string, patch: ActivityPatch): Promise<Activity> {
+    const all = this.acts();
+    const idx = all.findIndex((a) => a.id === id);
+    if (idx < 0) throw new Error("not found");
+    const row: ActivityRow = { ...all[idx], ...patch, updated_at: new Date().toISOString() };
+    all[idx] = row;
+    write(K.activity, all);
+    this.broadcast({ kind: "update", row });
+    return this.map(row);
+  }
+
   async deleteActivity(id: string): Promise<void> {
     write(K.activity, this.acts().filter((a) => a.id !== id));
     this.broadcast({ kind: "delete", id });
@@ -188,7 +200,7 @@ export class DemoRepo implements Repo {
     if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return null;
     return new BroadcastChannel("minom_demo");
   }
-  private broadcast(msg: { kind: "insert"; row: ActivityRow } | { kind: "delete"; id: string }) {
+  private broadcast(msg: BcMsg) {
     const ch = this.bc();
     if (ch) {
       ch.postMessage(msg);
@@ -200,10 +212,12 @@ export class DemoRepo implements Repo {
     if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return () => {};
     const ch = new BroadcastChannel("minom_demo");
     ch.onmessage = (e) => {
-      const msg = e.data as { kind: "insert"; row: ActivityRow } | { kind: "delete"; id: string };
-      if (msg.kind === "insert" && msg.row.baby_id === babyId) {
+      const msg = e.data as BcMsg;
+      if ((msg.kind === "insert" || msg.kind === "update") && msg.row.baby_id === babyId) {
         const u = this.userById(msg.row.logged_by_user_id);
-        handlers.onInsert({ ...msg.row, logged_by_name: u?.display_name ?? "Caregiver", logged_by_color: u?.avatar_color ?? null });
+        const enriched = { ...msg.row, logged_by_name: u?.display_name ?? "Caregiver", logged_by_color: u?.avatar_color ?? null };
+        if (msg.kind === "insert") handlers.onInsert(enriched);
+        else handlers.onUpdate(enriched);
       } else if (msg.kind === "delete") {
         handlers.onDelete(msg.id);
       }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
-import { clockTime, num } from "@/lib/format";
+import { clockTime, duration, num } from "@/lib/format";
 import { IcCheck, IcList, IcTrash, VERB_ICON } from "@/lib/icons";
 import { Avatar } from "./ui";
 import { t } from "@/i18n";
@@ -15,6 +15,10 @@ function detailSummary(a: Activity): string {
   }
   if (a.type === "diaper") {
     return d.kind ? `${t("verb.diaper")} · ${t(`diaper.${d.kind}`)}` : t("verb.diaper");
+  }
+  if (a.type === "sleep") {
+    if (!a.ended_at) return `${t("verb.sleep")} · ${t("sleep.sleeping")}`;
+    return `${t("verb.sleep")} · ${duration(new Date(a.ended_at).getTime() - new Date(a.started_at).getTime())}`;
   }
   return t(`verb.${a.type}`);
 }

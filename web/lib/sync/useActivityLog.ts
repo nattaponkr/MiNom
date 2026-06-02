@@ -1,31 +1,37 @@
 "use client";
-// useActivityLog — the Phase 2 sync engine.
+// useActivityLog — the sync engine (Phase 2 core, extended in Phase 3).
 //
-// Responsibilities (all from HANDOFF_dev_01 §3 + section 05):
 //   • Optimistic write: a log appears instantly as `queued`; no spinner.
-//   • 5s undo: a snackbar lets the user reverse it; if it already synced, we
-//     delete server-side.
-//   • Offline-safe: writes persist to a localStorage outbox and flush when the
-//     connection (or a manual offline toggle) comes back. Logging never blocks.
-//   • Realtime: another caregiver's entry arrives within ~5s, animates in, and
-//     raises a quiet toast — without stealing focus.
+//   • 5s undo on instant logs (Eat/Diaper); timers (Sleep) reverse via stop/delete.
+//   • Offline-safe: every mutation persists to a localStorage outbox of *ops*
+//     (insert | update | delete) and flushes in order when connectivity returns.
+//   • Realtime: peers' inserts arrive (animate + quiet toast) and updates
+//     (e.g. a sleep stop) reconcile silently — never stealing focus.
 //   • Concurrency: detect a same-verb log by another caregiver in the last 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Activity, SessionUser, VerbType } from "@/lib/types";
-import { getRepo, type ActivityInsert, type Repo } from "./repo";
+import { getRepo, type ActivityInsert, type ActivityPatch, type Repo } from "./repo";
 
 const UNDO_MS = 5000;
-const FRESH_MS = 600; // matches --dur-slow arrival animation
+const FRESH_MS = 600;
 const TOAST_MS = 2600;
 
 type Snackbar = { id: string } | null;
 type Toast = { name: string } | null;
 
-function outboxKey(babyId: string) {
-  return `minom_outbox_${babyId}`;
-}
-function cacheKey(babyId: string) {
-  return `minom_today_${babyId}`;
+// Outbox op. Legacy entries (bare ActivityInsert) are normalized to insert.
+type Op =
+  | { op: "insert"; insert: ActivityInsert }
+  | { op: "update"; id: string; patch: ActivityPatch }
+  | { op: "delete"; id: string };
+
+const outboxKey = (b: string) => `minom_outbox_${b}`;
+const cacheKey = (b: string) => `minom_today_${b}`;
+const opId = (o: Op) => (o.op === "insert" ? o.insert.id : o.id);
+
+function normalizeOps(raw: unknown): Op[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((e) => (e && typeof e === "object" && "op" in e ? (e as Op) : { op: "insert", insert: e as ActivityInsert }));
 }
 
 export function useActivityLog(babyId: string | null, me: SessionUser | null) {
@@ -43,41 +49,45 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
   const effectiveOnlineRef = useRef(effectiveOnline);
   effectiveOnlineRef.current = effectiveOnline;
 
-  const readOutbox = useCallback((): ActivityInsert[] => {
+  const readOutbox = useCallback((): Op[] => {
     if (!babyId || typeof window === "undefined") return [];
     try {
-      return JSON.parse(localStorage.getItem(outboxKey(babyId)) || "[]");
+      return normalizeOps(JSON.parse(localStorage.getItem(outboxKey(babyId)) || "[]"));
     } catch {
       return [];
     }
   }, [babyId]);
 
   const writeOutbox = useCallback(
-    (items: ActivityInsert[]) => {
-      if (babyId && typeof window !== "undefined") localStorage.setItem(outboxKey(babyId), JSON.stringify(items));
+    (ops: Op[]) => {
+      if (babyId && typeof window !== "undefined") localStorage.setItem(outboxKey(babyId), JSON.stringify(ops));
     },
     [babyId],
   );
 
-  // Flush queued writes. Safe to call often; no-ops when offline or empty.
+  const enqueue = useCallback((op: Op) => writeOutbox([...readOutbox(), op]), [readOutbox, writeOutbox]);
+
+  // Flush queued ops in order. Safe to call often; no-ops when offline/empty.
   const flush = useCallback(async () => {
     if (!repoRef.current || !effectiveOnlineRef.current) return;
     const pending = readOutbox();
     if (!pending.length) return;
-    const remaining: ActivityInsert[] = [];
-    for (const item of pending) {
+    const remaining: Op[] = [];
+    for (const op of pending) {
       try {
-        await repoRef.current.insertActivity(item);
-        setActivities((prev) => prev.map((a) => (a.id === item.id ? { ...a, _sync: "synced" } : a)));
+        if (op.op === "insert") await repoRef.current.insertActivity(op.insert);
+        else if (op.op === "update") await repoRef.current.updateActivity(op.id, op.patch);
+        else await repoRef.current.deleteActivity(op.id);
+        if (op.op !== "delete") setActivities((prev) => prev.map((a) => (a.id === opId(op) ? { ...a, _sync: "synced" } : a)));
       } catch {
-        remaining.push(item); // still offline / failed — keep it queued
+        remaining.push(op); // still offline / failed — keep queued (preserve order)
       }
     }
     writeOutbox(remaining);
   }, [readOutbox, writeOutbox]);
 
-  // Initial load: hydrate from cache (warm) then refresh from the repo (cold
-  // load shows skeletons because there is no cache yet).
+  // Initial load: hydrate cache (warm) then refresh from repo (cold → skeleton),
+  // re-applying still-queued optimistic ops on top of server truth.
   useEffect(() => {
     if (!babyId) return;
     let alive = true;
@@ -101,32 +111,35 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       if (!alive) return;
       repoRef.current = repo;
 
-      // Re-apply any still-queued optimistic writes on top of server truth.
-      const queued = readOutbox();
+      const ops = readOutbox();
       try {
         const server = await repo.listToday(babyId);
         if (!alive) return;
-        const queuedIds = new Set(queued.map((q) => q.id));
-        const optimistic: Activity[] = queued
-          .filter((q) => !server.some((s) => s.id === q.id))
-          .map((q) => ({
-            id: q.id,
-            baby_id: q.baby_id,
-            type: q.type,
-            started_at: q.started_at,
-            ended_at: q.ended_at ?? null,
-            details_json: q.details_json as Record<string, unknown>,
+        const insertOps = ops.filter((o): o is Extract<Op, { op: "insert" }> => o.op === "insert");
+        const optimistic: Activity[] = insertOps
+          .filter((o) => !server.some((s) => s.id === o.insert.id))
+          .map((o) => ({
+            id: o.insert.id,
+            baby_id: o.insert.baby_id,
+            type: o.insert.type,
+            started_at: o.insert.started_at,
+            ended_at: o.insert.ended_at ?? null,
+            details_json: o.insert.details_json as Record<string, unknown>,
             logged_by_user_id: me?.id ?? "",
-            created_at: q.started_at,
-            updated_at: q.started_at,
+            created_at: o.insert.started_at,
+            updated_at: o.insert.started_at,
             logged_by_name: "You",
             logged_by_color: null,
             _sync: "queued" as const,
             _mine: true,
           }));
-        const merged = [...optimistic, ...server.map((s) => ({ ...s, _sync: queuedIds.has(s.id) ? ("synced" as const) : s._sync }))].sort(
-          (x, y) => (x.started_at < y.started_at ? 1 : -1),
-        );
+        let merged: Activity[] = [...optimistic, ...server];
+        // Re-apply queued updates/deletes so a pending sleep-stop etc. shows.
+        for (const o of ops) {
+          if (o.op === "update") merged = merged.map((a) => (a.id === o.id ? { ...a, ...o.patch, _sync: "queued" } : a));
+          if (o.op === "delete") merged = merged.filter((a) => a.id !== o.id);
+        }
+        merged.sort((x, y) => (x.started_at < y.started_at ? 1 : -1));
         setActivities(merged);
         localStorage.setItem(cacheKey(babyId), JSON.stringify(merged));
       } catch {
@@ -134,7 +147,6 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       } finally {
         if (alive) setLoading(false);
       }
-
       void flush();
     })();
 
@@ -143,7 +155,6 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     };
   }, [babyId, me?.id, readOutbox, flush]);
 
-  // Persist the working set so warm navigations are instant.
   useEffect(() => {
     if (babyId && !loading) {
       try {
@@ -154,19 +165,15 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     }
   }, [activities, babyId, loading]);
 
-  // Realtime subscription.
+  // Realtime.
   useEffect(() => {
     if (!babyId || !repoRef.current) return;
     const repo = repoRef.current;
     const unsub = repo.subscribe(babyId, {
       onInsert: (row) => {
         setActivities((prev) => {
-          if (prev.some((a) => a.id === row.id)) {
-            // Our own echo (or a dup): just confirm it's synced.
-            return prev.map((a) => (a.id === row.id ? { ...a, _sync: "synced" } : a));
-          }
+          if (prev.some((a) => a.id === row.id)) return prev.map((a) => (a.id === row.id ? { ...a, _sync: "synced" } : a));
           const incoming: Activity = { ...row, _sync: "synced", _mine: row.logged_by_user_id === me?.id, _fresh: true };
-          // Quiet toast for someone else's arrival; never for our own.
           if (!incoming._mine) {
             setToast({ name: row.logged_by_name });
             if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -176,14 +183,20 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
           return [incoming, ...prev].sort((x, y) => (x.started_at < y.started_at ? 1 : -1));
         });
       },
+      // Peer edit (e.g. a sleep stop): reconcile quietly, never steal focus.
+      onUpdate: (row) => {
+        setActivities((prev) =>
+          prev.some((a) => a.id === row.id)
+            ? prev.map((a) => (a.id === row.id ? { ...a, ended_at: row.ended_at, details_json: row.details_json, started_at: row.started_at, _sync: "synced" } : a))
+            : prev,
+        );
+      },
       onDelete: (id) => setActivities((prev) => prev.filter((a) => a.id !== id)),
     });
     return unsub;
-    // re-subscribe once the repo is ready
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [babyId, repoRef.current, me?.id]);
 
-  // Connectivity listeners.
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -195,48 +208,73 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     };
   }, []);
 
-  // Flush whenever we (re)gain connectivity.
   useEffect(() => {
     if (effectiveOnline) void flush();
   }, [effectiveOnline, flush]);
 
   // ---- actions ----
 
+  // Build an optimistic row from an insert.
+  const optimisticRow = useCallback(
+    (insert: ActivityInsert): Activity => ({
+      id: insert.id,
+      baby_id: insert.baby_id,
+      type: insert.type,
+      started_at: insert.started_at,
+      ended_at: insert.ended_at ?? null,
+      details_json: insert.details_json as Record<string, unknown>,
+      logged_by_user_id: me?.id ?? "",
+      created_at: insert.started_at,
+      updated_at: insert.started_at,
+      logged_by_name: "You",
+      logged_by_color: null,
+      _sync: "queued",
+      _mine: true,
+    }),
+    [me?.id],
+  );
+
+  // Instant log (Eat/Diaper): optimistic + 5s undo.
   const log = useCallback(
     (type: VerbType, details: Record<string, unknown> = {}, startedAtISO?: string) => {
       if (!babyId) return null;
-      const id = crypto.randomUUID();
-      const startedAt = startedAtISO ?? new Date().toISOString();
-      const insert: ActivityInsert = { id, baby_id: babyId, type, started_at: startedAt, details_json: details };
-
-      const optimistic: Activity = {
-        id,
-        baby_id: babyId,
-        type,
-        started_at: startedAt,
-        ended_at: null,
-        details_json: details as Record<string, unknown>,
-        logged_by_user_id: me?.id ?? "",
-        created_at: startedAt,
-        updated_at: startedAt,
-        logged_by_name: "You",
-        logged_by_color: null,
-        _sync: "queued",
-        _mine: true,
-      };
-      setActivities((prev) => [optimistic, ...prev]);
-      writeOutbox([...readOutbox(), insert]);
-
-      // 5s undo window.
-      setSnackbar({ id });
+      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type, started_at: startedAtISO ?? new Date().toISOString(), details_json: details };
+      setActivities((prev) => [optimisticRow(insert), ...prev]);
+      enqueue({ op: "insert", insert });
+      setSnackbar({ id: insert.id });
       if (snackTimer.current) clearTimeout(snackTimer.current);
       snackTimer.current = setTimeout(() => setSnackbar(null), UNDO_MS);
-
       void flush();
-      return id;
+      return insert.id;
     },
-    [babyId, me?.id, readOutbox, writeOutbox, flush],
+    [babyId, optimisticRow, enqueue, flush],
   );
+
+  // Sleep timer start — an open-ended activity (ended_at null), no undo snackbar.
+  const startSleep = useCallback(
+    (startedAtISO?: string) => {
+      if (!babyId) return null;
+      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type: "sleep", started_at: startedAtISO ?? new Date().toISOString(), ended_at: null, details_json: {} };
+      setActivities((prev) => [optimisticRow(insert), ...prev]);
+      enqueue({ op: "insert", insert });
+      void flush();
+      return insert.id;
+    },
+    [babyId, optimisticRow, enqueue, flush],
+  );
+
+  // Sleep timer stop — patch ended_at (optimistic), queue an update op.
+  const stopSleep = useCallback(
+    (id: string, endedAtISO?: string) => {
+      const ended_at = endedAtISO ?? new Date().toISOString();
+      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ended_at, _sync: "queued" } : a)));
+      enqueue({ op: "update", id, patch: { ended_at } });
+      void flush();
+    },
+    [enqueue, flush],
+  );
+
+  const dropOps = useCallback((id: string) => writeOutbox(readOutbox().filter((o) => opId(o) !== id)), [readOutbox, writeOutbox]);
 
   const undo = useCallback(
     async (id: string) => {
@@ -244,32 +282,32 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       if (snackTimer.current) clearTimeout(snackTimer.current);
       const wasSynced = activities.find((a) => a.id === id)?._sync === "synced";
       setActivities((prev) => prev.filter((a) => a.id !== id));
-      writeOutbox(readOutbox().filter((q) => q.id !== id));
+      dropOps(id);
       if (wasSynced && repoRef.current) {
         try {
           await repoRef.current.deleteActivity(id);
         } catch {
-          /* will be cleaned up on next load */
+          /* cleaned up on next load */
         }
       }
     },
-    [activities, readOutbox, writeOutbox],
+    [activities, dropOps],
   );
 
   const remove = useCallback(
     async (id: string) => {
       const wasSynced = activities.find((a) => a.id === id)?._sync === "synced";
       setActivities((prev) => prev.filter((a) => a.id !== id));
-      writeOutbox(readOutbox().filter((q) => q.id !== id));
+      dropOps(id);
       if (wasSynced && repoRef.current) {
         try {
           await repoRef.current.deleteActivity(id);
         } catch {
-          /* offline: best-effort; row reappears on reload until reconnect */
+          /* offline: reappears on reload until reconnect */
         }
       }
     },
-    [activities, readOutbox, writeOutbox],
+    [activities, dropOps],
   );
 
   const checkConcurrent = useCallback(
@@ -284,6 +322,7 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     [babyId],
   );
 
+  const runningSleep = activities.find((a) => a.type === "sleep" && !a.ended_at) ?? null;
   const queuedCount = activities.filter((a) => a._sync === "queued").length;
 
   return {
@@ -297,6 +336,9 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     toast,
     dismissToast: () => setToast(null),
     log,
+    startSleep,
+    stopSleep,
+    runningSleep,
     undo,
     remove,
     checkConcurrent,

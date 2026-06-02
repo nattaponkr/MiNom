@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
 import { colorFromSeed } from "@/components/ui";
 import type { Activity, ActivityRow, Baby, Profile, SessionUser, VerbType } from "@/lib/types";
-import type { ActivityInsert, AuthResult, RealtimeHandlers, Repo } from "./repo";
+import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 const SELECT_WITH_LOGGER = "*, logged_by:logged_by_user_id (display_name, avatar_color)";
 
@@ -115,6 +115,13 @@ export class SupabaseRepo implements Repo {
     return this.map(data as any);
   }
 
+  async updateActivity(id: string, patch: ActivityPatch): Promise<Activity> {
+    const { data, error } = await this.sb.from("activity").update(patch).eq("id", id).select(SELECT_WITH_LOGGER).single();
+    if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return this.map(data as any);
+  }
+
   async deleteActivity(id: string): Promise<void> {
     const { error } = await this.sb.from("activity").delete().eq("id", id);
     if (error) throw error;
@@ -156,6 +163,15 @@ export class SupabaseRepo implements Repo {
           const row = payload.new as ActivityRow;
           const p = await this.profileFor(row.logged_by_user_id);
           handlers.onInsert({ ...row, logged_by_name: p.display_name, logged_by_color: p.avatar_color });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "activity", filter: `baby_id=eq.${babyId}` },
+        async (payload) => {
+          const row = payload.new as ActivityRow;
+          const p = await this.profileFor(row.logged_by_user_id);
+          handlers.onUpdate({ ...row, logged_by_name: p.display_name, logged_by_color: p.avatar_color });
         },
       )
       .on(

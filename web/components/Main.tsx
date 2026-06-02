@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { Baby, DiaperKind, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Baby, DiaperKind, EatDetails, Profile, SessionUser } from "@/lib/types";
 import { ago, clockTime } from "@/lib/format";
 import { getRepo } from "@/lib/sync/repo";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
@@ -8,8 +8,8 @@ import HomeScreen from "./HomeScreen";
 import Timeline from "./Timeline";
 import EatSheet from "./EatSheet";
 import DiaperSheet from "./DiaperSheet";
+import SleepSheet from "./SleepSheet";
 import TabBar, { type Tab } from "./TabBar";
-import { ComingSoonSheet } from "./ComingSoon";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
 import { Avatar, Button } from "./ui";
@@ -30,7 +30,7 @@ export default function Main({
   const [tab, setTab] = useState<Tab>("home");
   const [eatOpen, setEatOpen] = useState(false);
   const [diaperOpen, setDiaperOpen] = useState(false);
-  const [comingSoon, setComingSoon] = useState<VerbType | null>(null);
+  const [sleepOpen, setSleepOpen] = useState(false);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string } | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
 
@@ -49,6 +49,8 @@ export default function Main({
     log.log("diaper", { kind }, startedAt);
     setDiaperOpen(false);
   };
+
+  const lastWokeAt = log.activities.find((a) => a.type === "sleep" && a.ended_at)?.ended_at ?? null;
 
   const requestDelete = (id: string) => {
     const a = log.activities.find((x) => x.id === id);
@@ -76,8 +78,9 @@ export default function Main({
             forceOffline={log.forceOffline}
             onToggleOffline={() => log.setForceOffline(!log.forceOffline)}
             onLogEat={openEat}
+            onLogSleep={() => setSleepOpen(true)}
             onLogDiaper={() => setDiaperOpen(true)}
-            onComingSoon={(v) => setComingSoon(v)}
+            runningSleep={log.runningSleep}
           />
         )}
 
@@ -132,7 +135,18 @@ export default function Main({
 
       {diaperOpen && <DiaperSheet onSave={saveDiaper} onClose={() => setDiaperOpen(false)} />}
 
-      {comingSoon && <ComingSoonSheet verb={comingSoon} onClose={() => setComingSoon(null)} />}
+      {sleepOpen && (
+        <SleepSheet
+          running={log.runningSleep}
+          lastWokeAt={lastWokeAt}
+          onStart={(startedAt) => log.startSleep(startedAt)}
+          onStop={(id) => {
+            log.stopSleep(id);
+            setSleepOpen(false);
+          }}
+          onClose={() => setSleepOpen(false)}
+        />
+      )}
 
       {concurrency && (
         <ConcurrencySheet
