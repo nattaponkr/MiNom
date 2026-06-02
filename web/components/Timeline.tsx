@@ -7,11 +7,14 @@ import { Avatar } from "./ui";
 import { t } from "@/i18n";
 
 function detailSummary(a: Activity): string {
-  const d = a.details_json as { amount_ml?: number; what?: string; source?: string };
+  const d = a.details_json as { amount_ml?: number; what?: string; kind?: string };
   if (a.type === "eat") {
     if (typeof d.amount_ml === "number") return t("timeline.eat.amount", { n: num(d.amount_ml) });
     if (d.what === "food") return t("timeline.eat.food");
     return t("timeline.eat.plain");
+  }
+  if (a.type === "diaper") {
+    return d.kind ? `${t("verb.diaper")} · ${t(`diaper.${d.kind}`)}` : t("verb.diaper");
   }
   return t(`verb.${a.type}`);
 }

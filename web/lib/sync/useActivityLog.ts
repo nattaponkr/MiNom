@@ -11,7 +11,7 @@
 //     raises a quiet toast — without stealing focus.
 //   • Concurrency: detect a same-verb log by another caregiver in the last 60s.
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Activity, EatDetails, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, SessionUser, VerbType } from "@/lib/types";
 import { getRepo, type ActivityInsert, type Repo } from "./repo";
 
 const UNDO_MS = 5000;
@@ -203,10 +203,10 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
   // ---- actions ----
 
   const log = useCallback(
-    (type: VerbType, details: EatDetails = {}) => {
+    (type: VerbType, details: Record<string, unknown> = {}, startedAtISO?: string) => {
       if (!babyId) return null;
       const id = crypto.randomUUID();
-      const startedAt = new Date().toISOString();
+      const startedAt = startedAtISO ?? new Date().toISOString();
       const insert: ActivityInsert = { id, baby_id: babyId, type, started_at: startedAt, details_json: details };
 
       const optimistic: Activity = {

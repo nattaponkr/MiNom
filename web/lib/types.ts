@@ -24,6 +24,9 @@ export type EatDetails = {
   notes?: string;
 };
 
+export type DiaperKind = "wet" | "dirty" | "both";
+export type DiaperDetails = { kind: DiaperKind };
+
 // As stored / returned by the backend.
 export type ActivityRow = {
   id: string;

@@ -146,5 +146,26 @@ export const IcMoon = ({ size }: IconProps) => (
     <path d="M20 14.5A8 8 0 1 1 9.5 4a6.3 6.3 0 0 0 10.5 10.5Z" />
   </Svg>
 );
+export const IcDrop = ({ size, filled }: IconProps) => (
+  <Svg size={size}>
+    <path d="M12 3.5c3.5 4 6 6.6 6 10a6 6 0 0 1-12 0c0-3.4 2.5-6 6-10Z" fill={filled ? "currentColor" : "none"} />
+  </Svg>
+);
+export const IcLeaf = ({ size, filled }: IconProps) => (
+  <Svg size={size}>
+    <path d="M5 19c0-8 6-13 14-13 0 8-6 13-14 13Z" fill={filled ? "currentColor" : "none"} />
+    <path d="M5 19c2.5-4 5.5-6.5 9-8.5" strokeWidth={1.5} />
+  </Svg>
+);
+export const IcPlay = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <path d="M8 5.5v13l11-6.5-11-6.5Z" fill="currentColor" stroke="none" />
+  </Svg>
+);
+export const IcStop = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none" />
+  </Svg>
+);
 
 export const VERB_ICON = { eat: IcEat, sleep: IcSleep, diaper: IcDiaper, grow: IcGrow } as const;

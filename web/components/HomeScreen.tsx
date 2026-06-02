@@ -72,6 +72,7 @@ export default function HomeScreen({
   forceOffline,
   onToggleOffline,
   onLogEat,
+  onLogDiaper,
   onComingSoon,
 }: {
   baby: Baby;
@@ -82,6 +83,7 @@ export default function HomeScreen({
   forceOffline: boolean;
   onToggleOffline: () => void;
   onLogEat: () => void;
+  onLogDiaper: () => void;
   onComingSoon: (verb: VerbType) => void;
 }) {
   const [now, setNow] = useState(Date.now());
@@ -93,6 +95,7 @@ export default function HomeScreen({
   }, []);
 
   const lastEat = activities.find((a) => a.type === "eat");
+  const lastDiaper = activities.find((a) => a.type === "diaper");
 
   return (
     <div className="screen-body">
@@ -131,7 +134,15 @@ export default function HomeScreen({
             onClick={onLogEat}
           />
           <VerbCard verb="sleep" name={t("home.sleep.name")} stat="—" unit={t("home.comingSoon")} onClick={() => onComingSoon("sleep")} />
-          <VerbCard verb="diaper" name={t("home.diaper.name")} stat="—" unit={t("home.comingSoon")} onClick={() => onComingSoon("diaper")} />
+          <VerbCard
+            verb="diaper"
+            name={t("home.diaper.name")}
+            stat={lastDiaper ? ago(lastDiaper.started_at, now) : t("home.eat.empty.stat")}
+            unit={lastDiaper ? t("home.ago") : t("home.eat.empty.unit")}
+            by={lastDiaper && !lastDiaper._mine ? lastDiaper.logged_by_name : null}
+            byColor={lastDiaper?.logged_by_color}
+            onClick={onLogDiaper}
+          />
         </div>
       )}
 

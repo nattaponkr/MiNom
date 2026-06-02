@@ -11,6 +11,24 @@ export function clockTime(iso: string): string {
   return clockFmt.format(new Date(iso));
 }
 
+// Within ~a minute of now → treat as "now" (for the When card display).
+export function isNowish(iso: string, now = Date.now()): boolean {
+  return Math.abs(now - new Date(iso).getTime()) < 60000;
+}
+
+// ISO ⇄ <input type="datetime-local"> local-wall-clock string.
+const pad = (n: number) => String(n).padStart(2, "0");
+export function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+export function fromLocalInput(local: string): string {
+  return new Date(local).toISOString();
+}
+export function dateTime(iso: string): string {
+  return `${dateFmt.format(new Date(iso))} · ${clockFmt.format(new Date(iso))}`;
+}
+
 export function formatDate(iso: string | number | Date): string {
   return dateFmt.format(new Date(iso));
 }

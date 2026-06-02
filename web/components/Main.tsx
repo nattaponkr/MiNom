@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
-import type { Baby, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Baby, DiaperKind, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
 import { ago, clockTime } from "@/lib/format";
 import { getRepo } from "@/lib/sync/repo";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
 import HomeScreen from "./HomeScreen";
 import Timeline from "./Timeline";
 import EatSheet from "./EatSheet";
+import DiaperSheet from "./DiaperSheet";
 import TabBar, { type Tab } from "./TabBar";
 import { ComingSoonSheet } from "./ComingSoon";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
@@ -28,6 +29,7 @@ export default function Main({
   const log = useActivityLog(baby.id, me);
   const [tab, setTab] = useState<Tab>("home");
   const [eatOpen, setEatOpen] = useState(false);
+  const [diaperOpen, setDiaperOpen] = useState(false);
   const [comingSoon, setComingSoon] = useState<VerbType | null>(null);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string } | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
@@ -38,9 +40,14 @@ export default function Main({
     if (hit) setConcurrency({ name: hit._mine ? t("timeline.you") : hit.logged_by_name, agoText: ago(hit.started_at) });
   };
 
-  const saveEat = (d: EatDetails) => {
-    log.log("eat", d);
+  const saveEat = (d: EatDetails, startedAt: string) => {
+    log.log("eat", d, startedAt);
     setEatOpen(false);
+  };
+
+  const saveDiaper = (kind: DiaperKind, startedAt: string) => {
+    log.log("diaper", { kind }, startedAt);
+    setDiaperOpen(false);
   };
 
   const requestDelete = (id: string) => {
@@ -69,6 +76,7 @@ export default function Main({
             forceOffline={log.forceOffline}
             onToggleOffline={() => log.setForceOffline(!log.forceOffline)}
             onLogEat={openEat}
+            onLogDiaper={() => setDiaperOpen(true)}
             onComingSoon={(v) => setComingSoon(v)}
           />
         )}
@@ -121,6 +129,8 @@ export default function Main({
 
       {/* Overlays */}
       {eatOpen && <EatSheet onSave={saveEat} onClose={() => setEatOpen(false)} />}
+
+      {diaperOpen && <DiaperSheet onSave={saveDiaper} onClose={() => setDiaperOpen(false)} />}
 
       {comingSoon && <ComingSoonSheet verb={comingSoon} onClose={() => setComingSoon(null)} />}
 

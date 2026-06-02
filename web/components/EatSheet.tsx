@@ -1,15 +1,15 @@
 "use client";
 import { useState } from "react";
 import type { EatDetails } from "@/lib/types";
-import { clockTime } from "@/lib/format";
-import { IcCheck, IcChevL, IcClock, IcEat, IcPlus, IcX } from "@/lib/icons";
+import { IcCheck, IcChevL, IcEat, IcPlus, IcX } from "@/lib/icons";
 import { Button, Expander } from "./ui";
+import WhenCard from "./WhenCard";
 import { t } from "@/i18n";
 
 const SOURCES: NonNullable<EatDetails["source"]>[] = ["breast_l", "breast_r", "bottle", "solid"];
 
-export default function EatSheet({ onSave, onClose }: { onSave: (d: EatDetails) => void; onClose: () => void }) {
-  const startedAt = useState(() => new Date().toISOString())[0];
+export default function EatSheet({ onSave, onClose }: { onSave: (d: EatDetails, startedAt: string) => void; onClose: () => void }) {
+  const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [amount, setAmount] = useState<number | null>(null);
   const [what, setWhat] = useState<EatDetails["what"] | undefined>(undefined);
   const [source, setSource] = useState<EatDetails["source"] | undefined>(undefined);
@@ -21,7 +21,7 @@ export default function EatSheet({ onSave, onClose }: { onSave: (d: EatDetails) 
     if (what) d.what = what;
     if (source) d.source = source;
     if (notes.trim()) d.notes = notes.trim();
-    onSave(d);
+    onSave(d, startedAt);
   };
 
   return (
@@ -40,39 +40,8 @@ export default function EatSheet({ onSave, onClose }: { onSave: (d: EatDetails) 
             </button>
           </div>
 
-          {/* When — defaults to now (editing time is Phase 3) */}
-          <div
-            style={{
-              width: "100%",
-              textAlign: "left",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--r-lg)",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 12,
-            }}
-          >
-            <span className="verb-go" style={{ background: "var(--eat-tint)", color: "var(--eat)" }}>
-              <IcClock size={20} />
-            </span>
-            <span>
-              <span
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: "var(--fg-muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                {t("eat.when.label")}
-              </span>
-              <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{t("eat.when.now", { time: clockTime(startedAt) })}</span>
-            </span>
-          </div>
+          {/* When — defaults to now; แก้ไข reveals a back-dating input (PRD §4) */}
+          <WhenCard verb="eat" startedAt={startedAt} onChange={setStartedAt} />
 
           {/* Optional details — collapsed by default; Save works with none of this */}
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-lg)", padding: "2px 16px 6px" }}>
