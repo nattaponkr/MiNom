@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Activity, SessionUser, VerbType } from "@/lib/types";
 import { getRepo, type ActivityInsert, type ActivityPatch, type Repo } from "./repo";
+import { track } from "@/lib/analytics";
 
 const UNDO_MS = 5000;
 const FRESH_MS = 600;
@@ -81,6 +82,8 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
         if (op.op !== "delete") setActivities((prev) => prev.map((a) => (a.id === opId(op) ? { ...a, _sync: "synced" } : a)));
       } catch {
         remaining.push(op); // still offline / failed — keep queued (preserve order)
+        // A failure while we believe we're online is a real sync problem (not just offline).
+        if (effectiveOnlineRef.current && op.op === "insert") track("sync_failed", { type: op.insert.type });
       }
     }
     writeOutbox(remaining);

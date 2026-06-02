@@ -8,6 +8,7 @@ import { Button } from "./ui";
 import WhenCard from "./WhenCard";
 import PercentileChart from "./PercentileChart";
 import { ConfirmDeleteSheet } from "./Sheets";
+import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 
 function AddMeasurementSheet({ kind, babyName, onSave, onClose }: { kind: GrowthKind; babyName: string; onSave: (value: number, measuredAt: string) => void; onClose: () => void }) {
@@ -90,6 +91,7 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
   const save = async (value: number, measuredAt: string) => {
     const repo = await getRepo();
     await repo.addMeasurement({ id: crypto.randomUUID(), baby_id: baby.id, kind, value, measured_at: measuredAt });
+    track("activity_logged", { type: "grow", seconds_to_log: 0, was_backdated: Date.now() - new Date(measuredAt).getTime() > 70000 });
     setAddOpen(false);
     void reload();
   };
@@ -97,6 +99,7 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
     if (!deleteId) return;
     const repo = await getRepo();
     await repo.deleteMeasurement(deleteId);
+    track("activity_deleted", { type: "grow" });
     setDeleteId(null);
     void reload();
   };

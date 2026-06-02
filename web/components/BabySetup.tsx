@@ -3,6 +3,7 @@ import { useState } from "react";
 import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
 import { IcX } from "@/lib/icons";
+import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -27,6 +28,7 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
     try {
       const repo = await getRepo();
       await repo.createBaby(name, birthdate);
+      track("baby_created", {});
       onDone();
     } catch {
       setError(t("setup.createError"));

@@ -5,6 +5,7 @@ import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
 import { LamoonWordmark } from "./Brand";
 import { IcX } from "@/lib/icons";
+import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 import { isDebug } from "@/lib/debug";
 
@@ -36,6 +37,10 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
     if (res.error) {
       setFormError(res.error);
       return;
+    }
+    if (mode === "up") {
+      track("consent_accepted", {});
+      track("signup_complete", { source: "organic" });
     }
     onDone();
   };

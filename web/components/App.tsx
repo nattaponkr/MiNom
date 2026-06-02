@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { getRepo } from "@/lib/sync/repo";
+import { initAnalytics, identify, resetAnalytics, track } from "@/lib/analytics";
 import type { Baby, Profile, SessionUser } from "@/lib/types";
 import AuthScreen from "./AuthScreen";
 import BabySetup from "./BabySetup";
@@ -25,8 +26,11 @@ export default function App() {
       setProfile(null);
       setBaby(null);
       setStatus("auth");
+      resetAnalytics();
       return;
     }
+    identify(session.id);
+    track("app_opened", {});
     setProfile(await repo.getProfile());
     const babies = await repo.listBabies();
     if (!babies.length) {
@@ -38,6 +42,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    initAnalytics();
     void refresh();
     let unsub = () => {};
     (async () => {

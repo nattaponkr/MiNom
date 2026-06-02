@@ -227,6 +227,8 @@
   "settings.notifHint": "รับแจ้งเมื่อมีการบันทึกจากผู้ดูแลคนอื่น (ปิดเป็นค่าเริ่มต้น)",
   "settings.export": "ส่งออกข้อมูลของฉัน (JSON)",
   "settings.exportDone": "ดาวน์โหลดข้อมูลแล้ว",
+  "settings.feedback": "ส่งฟีดแบ็ค",
+  "settings.feedback.subject": "ฟีดแบ็คจาก ละมุน",
   "settings.deleteAccount": "ลบบัญชีและข้อมูล",
   "settings.deleteConfirm.title": "ลบบัญชีและข้อมูล?",
   "settings.deleteConfirm.body": "ข้อมูลของลูกและบันทึกทั้งหมดจะถูกลบหลังพ้นช่วงผ่อนผัน 30 วัน การกระทำนี้ย้อนกลับไม่ได้",

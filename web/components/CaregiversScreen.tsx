@@ -5,6 +5,7 @@ import { getRepo } from "@/lib/sync/repo";
 import { Avatar, Button } from "./ui";
 import { ConfirmSheet } from "./Sheets";
 import { IcMail, IcPlus, IcX } from "@/lib/icons";
+import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,6 +42,7 @@ export default function CaregiversScreen({ me, baby, onChanged }: { me: SessionU
       setError(t(res.error));
       return;
     }
+    track("caregiver_invited", { channel: "email-existing" });
     setEmail("");
     void reload();
   };

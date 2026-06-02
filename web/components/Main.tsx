@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
-import type { Activity, Baby, DiaperKind, EatDetails, Profile, SessionUser } from "@/lib/types";
+import { useRef, useState } from "react";
+import type { Activity, Baby, DiaperKind, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
 import { ago, clockTime } from "@/lib/format";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
+import { track } from "@/lib/analytics";
 import HomeScreen from "./HomeScreen";
 import Timeline from "./Timeline";
 import EatSheet from "./EatSheet";
@@ -36,19 +37,33 @@ export default function Main({
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string } | null>(null);
   const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
+  const openedAt = useRef(0); // sheet open time → seconds_to_log
+
+  // seconds open→save; was_backdated if the chosen time is well before now.
+  const logMetrics = (startedAt: string) => ({
+    seconds_to_log: Math.max(0, Math.round((Date.now() - openedAt.current) / 1000)),
+    was_backdated: Date.now() - new Date(startedAt).getTime() > 70000,
+  });
 
   const openEat = async () => {
+    openedAt.current = Date.now();
     setEatOpen(true);
     const hit = await log.checkConcurrent("eat");
     if (hit) setConcurrency({ name: hit._mine ? t("timeline.you") : hit.logged_by_name, agoText: ago(hit.started_at) });
   };
 
   const saveEat = (d: EatDetails, startedAt: string) => {
+    track("activity_logged", { type: "eat", ...logMetrics(startedAt) });
     log.log("eat", d, startedAt);
     setEatOpen(false);
   };
 
+  const openDiaper = () => {
+    openedAt.current = Date.now();
+    setDiaperOpen(true);
+  };
   const saveDiaper = (kind: DiaperKind, startedAt: string) => {
+    track("activity_logged", { type: "diaper", ...logMetrics(startedAt) });
     log.log("diaper", { kind }, startedAt);
     setDiaperOpen(false);
   };
@@ -56,6 +71,7 @@ export default function Main({
   // Sleep: if a timer is already running locally, just open it. Otherwise check
   // for a near-simultaneous start by another caregiver (concurrency, option A).
   const openSleep = async () => {
+    openedAt.current = Date.now();
     if (log.runningSleep) {
       setSleepSeed(null);
       setSleepOpen(true);
@@ -101,7 +117,7 @@ export default function Main({
             onToggleOffline={() => log.setForceOffline(!log.forceOffline)}
             onLogEat={openEat}
             onLogSleep={openSleep}
-            onLogDiaper={() => setDiaperOpen(true)}
+            onLogDiaper={openDiaper}
             runningSleep={log.runningSleep}
           />
         )}
@@ -128,8 +144,13 @@ export default function Main({
         <SleepSheet
           running={log.runningSleep ?? sleepSeed}
           lastWokeAt={lastWokeAt}
-          onStart={(startedAt) => log.startSleep(startedAt)}
+          onStart={(startedAt) => {
+            track("activity_logged", { type: "sleep", ...logMetrics(startedAt) });
+            log.startSleep(startedAt);
+          }}
           onStop={(id) => {
+            const a = log.activities.find((x) => x.id === id) ?? sleepSeed;
+            track("activity_edited", { type: "sleep", hours_after_create: a ? Math.round((Date.now() - new Date(a.started_at).getTime()) / 3600000) : 0 });
             log.stopSleep(id);
             closeSleep();
           }}
@@ -175,6 +196,8 @@ export default function Main({
           timeText={deleteId.timeText}
           babyName={baby.name}
           onConfirm={() => {
+            const a = log.activities.find((x) => x.id === deleteId.id);
+            track("activity_deleted", { type: (a?.type as VerbType) ?? "eat" });
             void log.remove(deleteId.id);
             setDeleteId(null);
           }}

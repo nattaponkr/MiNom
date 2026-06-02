@@ -6,6 +6,7 @@ import { getRepo } from "@/lib/sync/repo";
 import { Avatar, Button } from "./ui";
 import { ConfirmSheet } from "./Sheets";
 import { IcCheck } from "@/lib/icons";
+import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 
 export default function SettingsScreen({
@@ -67,6 +68,13 @@ export default function SettingsScreen({
     URL.revokeObjectURL(url);
     setExported(true);
     setTimeout(() => setExported(false), 2500);
+  };
+
+  const sendFeedback = () => {
+    const subject = encodeURIComponent(t("settings.feedback.subject"));
+    const body = encodeURIComponent(`\n\n———\n(ข้อมูลช่วยทีม: user ${me.id} · route ${typeof location !== "undefined" ? location.pathname : "/"})`);
+    track("feedback_sent", { length: 0 }); // content not captured (privacy)
+    window.location.href = `mailto:support@lamoon.app?subject=${subject}&body=${body}`;
   };
 
   const signOut = async () => {
@@ -162,11 +170,16 @@ export default function SettingsScreen({
             <span className="lr-t">{exported ? <><IcCheck size={14} /> {t("settings.exportDone")}</> : t("settings.export")}</span>
           </span>
         </button>
-        <Link href="/privacy" className="list-row" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/privacy" className="list-row" style={{ textDecoration: "none", color: "inherit", borderBottom: "1px solid var(--border)" }}>
           <span className="lr-main">
             <span className="lr-t">{t("privacy.title")}</span>
           </span>
         </Link>
+        <button className="list-row" onClick={sendFeedback} type="button" style={{ width: "100%", textAlign: "left", background: "none", border: "none" }}>
+          <span className="lr-main">
+            <span className="lr-t">{t("settings.feedback")}</span>
+          </span>
+        </button>
       </div>
 
       <div style={{ height: 18 }} />
