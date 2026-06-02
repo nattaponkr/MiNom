@@ -10,6 +10,7 @@ import DiaperSheet from "./DiaperSheet";
 import SleepSheet from "./SleepSheet";
 import GrowthScreen from "./GrowthScreen";
 import SettingsScreen from "./SettingsScreen";
+import CaregiversScreen from "./CaregiversScreen";
 import TabBar, { type Tab } from "./TabBar";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
@@ -59,7 +60,11 @@ export default function Main({
 
   return (
     <div className="app">
-      {!log.online && <div className="offline-banner">{t("sync.offline.banner")}</div>}
+      {!log.online && (
+        <div className="offline-banner" role="status" aria-live="polite">
+          {t("sync.offline.banner")}
+        </div>
+      )}
 
       <main className="app-main">
         {tab === "home" && (
@@ -82,16 +87,7 @@ export default function Main({
 
         {tab === "grow" && <GrowthScreen baby={baby} />}
 
-        {tab === "care" && (
-          <div className="screen-body">
-            <div className="appbar">
-              <span className="ttl">{t("tab.care")}</span>
-            </div>
-            <div className="note" style={{ marginTop: 12 }} lang="th">
-              {t("phase3.soon")}
-            </div>
-          </div>
-        )}
+        {tab === "care" && <CaregiversScreen me={me} baby={baby} onChanged={onSignOut} />}
 
         {tab === "settings" && (
           <SettingsScreen me={me} profile={profile} baby={baby} onSignedOut={onSignOut} onProfileChanged={onSignOut} />
