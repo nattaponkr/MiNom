@@ -48,9 +48,14 @@ the Home header to exercise the offline outbox without DevTools.
 3. **Auth settings** → Authentication → Providers → Email: enable. For the skeleton you can turn **off** "Confirm email" so sign-up logs in immediately.
 4. **Env**: copy `.env.example` to `.env.local` and fill in:
    ```
-   NEXT_PUBLIC_SUPABASE_URL=...        # Project Settings → API
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=...   # Project Settings → API (anon public)
+   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co   # BASE HOST ONLY — not the
+                                                        # /rest/v1 endpoint (that → "Invalid path")
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=...                    # Settings → API Keys → Publishable
+                                                        # key (sb_publishable_…), or Legacy anon
    ```
+   On Railway these are build-time vars — changing them requires a **fresh rebuild**, not just a restart.
+   Email confirmations are ON by default: either turn them off, or pre-confirm test users in
+   Authentication → Users (Add user → Auto Confirm), to let sign-up log in immediately.
 5. `npm run dev` — now using real Supabase. Sign up on two **devices**, share the baby (Phase 3 adds the invite UI; for now both can sign in to the same account), and confirm Eat entries cross within 5s.
 
 ### Deploy to Railway (current staging: https://minom-production.up.railway.app)

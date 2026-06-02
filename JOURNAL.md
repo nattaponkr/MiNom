@@ -18,6 +18,40 @@
 
 ---
 
+## 2026-06-02 — Dev — 2.8 VERIFIED on live Supabase → Phase 3 COMPLETE → Handoff → PM
+
+**The last gate is closed.** Real Supabase backend is provisioned (CPO) and the literal two-device + RLS exit criteria now pass against it. **Phase 3 is done and live-verified.**
+
+**Provisioning (CPO did this; recorded for the team)**
+- Supabase project live, region **Singapore (ap-southeast-1)**; migrations `0001`–`0003` run; `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (new `sb_publishable_` key, works with our supabase-js 2.106) set in Railway. App is on the real backend at https://minom-production.up.railway.app
+
+**Live verification — 8/8 (automated headless against production)**
+- ✅ Real auth (sign-in) on the real backend.
+- ✅ Real storage: baby + Eat persisted in Postgres; a fresh 2nd session sees them.
+- ✅ **REALTIME: an Eat on device A appeared on device A2 in ~0.6s** (criterion: <5s).
+- ✅ **RLS isolation**: account 2 cannot see account 1's baby (lands on setup, sees only its own); account 1 stays isolated from account 2. Data isolation enforced by the RLS policies in 0001.
+
+This closes **Phase 2 exit criterion #4** (the long-standing carry-over) and the real-backend halves of **Phase 3 #4/#5**.
+
+**Deploy gotchas hit + fixed (for the record)**
+- Railway: app subdir → Root Directory `/web`; HIGH-CVE gate → Next 14→15; PORT 8080 → domain target 8080.
+- Supabase: `NEXT_PUBLIC_SUPABASE_URL` must be the **base host** (`https://<ref>.supabase.co`) — a copied `/rest/v1/` endpoint caused "Invalid path"; `NEXT_PUBLIC_*` only bakes in on a **fresh build**.
+- Email confirmations are **ON** in this project; for the 2.8 test we used **pre-confirmed accounts** (dashboard-created, auto-confirm) and signed in. (Supabase rejects `@test.com` as an invalid email domain — used `@gmail.com`.)
+
+**Small follow-ups (non-blocking; PM to schedule — none gate Phase 3)**
+- **Self-serve signup for beta**: either turn email confirmations OFF (toggle relocated in this Supabase version — find together) or wire an email sender. Today's flow needs users pre-confirmed or confirmations off. PRD already says "enable confirmation before *public* launch", so off-for-beta is consistent.
+- **New-user email invites** (Caregivers) → invite-token + email (Phase 3.x); existing-user invites work now.
+- **Account hard-delete** → Supabase edge function (auth admin); UI + 30-day-grace messaging in place.
+- **Privacy policy full legal text** (PM); **WHO LMS reference data** for exact growth curves (data task).
+
+**Handoff → PM (Claude)**
+- **Phase 3 is complete and verified live** — every dev ticket from `HANDOFF_dev_02.md` done in Thai on the real backend; the full new-parent loop works on staging (signup/sign-in → baby → log all three verbs incl. back-dated → growth → caregivers → timeline history → settings → PDPA), with cross-device realtime <5s and RLS isolation proven.
+- **Recommend PM open Phase 4 (Beta & Launch)** per PLAN §3: recruit 10–20 households, instrument the success metrics, decide the email-confirmation-vs-sender call for self-serve signup, and line up the Phase-3.x follow-ups above.
+- Please route the Thai-copy review (Dev-added keys) + the `concurrency.sleep` copy question to Designer, and own the privacy-policy text.
+- CPO: please route to PM. Dev baton is free.
+
+---
+
 ## 2026-06-02 — Dev — Phase 3 feature-complete (demo-verified); only live Supabase verification remains → Handoff → PM
 
 **Summary:** Every Phase-3 dev ticket that doesn't require the live backend is **built, in Thai, on the proven architecture, and verified**. The one item I can't self-serve — **#2.8 the literal two-device + RLS test on a real Supabase** — is built in code (incl. migrations) but **gated on CPO provisioning**. All on `main`; Railway live (demo mode): https://minom-production.up.railway.app
