@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
 import { colorFromSeed } from "@/components/ui";
-import type { Activity, ActivityRow, Baby, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 const SELECT_WITH_LOGGER = "*, logged_by:logged_by_user_id (display_name, avatar_color)";
@@ -165,6 +165,54 @@ export class SupabaseRepo implements Repo {
     const p = { display_name: data?.display_name ?? "Caregiver", avatar_color: data?.avatar_color ?? null };
     this.profileCache.set(userId, p);
     return p;
+  }
+
+  async listMeasurements(babyId: string): Promise<Measurement[]> {
+    await this.getSession();
+    const { data, error } = await this.sb.from("measurements").select("*").eq("baby_id", babyId).order("measured_at", { ascending: false });
+    if (error) throw error;
+    return (data as Measurement[]) ?? [];
+  }
+  async addMeasurement(m: { id: string; baby_id: string; kind: GrowthKind; value: number; measured_at: string }): Promise<Measurement> {
+    const session = await this.getSession();
+    if (!session) throw new Error("Not authenticated");
+    const { data, error } = await this.sb.from("measurements").insert({ ...m, logged_by_user_id: session.id }).select("*").single();
+    if (error) throw error;
+    return data as Measurement;
+  }
+  async deleteMeasurement(id: string): Promise<void> {
+    const { error } = await this.sb.from("measurements").delete().eq("id", id);
+    if (error) throw error;
+  }
+
+  async listCaregivers(babyId: string): Promise<Caregiver[]> {
+    const { data, error } = await this.sb
+      .from("baby_caregivers")
+      .select("user_id, role, joined_at, users:user_id (display_name, avatar_color, email)")
+      .eq("baby_id", babyId);
+    if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data as any[]) ?? []).map((r) => ({
+      user_id: r.user_id,
+      role: r.role,
+      joined_at: r.joined_at,
+      display_name: r.users?.display_name ?? "Caregiver",
+      avatar_color: r.users?.avatar_color ?? null,
+      email: r.users?.email ?? null,
+    }));
+  }
+  async addCaregiverByEmail(babyId: string, email: string): Promise<{ error: string | null }> {
+    const { data, error } = await this.sb.rpc("add_caregiver_by_email", { p_baby: babyId, p_email: email.trim().toLowerCase() });
+    if (error) return { error: error.message };
+    return { error: (data as string | null) ?? null }; // RPC returns null on success or a message key
+  }
+  async removeCaregiver(babyId: string, userId: string): Promise<void> {
+    const { error } = await this.sb.rpc("remove_caregiver", { p_baby: babyId, p_user: userId });
+    if (error) throw error;
+  }
+  async transferOwnership(babyId: string, userId: string): Promise<void> {
+    const { error } = await this.sb.rpc("transfer_ownership", { p_baby: babyId, p_user: userId });
+    if (error) throw error;
   }
 
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void {

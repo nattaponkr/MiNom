@@ -55,3 +55,25 @@ export type Activity = ActivityRow & {
 };
 
 export type SessionUser = { id: string; email: string };
+
+export type GrowthKind = "weight" | "height";
+export type Measurement = {
+  id: string;
+  baby_id: string;
+  kind: GrowthKind;
+  value: number;
+  measured_at: string;
+  logged_by_user_id: string;
+  created_at: string;
+};
+
+// A caregiver of a baby (roster row joined with profile).
+export type CaregiverRole = "owner" | "caregiver";
+export type Caregiver = {
+  user_id: string;
+  role: CaregiverRole;
+  joined_at: string;
+  display_name: string;
+  avatar_color: string | null;
+  email: string | null; // visible to owner only in practice
+};

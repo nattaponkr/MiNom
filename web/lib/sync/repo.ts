@@ -3,7 +3,7 @@
 //   - demoRepo:     localStorage + BroadcastChannel (zero-backend UX demo).
 // The factory picks one based on whether Supabase env vars are present, so the
 // entire UI/sync layer above this line is identical in both modes.
-import type { Activity, ActivityRow, Baby, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, EatDetails, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import { SUPABASE_CONFIGURED } from "@/lib/supabase/client";
 
 export type ActivityInsert = {
@@ -53,6 +53,17 @@ export interface Repo {
   // returns the most recent in-progress/just-started activity of a type within
   // `withinSec` seconds, by another caregiver — drives the concurrency prompt.
   recentByOther(babyId: string, type: VerbType, withinSec: number): Promise<Activity | null>;
+
+  // growth
+  listMeasurements(babyId: string): Promise<Measurement[]>;
+  addMeasurement(m: { id: string; baby_id: string; kind: GrowthKind; value: number; measured_at: string }): Promise<Measurement>;
+  deleteMeasurement(id: string): Promise<void>;
+
+  // caregivers (PRD §5a)
+  listCaregivers(babyId: string): Promise<Caregiver[]>;
+  addCaregiverByEmail(babyId: string, email: string): Promise<{ error: string | null }>;
+  removeCaregiver(babyId: string, userId: string): Promise<void>;
+  transferOwnership(babyId: string, userId: string): Promise<void>;
 
   // realtime
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void;

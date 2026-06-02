@@ -8,7 +8,7 @@ import { clockTime, dateTime, fromLocalInput, isNowish, toLocalInput } from "@/l
 import { IcClock } from "@/lib/icons";
 import { t } from "@/i18n";
 
-export default function WhenCard({ verb, startedAt, onChange }: { verb: VerbType; startedAt: string; onChange: (iso: string) => void }) {
+export default function WhenCard({ verb, startedAt, onChange }: { verb: VerbType | "grow"; startedAt: string; onChange: (iso: string) => void }) {
   const [editing, setEditing] = useState(false);
   const nowMax = toLocalInput(new Date().toISOString());
   const display = isNowish(startedAt) ? t("eat.when.now", { time: clockTime(startedAt) }) : dateTime(startedAt);

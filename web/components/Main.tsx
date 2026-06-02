@@ -9,6 +9,7 @@ import Timeline from "./Timeline";
 import EatSheet from "./EatSheet";
 import DiaperSheet from "./DiaperSheet";
 import SleepSheet from "./SleepSheet";
+import GrowthScreen from "./GrowthScreen";
 import TabBar, { type Tab } from "./TabBar";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
@@ -86,10 +87,12 @@ export default function Main({
 
         {tab === "timeline" && <Timeline babyId={baby.id} activities={log.activities} loading={log.loading} onDelete={requestDelete} />}
 
-        {(tab === "grow" || tab === "care") && (
+        {tab === "grow" && <GrowthScreen baby={baby} />}
+
+        {tab === "care" && (
           <div className="screen-body">
             <div className="appbar">
-              <span className="ttl">{tab === "grow" ? t("tab.grow") : t("tab.care")}</span>
+              <span className="ttl">{t("tab.care")}</span>
             </div>
             <div className="note" style={{ marginTop: 12 }} lang="th">
               {t("phase3.soon")}

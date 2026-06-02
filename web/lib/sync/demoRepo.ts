@@ -5,7 +5,7 @@
 // architecture proof; this exists so `npm run dev` works with no setup.
 import { colorFromSeed } from "@/components/ui";
 import { t } from "@/i18n";
-import type { Activity, ActivityRow, Baby, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 type DemoUser = { id: string; email: string; password: string; display_name: string; avatar_color: string };
@@ -18,6 +18,7 @@ const K = {
   babies: "minom_demo_babies",
   links: "minom_demo_links",
   activity: "minom_demo_activity",
+  measurements: "minom_demo_measurements",
 };
 
 function read<T>(key: string, fallback: T): T {
@@ -200,6 +201,69 @@ export class DemoRepo implements Repo {
       (a) => a.baby_id === babyId && a.type === type && a.started_at >= since && a.logged_by_user_id !== mine,
     );
     return hit ? this.map(hit) : null;
+  }
+
+  // ---- growth ----
+  async listMeasurements(babyId: string): Promise<Measurement[]> {
+    return read<Measurement[]>(K.measurements, [])
+      .filter((m) => m.baby_id === babyId)
+      .sort((x, y) => (x.measured_at < y.measured_at ? 1 : -1));
+  }
+  async addMeasurement(m: { id: string; baby_id: string; kind: GrowthKind; value: number; measured_at: string }): Promise<Measurement> {
+    const id = this.myId();
+    if (!id) throw new Error("Not authenticated");
+    const row: Measurement = { ...m, logged_by_user_id: id, created_at: new Date().toISOString() };
+    write(K.measurements, [row, ...read<Measurement[]>(K.measurements, [])]);
+    return row;
+  }
+  async deleteMeasurement(id: string): Promise<void> {
+    write(K.measurements, read<Measurement[]>(K.measurements, []).filter((m) => m.id !== id));
+  }
+
+  // ---- caregivers ----
+  async listCaregivers(babyId: string): Promise<Caregiver[]> {
+    return this.links()
+      .filter((l) => l.baby_id === babyId)
+      .map((l) => {
+        const u = this.userById(l.user_id);
+        return {
+          user_id: l.user_id,
+          role: l.role as Caregiver["role"],
+          joined_at: (l as Link & { joined_at?: string }).joined_at ?? new Date().toISOString(),
+          display_name: u?.display_name ?? "Caregiver",
+          avatar_color: u?.avatar_color ?? null,
+          email: u?.email ?? null,
+        };
+      })
+      .sort((a, b) => (a.role === "owner" ? -1 : b.role === "owner" ? 1 : 0));
+  }
+  // Returns an i18n key on failure (UI t()'s it), or null on success.
+  async addCaregiverByEmail(babyId: string, email: string): Promise<{ error: string | null }> {
+    const me = this.myId();
+    if (!me) return { error: "care.error.generic" };
+    const links = this.links();
+    if (links.filter((l) => l.baby_id === babyId).length >= 10) return { error: "care.error.full" };
+    const target = this.users().find((u) => u.email === email.trim().toLowerCase());
+    // In demo there is no email delivery: only existing demo users can be linked.
+    if (!target) return { error: "care.error.noUser" };
+    if (links.some((l) => l.baby_id === babyId && l.user_id === target.id)) return { error: "care.error.already" };
+    write(K.links, [...links, { baby_id: babyId, user_id: target.id, role: "caregiver" }]);
+    return { error: null };
+  }
+  async removeCaregiver(babyId: string, userId: string): Promise<void> {
+    write(K.links, this.links().filter((l) => !(l.baby_id === babyId && l.user_id === userId)));
+  }
+  async transferOwnership(babyId: string, userId: string): Promise<void> {
+    const me = this.myId();
+    const links = this.links().map((l) => {
+      if (l.baby_id !== babyId) return l;
+      if (l.user_id === userId) return { ...l, role: "owner" };
+      if (l.user_id === me) return { ...l, role: "caregiver" };
+      return l;
+    });
+    write(K.links, links);
+    const babies = read<Baby[]>(K.babies, []).map((b) => (b.id === babyId ? { ...b, owner_id: userId } : b));
+    write(K.babies, babies);
   }
 
   // ---- cross-tab "realtime" via BroadcastChannel ----

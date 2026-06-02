@@ -59,14 +59,16 @@ export function ConfirmDeleteSheet({
   babyName,
   onConfirm,
   onCancel,
+  generic,
 }: {
   timeText: string;
   babyName: string;
   onConfirm: () => void;
   onCancel: () => void;
+  generic?: boolean;
 }) {
   return (
-    <BottomSheet title={t("delete.title")} body={t("delete.body", { time: timeText, baby: babyName })} onDismiss={onCancel}>
+    <BottomSheet title={t("delete.title")} body={generic ? t("common.deleteIrreversible") : t("delete.body", { time: timeText, baby: babyName })} onDismiss={onCancel}>
       <Button kind="danger" block icon={<IcTrash size={18} />} onClick={onConfirm}>
         {t("delete.confirm")}
       </Button>
