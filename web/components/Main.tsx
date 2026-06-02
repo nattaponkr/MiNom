@@ -84,7 +84,7 @@ export default function Main({
           />
         )}
 
-        {tab === "timeline" && <Timeline activities={log.activities} loading={log.loading} onDelete={requestDelete} />}
+        {tab === "timeline" && <Timeline babyId={baby.id} activities={log.activities} loading={log.loading} onDelete={requestDelete} />}
 
         {(tab === "grow" || tab === "care") && (
           <div className="screen-body">

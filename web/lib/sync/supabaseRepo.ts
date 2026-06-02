@@ -94,6 +94,20 @@ export class SupabaseRepo implements Repo {
     return ((data as any[]) ?? []).map((r) => this.map(r));
   }
 
+  async listRange(babyId: string, fromISO: string, toISO: string): Promise<Activity[]> {
+    await this.getSession();
+    const { data, error } = await this.sb
+      .from("activity")
+      .select(SELECT_WITH_LOGGER)
+      .eq("baby_id", babyId)
+      .gte("started_at", fromISO)
+      .lt("started_at", toISO)
+      .order("started_at", { ascending: false });
+    if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data as any[]) ?? []).map((r) => this.map(r));
+  }
+
   async insertActivity(a: ActivityInsert): Promise<Activity> {
     const session = await this.getSession();
     if (!session) throw new Error("Not authenticated");

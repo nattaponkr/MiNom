@@ -149,6 +149,13 @@ export class DemoRepo implements Repo {
       .map((a) => this.map(a));
   }
 
+  async listRange(babyId: string, fromISO: string, toISO: string): Promise<Activity[]> {
+    return this.acts()
+      .filter((a) => a.baby_id === babyId && a.started_at >= fromISO && a.started_at < toISO)
+      .sort((x, y) => (x.started_at < y.started_at ? 1 : -1))
+      .map((a) => this.map(a));
+  }
+
   async insertActivity(a: ActivityInsert): Promise<Activity> {
     const id = this.myId();
     if (!id) throw new Error("Not authenticated");

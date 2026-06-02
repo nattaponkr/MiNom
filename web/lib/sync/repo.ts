@@ -46,6 +46,7 @@ export interface Repo {
 
   // activity
   listToday(babyId: string): Promise<Activity[]>;
+  listRange(babyId: string, fromISO: string, toISO: string): Promise<Activity[]>; // past-day history (read-only)
   insertActivity(a: ActivityInsert): Promise<Activity>; // rejects when offline
   updateActivity(id: string, patch: ActivityPatch): Promise<Activity>; // e.g. stop a sleep timer
   deleteActivity(id: string): Promise<void>;

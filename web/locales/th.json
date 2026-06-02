@@ -110,6 +110,8 @@
 
   "timeline.title": "ไทม์ไลน์",
   "timeline.today": "วันนี้",
+  "timeline.yesterday": "เมื่อวาน",
+  "timeline.empty.day": "วันนี้ยังไม่มีบันทึก",
   "timeline.you": "คุณ",
   "timeline.empty.title": "วันนี้ยังไม่มีบันทึก",
   "timeline.empty.body": "กิจกรรมที่คุณและคนอื่นๆ บันทึก จะแสดงที่นี่ เรียงจากล่าสุด",
