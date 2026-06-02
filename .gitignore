@@ -7,6 +7,8 @@ web/.next/
 web/out/
 web/build/
 web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+*.tsbuildinfo
 
 # env / secrets — never commit
 .env

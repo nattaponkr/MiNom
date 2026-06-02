@@ -1,4 +1,6 @@
-# MiNom — Project Journal
+# ละมุน (Lamoon) — Project Journal
+
+> **App name:** ละมุน (Lamoon, *lah-MOON*) — chosen 2026-06-01. Project/folder/repo name MiNom unchanged internally.
 
 > **Single source of truth.** All decisions, completions, and handoff notes live here.
 > Newest entries on top. Format: `## YYYY-MM-DD — [Role] — Topic`.
@@ -13,6 +15,205 @@
 - Single work stream at a time.
 - Every handoff ends with a `Handoff →` line naming the next owner and what they need.
 - Decisions are logged with rationale so context survives the handoff.
+
+---
+
+## 2026-06-02 — Dev — Part 1 complete: i18n wiring + rebrand to ละมุน (checkpoint; Dev continues to Phase 3)
+
+**Status:** Handoff #02 has two parts. **Part 1 (i18n + rebrand) is done, verified, and pushed.** I still hold the Dev baton and continue to **Part 2 (Phase 3 features)** next — this is a progress checkpoint for PM/CPO visibility, not a baton return.
+
+**What shipped (Part 1)**
+- **Thai everywhere.** Every UI string + screen-reader label now resolves through `t()` against `web/locales/th.json`. `<html lang="th">`. No English leaks (verified). The dev-facing demo/skeleton notes and the manual offline toggle are gated behind a debug flag so the product UX is clean Thai.
+- **Typography.** Anuphan + Spline Sans Mono via **next/font** (subset + preload for the §11.6 first-paint budget; replaces the old render-blocking Latin `@import`). `thai.css` `[lang="th"]` line-heights 1.45 body / 1.35 titles, letter-spacing/caps neutralized. Spline mono kept for Latin numerals only.
+- **Formatting.** All dates/times/numbers via `Intl.*('th-TH')` — 24-hour, Arabic numerals. Baby age, weekday, clock, amounts all localized.
+- **Rebrand (user-facing only).** `LamoonWordmark` + `LamoonIcon` (Anuphan, clay dot) on auth + loading; `brand.css`; `<title>`/meta/OG → **ละมุน** + tagline "ดูแลลูกอย่างละมุนละไม". **Internal MiNom unchanged** (repo, folder, package, Railway service, env).
+
+**Decisions I own (logged, not silent)**
+1. **i18n: minimal flat-key `t()` instead of next-intl.** The Designer's `th.json` uses flat dotted keys with intentional collisions (`auth.toSignUp` is a string AND `auth.toSignUp.cta` exists) — next-intl's nested-namespace model can't represent both. For a single locale, a tiny resolver over the flat dict is the correct "equivalent" the brief allows, and matches the th.json shape exactly. When EN lands, swap for a locale-selecting provider (en.json stub already in place). **PM: flag if you'd rather I force next-intl (would require restructuring th.json keys).**
+2. **Clarification #5 implemented as specced:** manual offline toggle → dev/QA-only behind `?debug=1`; production shows only the automatic read-only offline banner.
+
+**Keys I added to th.json (please have Designer review the Thai — I wrote these to avoid English leaks, not as final copy):**
+`age.days/weeks/months/years`, `settings.signOut`, `settings.baby`, `phase3.soon`, `setup.createError`, `auth.error.exists`, `auth.error.badCredentials`, `a11y.themeToggle`, `a11y.primaryNav`, `a11y.deleteEntry`. No keys from the Designer's set were missing for the existing screens — these cover surfaces the Designer's table didn't include (errors, a11y labels, settings stub, age strings).
+
+**Verification (Part 1)**
+- `tsc` + production build green on Next 15.5.18.
+- **13/13 headless-Chrome QA in Thai**: signup→setup→Home→Eat→Timeline; optimistic + undo; offline → **รอซิงค์** → reconnect → flush; cross-tab realtime arrival; attribution (**คุณ**); `lang=th`; age via Intl.
+- Screenshots checked vs the Thai hi-fi + brand: Anuphan renders cleanly (no tofu) in light + dark; wordmark matches `brand.jsx`.
+- Pushed to `main`; Railway auto-redeploys https://minom-production.up.railway.app (still demo-mode).
+
+**Part 2 — Phase 3 plan + sequence (Dev continues)**
+1. **Back-dating affordance** on Eat (the new shared pattern) → then **Sleep** + **Diaper** quick-logs (copy the Eat vertical: sync/offline/optimistic/undo/concurrency/attribution).
+2. **Timeline** swipe-left to past days.
+3. **Growth** (weight + height, WHO percentile curves, history edit/delete).
+4. **Settings** (export JSON, delete account w/ PDPA grace, notif opt-in toggles, display name/avatar).
+5. **PDPA** signup consent (4 lines from `consent.*`) + privacy policy page (PM drafts full text).
+6. **Accessibility pass** (SR labels, aria-live on toasts, reduced-motion, 48px, AA both themes).
+7. **Caregivers** (invite/roles/transfer) — **needs real Supabase** for true multi-user; build UI on demo, verify on live.
+8. **Supabase live + two-device + RLS** — gated on CPO provisioning (carry-over).
+
+**Dependencies/risks**
+- **Supabase provisioning** (CPO) is still the long-pole — blocks the literal two-device/RLS close-out and full Caregivers verification. I'll build everything else against demo mode and flip to live when env vars land.
+
+**Status → Dev continues to Part 2.** Will write `## — Dev — Phase 3 complete` with the full verification log + `Handoff → PM` when the whole surface is done. CPO/PM: the live URL now shows the rebranded Thai app for review; flag the i18n-library decision (#1) and route the added-key list to Designer if you want the Thai polished.
+
+---
+
+## 2026-06-01 — PM — Phase 2.5 accepted; routing to Dev for i18n + Phase 3
+
+**What happened**
+- Reviewed the Designer's Rebrand + Localization deliverable. Read `th.json` (microcopy keyed to existing string IDs, intent-driven Thai, kid-words ฉี่/อึ, ให้นม, ครอบครัว) and `brand.jsx` (wordmark, icon, voice filter with on-brand/off-brand examples). Hi-fi screens checked at 360px light+dark. PDPA 4-line signup consent in place.
+- **Phase 2.5 accepted.** Designer's work is high-craft: brand thesis (the name names the feeling, so it's a design filter), typography (Anuphan with one personality for logo + UI), microcopy from intent not translation, and concrete voice examples that future copy can be tested against.
+
+**Pending decisions — both confirmed**
+1. **Tagline: "ดูแลลูกอย่างละมุนละไม"** → ✅ **Locked.** Echoes the brand word's compound form; the line reinforces the name. Warm, declarative, not advertising-loud. The two alts stay on file in `design/brand.jsx` for splash/store-listing length needs.
+2. **Clarification #4 — back-dating Eat via `แก้ไข`** → ✅ **Approved as a scope addition.** Reasoning: parents log retrospectively all the time ("she ate 20 min ago, just now writing it down"); without back-dating, the timeline drifts from reality. Adds a tiny edit affordance to the quick-log; the 2-tap path is preserved when "now" is correct. Matters most for Diaper (often logged minutes-hours after the fact). Pattern carries to Sleep and Diaper in Phase 3.
+
+**Files promoted**
+- `lamoon_drop/design/*` → `MiNom/design/` (Phase-1 EN reference kept intact; Thai files alongside).
+- `lamoon_drop/web/locales/th.json` → `web/locales/th.json` (Dev drop-in).
+- `lamoon_drop/` to be removed; the Designer's journal entry below is now folded into the canonical `JOURNAL.md`.
+
+**PRD updates**
+- `PRD_v0.3.md` §0 — locked tagline + positioning + brand voice rule.
+- `PRD_v0.3.md` §4 — added back-dating (the new pattern).
+
+**Handoff → Dev (Claude Code)**
+- Brief: `HANDOFF_dev_02.md`. Two work batons bundled:
+  - **Part 1 — i18n wiring + rebrand swap.** Wire next-intl with `web/locales/th.json`; set `<html lang="th">`; load Anuphan (subset + preload); `Intl.*('th-TH')` for dates/numbers; swap user-facing brand to ละมุน via `design/brand.jsx`. Internal MiNom unchanged.
+  - **Part 2 — Phase 3 (Complete MVP).** Copy Eat vertical to Sleep + Diaper (with back-dating); build Growth (WHO weight+height), Caregivers (per §5a), Timeline (swipe-left for past days), Settings, PDPA signup consent (lines in `th.json` already), accessibility pass.
+- Read order: `PRD_v0.3.md` → this `JOURNAL.md` (the Designer entry below) → `HANDOFF_dev_02.md` → design deliverables.
+- Exit criteria spelled out in the brief. North-star QA loop: a CPO can complete the full new-parent loop on staging in Thai.
+
+**Carry-over: Supabase provisioning**
+- Still the long-pole risk for closing Phase 2's literal exit criteria (two-device + RLS). CPO action; Dev can proceed in parallel using demo mode and flip to live the moment env vars land.
+
+CPO: please route `HANDOFF_dev_02.md` to Claude Code. Q1 (monetization) remains the only open PRD question; doesn't block.
+
+---
+
+## 2026-06-01 — Designer — Rebrand + Localization rework complete
+
+**What happened**
+- Delivered the **rebrand to ละมุน (Lamoon)**, the Thai-first rework, and answers to Dev's five Phase-2 clarifications — in one pass. Built as a **companion deliverable** so the Phase-1 English system stays intact as the reference; only the name, typography and words change (per the brief's "don't redo what works").
+
+**Part 0 — Brand identity (ละมุน / Lamoon)**
+- **Wordmark:** ละมุน set in **Anuphan Medium (500)** with the warm-clay dot carried over from v0.2 — logo and UI share one type personality. Shown large→small, light + dark.
+- **App icon:** ล monogram (first letter) in cream on warm clay, validated 1024→48px. Placeholder for staging; final at Phase-4 beta.
+- **Tagline (picked):** **"ดูแลลูกอย่างละมุนละไม"** — *care for your baby, exquisitely gently* — echoes the ละมุนละไม compound so the line reinforces the name. Two alts documented.
+- **Brand voice filter:** one rule — *warm, plain Thai that leaves a ละมุน feeling* — with concrete on-brand vs off-brand Thai examples for every future copy decision.
+- **Rebrand propagated** to wordmark, hero, signup, footer, and `brand.*` strings. Per PRD §0, **internal code/folder/repo stay "MiNom"** — only user-facing surfaces changed.
+
+**Part A — Thai-first rework + deliverables (file paths — in `design/`)**
+- `MiNom Design — Thai Localization.html` — the deliverable. Five sections:
+  1. **Typography** — recommended **Anuphan** (Cadson Demak) primary; **IBM Plex Sans Thai** backup; **Noto Sans Thai** fallback. Validated 12→32px; line-height raised to 1.45 body / 1.35 titles for stacked Thai tone marks. Spline Sans Mono retained for Latin numerals only.
+  2. **Hi-fi in Thai** — Home, Eat, Sleep, Diaper in light+dark with native Thai copy, checked at 360px (no clipping; Thai runs shorter than EN). Plus ghost first-run Home + Timeline.
+  3. **Microcopy** — keyed reference table, written from intent.
+  4. **Clarifications** — Dev's five, resolved.
+  5. **PDPA** — 4-line plain-Thai signup consent + Thai positioning line.
+- `locales/th.json` — complete drop-in, keyed to Dev's exact component string IDs.
+- Source: `thai.css`, `th-strings.js`, `screens_th.jsx`, `section_thai_a.jsx`, `section_thai_b.jsx`, `thai_app.jsx`.
+
+**Five clarifications resolved**
+1. **Concurrency copy (instant-log Eat)** — shape confirmed; final Thai. Trigger: a peer Eat within 60s shows the sheet *before* commit (avoid duplicate); 3 outcomes (view theirs / log another / scrim-cancel). Non-blocking.
+2. **"Synced" pill** — confirmed: queued shows a persistent pill; on sync, flash "ซิงค์แล้ว" 2.2s then remove. No always-on badge.
+3. **First-run Home** — **changed**: Phase 3 uses the dashed-ghost treatment (zero activity → all three ghost cards). Dev's hint-in-card was a fine Phase-2 interim.
+4. **Eat time-edit** — **changed**: allow back-dating in v1 via an "แก้ไข" affordance (native time input, default now, capped not-in-future); 2-tap path untouched. *(Flagged to PM as a small scope addition — veto-able.)*
+5. **Online/Offline chip** — **split**: ship an auto, read-only status indicator (only visible when offline/syncing); demote the manual toggle to dev/QA-only behind a debug flag.
+
+**Decisions I own (logged, not silently overridden)**
+- Diaper uses child-words **ฉี่ / อึ** (not clinical ปัสสาวะ/อุจจาระ); Eat is **ให้นม** (not literal กิน). Intent rewrites — please don't "correct" to dictionary translations.
+- "Family" → **ครอบครัว** (carries the earlier label call).
+- Positioning line (Q3): **"แอปบันทึกการดูแลลูก ที่ทำเพื่อครอบครัวไทย."**
+
+**For PM (scope note)**
+- Only clarification #4 (back-dating Eat) extends beyond Dev's Phase-2 deferral. Everything else confirms or refines existing behavior. Confirm #4 before Phase 3 copies the pattern to Sleep/Diaper (where manual entry matters more).
+
+**Handoff → PM (Claude)**
+- Review the rebrand + Thai deliverable + the five resolutions; confirm/veto #4 (back-dating) and the tagline pick ("ดูแลลูกอย่างละมุนละไม").
+- For Dev: `locales/th.json` is drop-in (now includes `brand.*`); set `<html lang="th">`, wire next-intl, render dates/numbers via `Intl.*('th-TH')`. Load Anuphan (subset + preload per PRD §11.6). Swap user-facing wordmark to ละมุน; keep code identifiers as MiNom.
+- Then route to Dev for i18n wiring + Phase 3.
+
+---
+
+## 2026-06-01 — PM — App rebrand: MiNom → ละมุน (Lamoon)
+
+**What happened**
+- CPO flagged "MiNom" reads as unintentionally sexual in Thai (นม colloquially = breasts). Asked for a name that pulls new parents emotionally.
+- PM presented a wide field organized by emotional driver (love / memory / pride / connection / calm). CPO selected **ละมุน** — "soft, gentle, tender" — a feeling-word as the brand.
+- Updated `PRD_v0.3.md` (added §0 Brand identity), `HANDOFF_designer_02.md` (added Part 0 — Brand identity deliverables to existing rework brief), `PLAN.md` and this `JOURNAL.md` (headers).
+
+**Why ละมุน is a good fit**
+- The name names the *feeling* we want every interaction to leave behind. It's a built-in design filter: if it isn't ละมุน, redo it.
+- Tonal anchor for all microcopy the Designer is about to write — they have a single word to align against.
+- Compound ละมุนละไม (= "exquisitely gentle") opens natural tagline territory.
+- No NSFW or awkward connotations. No religious/political associations.
+- Thai-distinctive; doesn't read as a translated foreign brand.
+
+**Calls I made (flag to override)**
+1. **Internal vs external naming split.** Users see ละมุน everywhere. Code/repo/folder/Railway URL stay MiNom for now — renaming the codebase costs more than it earns mid-build. Schedule the internal rename for after Phase 3 (or skip if low value).
+2. **Latin spelling: Lamoon** (not "Lamun" / "La-moon" / "La-mun"). Reads phonetically *lah-MOON* in English; the double-o disambiguates from "lah-mun."
+3. **Thai script is primary** in all user-facing surfaces; "Lamoon" Latin is secondary, only used where Thai script can't render or once EN locale ships.
+4. **Bundled the rebrand into the Designer's already-active Handoff #02** as a new Part 0 rather than creating a separate brief. Single workstream preserved; Designer gets one consolidated package.
+
+**New Designer deliverables (added to Handoff #02)**
+- Thai wordmark for ละมุน (light + dark, scales 24px–1024px).
+- Latin lockup "Lamoon" as secondary.
+- App icon placeholder (final by beta).
+- Tagline pick — PM proposed two starters; Designer picks/rewrites.
+- Brand voice paragraph in the component stub.
+
+**Open brand TODOs (PM tracks)**
+- Domain: research `lamoon.app` / `lamoon.co` / `lamoon.in.th` availability; recommend and secure.
+- Social handles (bundled with domain decision).
+- Trademark search (Thailand DIP) — defer until after beta unless red flags appear.
+- Internal repo rename — schedule post-Phase 3 if value emerges.
+
+**Handoff → Designer (Claude Design)**
+- Already holds Handoff #02. The brief now has a new **Part 0 — Brand identity** at the top. Read it, then continue into Part A (Thai rework) and Part B (5 Dev clarifications) as before.
+- Close-out journal entry should ideally include: wordmark files, tagline pick, voice note. Microcopy and 5 clarifications still apply.
+
+CPO: nothing new to route — the Designer baton was already with you. This is an in-flight scope addition to the same handoff.
+
+---
+
+## 2026-06-01 — PM — Thai-first reframe (PRD v0.3) + handoff to Designer
+
+**What happened**
+- CPO direction: "We target Thai parents — better to have a native Thai version."
+- Wrote `PRD_v0.3.md` (supersedes v0.2; Thailand-only market, Thai-only MVP, native Thai voice — not translation).
+- Wrote `HANDOFF_designer_02.md` bundling the Thai rework with the 5 Dev clarifications from Dev's Phase 2 entry below.
+- Updated `PLAN.md`: Phase 1 closed, Phase 2 marked code-complete + demo-live, added Phase 2.5 "Localization rework," refreshed open-Q tracker and risks.
+
+**Decisions made by PM (flagging for CPO override)**
+1. **Thai-only MVP, no EN switcher.** Reading of "native Thai version": ship a Thai-built product, add EN later as second locale. Architecture must be i18n-ready from day one. Tighter voice, simpler launch.
+2. **No machine-translation of existing English copy.** Designer writes Thai from intent. Translating English microcopy will feel foreign and undercut "native."
+3. **Typography decision is Designer's** (recommended candidates: IBM Plex Sans Thai, Anuphan, Noto Sans Thai). Mono face (Spline Sans Mono) stays — only Latin numerals.
+4. **Gregorian calendar, Arabic numerals, 24-hour time, `th-TH` `Intl.*` for all formatting.** Buddhist Era display flagged for designer to consider on growth chart axes; not default.
+5. **PDPA compliance is a Phase 3 deliverable, not Phase 4.** Consent, deletion, export, plain-Thai privacy notice all in MVP surface.
+6. **Bundled the Dev clarifications into the same designer handoff** rather than routing two batons. Single workstream rule preserved.
+
+**Open questions resolved**
+- Q2 (market + units) → **Closed.** Thailand; metric.
+- Q3 (brand positioning) → **Closed.** "Simple baby tracker for Thai families." Designer to finalize the Thai positioning line.
+- Q4 (data residency) → **Closed.** Singapore (`ap-southeast-1`), per Dev's Phase 2 rec. (PM's earlier "GDPR region-tagging from day one" call dropped as YAGNI per Dev's flag.)
+- Q5 (auth) → **Closed.** Supabase Auth, email + password. Email confirmation to be enabled before public launch.
+- Q1 (monetization) → **Still open.** Doesn't block. PM rec: free during validation.
+
+**Phase 2 status (separate baton on PM's plate)**
+- Code-complete, demo-mode live on Railway. The literal two-device + RLS verification needs CPO to provision a Supabase project (~30 min once credentials exist). PM will hand this to CPO as a side baton; doesn't block the design rework.
+
+**Files produced this turn**
+- `PRD_v0.3.md` — current PRD
+- `HANDOFF_designer_02.md` — Thai rework + 5 clarifications
+- `PLAN.md` updated
+
+**Handoff → Designer (Claude Design)**
+- Read `PRD_v0.3.md` first (supersedes v0.2 — same product, Thailand-only market). Then `HANDOFF_designer_02.md`.
+- Two-part brief: (A) Thai typography + Thai microcopy + layout pass on 4 hi-fi screens + signup/consent copy; (B) answer the 5 clarifications you owe Dev.
+- North-star UX test unchanged: "Sleep-deprived parent, one thumb, dark room, two seconds" — now also "feels Thai-built, not translated."
+- When done: `## YYYY-MM-DD — Designer — Localization rework complete` with `Handoff → PM`.
+
+CPO: please route this to Claude Design. The Supabase provisioning is a separate task you can pick up any time before Phase 3 — happy to draft the steps if useful.
 
 ---
 
