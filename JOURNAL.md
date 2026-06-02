@@ -18,6 +18,48 @@
 
 ---
 
+## 2026-06-02 — Dev — Phase 3 feature-complete (demo-verified); only live Supabase verification remains → Handoff → PM
+
+**Summary:** Every Phase-3 dev ticket that doesn't require the live backend is **built, in Thai, on the proven architecture, and verified**. The one item I can't self-serve — **#2.8 the literal two-device + RLS test on a real Supabase** — is built in code (incl. migrations) but **gated on CPO provisioning**. All on `main`; Railway live (demo mode): https://minom-production.up.railway.app
+
+**Shipped this phase (commits on `main`)**
+- **i18n + rebrand to ละมุน** — Thai throughout, Anuphan via next/font, `Intl('th-TH')`, brand marks + tagline; internal MiNom unchanged.
+- **Three verbs** — Eat, Sleep (live start/stop timer), Diaper (ฉี่/อึ/ทั้งคู่), all with optimistic write + 5s undo + offline outbox (now insert/update/delete ops) + realtime + attribution.
+- **Back-dating** (PRD §4) — shared WhenCard, capped not-in-future, on all logs.
+- **Timeline history** — swipe / chevrons to past days; today live, past read-only.
+- **Growth** — weight/height entry, history (delete), WHO percentile chart (bands are representative placeholders — exact WHO LMS dataset is a flagged data task), 0002 migration.
+- **Settings** — display-name edit, notification opt-in toggle (off by default; no delivery in v1), data export (JSON), delete account (30-day-grace messaging), sign out.
+- **PDPA** — 4-line Thai consent on signup + `/privacy` policy page (PM to supply full legal text).
+- **Caregivers** — roster + owner badge, invite-by-email (cap 10), remove/transfer/leave; 0003 migration with SECURITY DEFINER RPCs.
+- **Accessibility** — live-regions (offline/sync/sleep status), roles (switch/radiogroup/tabs), aria-labels on icon buttons, reduced-motion, ≥48px primary targets, icon+label state cues, labeled inputs.
+
+**Verification**
+- `tsc` + production build green throughout (Next 15.5.18).
+- **35/35 headless-Chrome QA in Thai** covering: signup+consent → setup → all three verbs (incl. sleep start→running→stop→duration + offline cycle) → back-dating (capped) → timeline yesterday↔today → growth add→chart→history → caregivers owner view + invite error → settings export → privacy page → optimistic+undo, offline→รอซิงค์→flush, cross-tab realtime, attribution, theme.
+- Screenshots match the Thai hi-fi + brand (Home/Eat/Sleep/Timeline/Auth/Caregivers/Settings, light + dark).
+- DB migrations ready to run: `web/supabase/migrations/0001_init.sql` (schema + RLS + realtime + auth trigger), `0002_growth.sql`, `0003_caregivers.sql`.
+
+**Decisions I own (logged; PM/Designer flag if you disagree)**
+- i18n = minimal flat-key `t()` (next-intl can't model the flat th.json with collisions); swap when EN lands.
+- Concurrency soft-prompt = **Eat only** (th.json copy is feed-specific). Sleep-timer concurrency needs `concurrency.sleep.*` copy from Designer.
+- Diaper has no concurrency prompt (distinct events, not a clash).
+- Sleep manual entry = back-date the start (covers "forgot to start"); full start+end manual entry deferred unless wanted.
+- Added many Thai keys (growth.*, care.*, settings.*, privacy.*, age.*, a11y.*, auth.error.*) to avoid English leaks — **please have Designer review the Thai copy**; these cover surfaces the Designer's table didn't include.
+
+**What's gated (cannot self-serve — needs CPO)**
+- **#2.8 live two-device + RLS** and the brief's success criteria #4/#5 (real second caregiver, cross-device ≤5s on staging): need a **Supabase project (region ap-southeast-1) + the two `NEXT_PUBLIC_SUPABASE_*` env vars in Railway + run migrations 0001–0003**. ~30–45 min. Then I'll run the live verification and close those criteria.
+- **New-user email invites** (Caregivers) need an invite-token table + email delivery (Phase 3.x); demo links existing accounts.
+- **Account hard-delete** needs a Supabase edge function (auth admin); UI + grace messaging are in place.
+- **Privacy policy full text** (PM) and **WHO LMS reference data** (data task) — flagged.
+
+**Handoff → PM (Claude)**
+- Phase 3 is **feature-complete and demo-verifiable live** — review the rebranded Thai app at the URL; do the full new-parent loop in demo mode.
+- To formally close Phase 3 exit criteria #4/#5, **CPO needs to provision Supabase** (the long-pole, tracked since Phase 2). Once env vars + migrations land, I'll run the two-device/RLS pass and post the result.
+- Please route the **Thai-copy review of Dev-added keys** + the **concurrency.sleep copy** question to Designer, and the **privacy policy full text** to yourself.
+- CPO: please route to PM. Suggest PM begins Phase 4 (beta) prep in parallel; the only blocker to a real-backend beta is Supabase provisioning.
+
+---
+
 ## 2026-06-02 — Dev — Phase 3 progress: three verbs + back-dating + timeline history (checkpoint; Dev continues)
 
 **Status:** Part 2 (Phase 3) underway. The **core product loop is done in Thai**: log all three verbs (with back-dating) + view history. Still on the Dev baton; remaining Phase 3 surfaces below. All pushed to `main`; Railway auto-redeploys https://minom-production.up.railway.app (demo mode).
