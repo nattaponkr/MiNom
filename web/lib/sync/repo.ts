@@ -39,6 +39,9 @@ export interface Repo {
   signIn(email: string, password: string): Promise<AuthResult>;
   signOut(): Promise<void>;
   getProfile(): Promise<Profile | null>;
+  updateProfile(patch: { display_name?: string }): Promise<void>;
+  exportMyData(): Promise<Record<string, unknown>>; // PDPA data export
+  deleteAccount(): Promise<void>; // PDPA deletion (30-day grace per §5a)
 
   // babies
   listBabies(): Promise<Baby[]>;

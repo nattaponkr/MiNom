@@ -2,7 +2,6 @@
 import { useState } from "react";
 import type { Baby, DiaperKind, EatDetails, Profile, SessionUser } from "@/lib/types";
 import { ago, clockTime } from "@/lib/format";
-import { getRepo } from "@/lib/sync/repo";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
 import HomeScreen from "./HomeScreen";
 import Timeline from "./Timeline";
@@ -10,10 +9,10 @@ import EatSheet from "./EatSheet";
 import DiaperSheet from "./DiaperSheet";
 import SleepSheet from "./SleepSheet";
 import GrowthScreen from "./GrowthScreen";
+import SettingsScreen from "./SettingsScreen";
 import TabBar, { type Tab } from "./TabBar";
 import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
-import { Avatar, Button } from "./ui";
 import { t } from "@/i18n";
 
 export default function Main({
@@ -58,12 +57,6 @@ export default function Main({
     setDeleteId({ id, timeText: a ? clockTime(a.started_at) : "this" });
   };
 
-  const signOut = async () => {
-    const repo = await getRepo();
-    await repo.signOut();
-    onSignOut();
-  };
-
   return (
     <div className="app">
       {!log.online && <div className="offline-banner">{t("sync.offline.banner")}</div>}
@@ -101,33 +94,7 @@ export default function Main({
         )}
 
         {tab === "settings" && (
-          <div className="screen-body">
-            <div className="appbar">
-              <span className="ttl">{t("tab.settings")}</span>
-            </div>
-            <div className="list" style={{ marginTop: 8 }}>
-              <div className="list-row">
-                {profile && <Avatar name={profile.display_name} color={profile.avatar_color} size="lg" />}
-                <span className="lr-main">
-                  <span className="lr-t">{profile?.display_name ?? t("timeline.you")}</span>
-                  <span className="lr-d">{me.email}</span>
-                </span>
-              </div>
-              <div className="list-row">
-                <span className="lr-main">
-                  <span className="lr-t">{t("settings.baby")}</span>
-                  <span className="lr-d">{baby.name}</span>
-                </span>
-              </div>
-            </div>
-            <div style={{ height: 16 }} />
-            <Button kind="ghost" block onClick={signOut}>
-              {t("settings.signOut")}
-            </Button>
-            <div className="note" style={{ marginTop: 16, fontSize: 12 }} lang="th">
-              {t("phase3.soon")}
-            </div>
-          </div>
+          <SettingsScreen me={me} profile={profile} baby={baby} onSignedOut={onSignOut} onProfileChanged={onSignOut} />
         )}
       </main>
 

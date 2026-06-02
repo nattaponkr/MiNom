@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
 import { LamoonWordmark } from "./Brand";
@@ -111,6 +112,23 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
         {formError && (
           <div className="form-error" role="alert">
             <IcX size={15} /> {formError}
+          </div>
+        )}
+
+        {mode === "up" && (
+          <div className="consent" lang="th">
+            <div className="ct">
+              {t("consent.line1")}
+              <br />
+              {t("consent.line2")}
+              <br />
+              {t("consent.line3")}
+              <br />
+              {t("consent.line4")} ·{" "}
+              <Link href="/privacy" target="_blank">
+                {t("consent.readFull")}
+              </Link>
+            </div>
           </div>
         )}
 

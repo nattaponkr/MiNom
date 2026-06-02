@@ -69,6 +69,39 @@ export class SupabaseRepo implements Repo {
     return (data as Profile) ?? null;
   }
 
+  async updateProfile(patch: { display_name?: string }): Promise<void> {
+    const session = await this.getSession();
+    if (!session || !patch.display_name) return;
+    const { error } = await this.sb.from("users").update({ display_name: patch.display_name.trim() }).eq("id", session.id);
+    if (error) throw error;
+  }
+
+  async exportMyData(): Promise<Record<string, unknown>> {
+    const babies = await this.listBabies();
+    const ids = babies.map((b) => b.id);
+    const [acts, meas] = await Promise.all([
+      ids.length ? this.sb.from("activity").select("*").in("baby_id", ids) : Promise.resolve({ data: [] }),
+      ids.length ? this.sb.from("measurements").select("*").in("baby_id", ids) : Promise.resolve({ data: [] }),
+    ]);
+    return {
+      exported_at: new Date().toISOString(),
+      profile: await this.getProfile(),
+      babies,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      activities: (acts as any).data ?? [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      measurements: (meas as any).data ?? [],
+    };
+  }
+
+  async deleteAccount(): Promise<void> {
+    // Deleting the auth user (and cascading data) requires elevated privileges —
+    // a server-side edge function with the service role. That isn't provisioned
+    // yet, so here we sign out; the UI presents the 30-day-grace messaging.
+    // TODO(Phase 3.x): edge function `request_account_deletion` (auth admin + grace).
+    await this.sb.auth.signOut();
+  }
+
   async listBabies(): Promise<Baby[]> {
     const { data, error } = await this.sb.from("babies").select("*").order("created_at", { ascending: true });
     if (error) throw error;

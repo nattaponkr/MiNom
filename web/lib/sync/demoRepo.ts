@@ -126,6 +126,44 @@ export class DemoRepo implements Repo {
     return u ? { id: u.id, email: u.email, display_name: u.display_name, avatar_color: u.avatar_color } : null;
   }
 
+  async updateProfile(patch: { display_name?: string }): Promise<void> {
+    const id = this.myId();
+    if (!id) return;
+    const users = this.users().map((u) => (u.id === id ? { ...u, ...(patch.display_name ? { display_name: patch.display_name.trim() } : {}) } : u));
+    write(K.users, users);
+    this.emitAuth();
+  }
+
+  async exportMyData(): Promise<Record<string, unknown>> {
+    const id = this.myId();
+    const babies = await this.listBabies();
+    const babyIds = new Set(babies.map((b) => b.id));
+    return {
+      exported_at: new Date().toISOString(),
+      profile: await this.getProfile(),
+      babies,
+      activities: this.acts().filter((a) => babyIds.has(a.baby_id)),
+      measurements: read<Measurement[]>(K.measurements, []).filter((m) => babyIds.has(m.baby_id)),
+      caregivers: this.links().filter((l) => babyIds.has(l.baby_id)),
+      _note: id ? "demo export" : "no session",
+    };
+  }
+
+  async deleteAccount(): Promise<void> {
+    const id = this.myId();
+    if (!id) return;
+    // Demo: remove the user + babies they own + dependent data (real flow uses a
+    // 30-day grace + ownership auto-transfer per PRD §5a).
+    const ownedBabyIds = new Set(read<Baby[]>(K.babies, []).filter((b) => b.owner_id === id).map((b) => b.id));
+    write(K.babies, read<Baby[]>(K.babies, []).filter((b) => b.owner_id !== id));
+    write(K.links, this.links().filter((l) => l.user_id !== id && !ownedBabyIds.has(l.baby_id)));
+    write(K.activity, this.acts().filter((a) => !ownedBabyIds.has(a.baby_id)));
+    write(K.measurements, read<Measurement[]>(K.measurements, []).filter((m) => !ownedBabyIds.has(m.baby_id)));
+    write(K.users, this.users().filter((u) => u.id !== id));
+    write<string | null>(K.session, null);
+    this.emitAuth();
+  }
+
   async listBabies(): Promise<Baby[]> {
     const id = this.myId();
     if (!id) return [];

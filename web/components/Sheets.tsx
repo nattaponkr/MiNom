@@ -29,6 +29,36 @@ function BottomSheet({ title, body, children, onDismiss }: { title: string; body
   );
 }
 
+// Generic confirm sheet (account deletion, remove caregiver, transfer, …).
+export function ConfirmSheet({
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  danger,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: ReactNode;
+  confirmLabel: string;
+  cancelLabel: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <BottomSheet title={title} body={body} onDismiss={onCancel}>
+      <Button kind={danger ? "danger" : "primary"} block icon={danger ? <IcTrash size={18} /> : undefined} onClick={onConfirm}>
+        {confirmLabel}
+      </Button>
+      <Button kind="ghost" block onClick={onCancel}>
+        {cancelLabel}
+      </Button>
+    </BottomSheet>
+  );
+}
+
 export function ConcurrencySheet({
   name,
   agoText,
