@@ -1,0 +1,91 @@
+/* ============================================================
+   MiNom — Thai localization layer
+   Anuphan (Cadson Demak) primary · IBM Plex Sans Thai backup
+   Scope all product-screen Thai under .th ; doc chrome stays Latin.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+
+/* Thai needs more leading — tone marks + vowels stack up to 3 levels.
+   Apply the Thai face + relaxed line-heights only inside lang="th" regions. */
+[lang="th"] {
+  --font-sans: 'Anuphan', system-ui, sans-serif;
+  font-family: 'Anuphan', system-ui, sans-serif;
+}
+[lang="th"], [lang="th"] .screen-body, [lang="th"] .verb-stat, [lang="th"] .st {
+  line-height: 1.45;
+}
+
+/* Thai has no caps and word-spacing tricks — neutralise Latin micro-typography */
+[lang="th"] .verb-name,
+[lang="th"] .wflbl,
+[lang="th"] .k,
+[lang="th"] .hero .k,
+[lang="th"] .tl-day { text-transform: none; letter-spacing: 0; }
+
+/* Thai headlines: stack title + subtitle in appbars (Thai strings are wider) */
+[lang="th"] .appbar .ttl { display: block; line-height: 1.35; letter-spacing: 0; }
+[lang="th"] .appbar .sub { display: block; white-space: nowrap; }
+[lang="th"] .who .nm { white-space: nowrap; }
+
+/* Headlines: Thai ascenders are tall — give titles a touch more room */
+[lang="th"] .ttl { line-height: 1.35; letter-spacing: 0; }
+[lang="th"] .verb-stat { line-height: 1.3; }
+[lang="th"] .seg-opt { letter-spacing: 0; }
+
+/* font-family for inputs/buttons inside Thai regions */
+[lang="th"] .input, [lang="th"] .btn { letter-spacing: 0; }
+
+/* font picker for the specimen comparison */
+.fface-anuphan { font-family: 'Anuphan', sans-serif; }
+.fface-plex { font-family: 'IBM Plex Sans Thai', sans-serif; }
+.fface-noto { font-family: 'Noto Sans Thai', sans-serif; }
+
+/* specimen ladder */
+.ladder { display: flex; flex-direction: column; gap: 2px; }
+.ladder-row { display: flex; align-items: baseline; gap: 18px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.ladder-row:last-child { border-bottom: none; }
+.ladder-row .px { font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted); width: 96px; flex: none; }
+.ladder-row .smp { font-family: 'Anuphan', sans-serif; line-height: 1.45; }
+
+.face-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; box-shadow: var(--shadow-sm); }
+.face-card.pick { border-color: var(--primary); border-width: 2px; }
+.face-card .fc-name { font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 10px; }
+.face-card .fc-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: var(--r-pill); background: color-mix(in oklch, var(--primary) 16%, transparent); color: var(--primary); }
+.face-card .fc-meta { font-size: 12.5px; color: var(--fg-muted); margin: 3px 0 14px; }
+.face-card .fc-big { font-size: 30px; font-weight: 600; line-height: 1.4; }
+.face-card .fc-row { font-size: 15px; line-height: 1.6; color: var(--fg); }
+
+/* clarification cards */
+.clar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.clar-head { display: flex; gap: 13px; padding: 16px 18px; align-items: flex-start; border-bottom: 1px solid var(--border); }
+.clar-num { width: 30px; height: 30px; border-radius: 9px; background: var(--primary); color: var(--on-primary); font-weight: 800; font-size: 15px; display: grid; place-items: center; flex: none; }
+.clar-head .q { font-weight: 800; font-size: 15.5px; }
+.clar-head .askedby { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+.clar-body { padding: 16px 18px; display: grid; gap: 14px; }
+.clar-block .lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); margin-bottom: 5px; display: flex; align-items: center; gap: 7px; }
+.clar-verdict { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 800; padding: 5px 11px; border-radius: var(--r-pill); }
+.clar-verdict.keep { background: color-mix(in oklch, var(--good) 16%, transparent); color: var(--good); }
+.clar-verdict.change { background: color-mix(in oklch, var(--warn) 20%, transparent); color: color-mix(in oklch, var(--warn) 80%, var(--fg)); }
+.clar-body .spec { font-size: 13.5px; line-height: 1.6; color: var(--fg); }
+.clar-body .spec b { font-weight: 700; }
+.thai-quote { font-family: 'Anuphan', sans-serif; font-size: 15px; line-height: 1.55; background: var(--bg); border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: 8px; padding: 11px 14px; }
+.thai-quote .en { font-family: var(--font-sans); font-size: 12px; color: var(--fg-muted); margin-top: 6px; display: block; }
+
+/* microcopy table */
+.mc-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.mc-group-h { font-size: 12px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--primary);
+  padding: 14px 16px 8px; background: color-mix(in oklch, var(--primary) 6%, transparent); }
+.mc-tbl { width: 100%; border-collapse: collapse; }
+.mc-tbl td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.mc-tbl tr:last-child td { border-bottom: none; }
+.mc-tbl .key { font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-muted); width: 34%; white-space: nowrap; }
+.mc-tbl .th-val { font-family: 'Anuphan', sans-serif; font-size: 14.5px; color: var(--fg); }
+.mc-tbl .en-val { font-size: 12px; color: var(--fg-faint); display: block; margin-top: 3px; }
+
+/* consent block */
+.consent { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 14px 16px; }
+.consent .ct { font-family: 'Anuphan', sans-serif; font-size: 13.5px; line-height: 1.65; color: var(--fg-muted); }
+.consent .ct a { color: var(--primary); font-weight: 600; text-decoration: none; }
+
+/* time-edit affordance demo */
+.edit-aff { color: var(--primary); font-weight: 700; font-size: 14px; font-family: 'Anuphan', sans-serif; }

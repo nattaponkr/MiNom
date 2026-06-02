@@ -1,0 +1,54 @@
+/* ============================================================
+   ละมุน (Lamoon) — Brand identity layer
+   Wordmark, app icon, voice. Soft, gentle, unhurried.
+   ============================================================ */
+
+/* ---- Wordmark (typographic lockup, Anuphan) ---- */
+.lamoon-wm { display: inline-flex; align-items: center; gap: 0.42em; font-family: 'Anuphan', sans-serif; line-height: 1; }
+.lamoon-wm .lm-dot { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--primary); flex: none;
+  box-shadow: 0 0 0 0.16em color-mix(in oklch, var(--primary) 22%, transparent); }
+.lamoon-wm .lm-word { font-weight: 500; letter-spacing: 0.01em; color: var(--fg, var(--page-fg)); }
+.lamoon-wm.on-clay .lm-word { color: var(--on-primary); }
+.lamoon-wm.on-clay .lm-dot { background: var(--on-primary); box-shadow: 0 0 0 0.16em color-mix(in oklch, var(--on-primary) 24%, transparent); }
+
+/* Latin secondary lockup */
+.lamoon-latin { font-family: 'Anuphan', sans-serif; font-weight: 500; letter-spacing: 0.06em; color: var(--fg-muted); }
+
+/* ---- App icon ---- */
+.lamoon-icon { display: grid; place-items: center; background: var(--primary);
+  border-radius: 26%; color: var(--on-primary); font-family: 'Anuphan', sans-serif; font-weight: 500;
+  position: relative; overflow: hidden; box-shadow: var(--shadow-md); }
+.lamoon-icon::after { content: ''; position: absolute; inset: 0;
+  background: radial-gradient(120% 120% at 28% 22%, color-mix(in oklch, white 18%, transparent), transparent 60%); }
+.lamoon-icon .glyph { position: relative; z-index: 1; line-height: 1; }
+
+/* ---- Brand section layout ---- */
+.brand-hero { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 30px; align-items: stretch; }
+.brand-stage { border-radius: var(--r-xl); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); }
+.brand-stage .bs-cap { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.brand-stage .bs-body { display: grid; place-items: center; padding: 44px 20px; }
+.brand-stage.light .bs-body { background: var(--bg); }
+.brand-stage.dark { --bg: oklch(0.205 0.012 64); }
+
+.icon-row { display: flex; align-items: flex-end; gap: 22px; flex-wrap: wrap; }
+.icon-spec { text-align: center; }
+.icon-spec .cap { font-family: var(--font-mono); font-size: 11px; color: var(--fg-muted); margin-top: 8px; }
+
+.tagline-opt { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
+.tagline-opt.pick { border-color: var(--primary); border-width: 2px; background: color-mix(in oklch, var(--primary) 5%, var(--surface)); }
+.tagline-opt .badge { font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--primary); padding: 3px 8px; border-radius: var(--r-pill); background: color-mix(in oklch, var(--primary) 14%, transparent); flex: none; margin-top: 2px; }
+.tagline-opt .th { font-family: 'Anuphan', sans-serif; font-size: 17px; font-weight: 500; }
+.tagline-opt .en { font-size: 12.5px; color: var(--fg-muted); margin-top: 3px; }
+
+/* voice: on-brand vs off-brand */
+.voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.voice-col { border-radius: var(--r-lg); border: 1px solid var(--border); overflow: hidden; }
+.voice-col .vh { font-size: 13px; font-weight: 800; padding: 12px 14px; display: flex; align-items: center; gap: 8px; }
+.voice-col.on .vh { background: color-mix(in oklch, var(--good) 14%, var(--surface)); color: var(--good); }
+.voice-col.off .vh { background: color-mix(in oklch, var(--danger) 12%, var(--surface)); color: var(--danger); }
+.voice-row { padding: 11px 14px; border-top: 1px solid var(--border); }
+.voice-row .q { font-family: 'Anuphan', sans-serif; font-size: 14.5px; }
+.voice-row .note { font-size: 11.5px; color: var(--fg-muted); margin-top: 3px; }
+
+.brand-principles { display: grid; gap: 0; }
+@media (max-width: 720px) { .brand-hero { grid-template-columns: 1fr; } .voice-grid { grid-template-columns: 1fr; } }
