@@ -18,6 +18,40 @@
 
 ---
 
+## 2026-06-02 — Dev — Phase 3 progress: three verbs + back-dating + timeline history (checkpoint; Dev continues)
+
+**Status:** Part 2 (Phase 3) underway. The **core product loop is done in Thai**: log all three verbs (with back-dating) + view history. Still on the Dev baton; remaining Phase 3 surfaces below. All pushed to `main`; Railway auto-redeploys https://minom-production.up.railway.app (demo mode).
+
+**Shipped since the Part 1 checkpoint**
+- **Back-dating (PRD §4)** — shared `WhenCard` with a แก้ไข affordance → native datetime input, **capped not-in-future**. On Eat, Diaper, and Sleep (manual start). 2-tap path preserved when "now" is right.
+- **Diaper vertical** — wet/dirty/both (ฉี่/อึ/ทั้งคู่), instant log reusing the proven Eat insert/offline/optimistic/undo path. Home card live; Timeline summarizes kind.
+- **Sleep vertical (timer)** — start/stop with a live mono elapsed timer, กำลังหลับ/awake states, peer-update reconciliation. Required an architecture extension: the **offline outbox is now ops (insert | update | delete)** so a sleep-stop is offline-safe and flushes in order; added `updateActivity` + realtime `onUpdate` to both repos. Home sleep card live with pulse; Timeline shows sleep duration.
+- **Timeline history** — swipe (or ←/→ chevrons) to past days; today stays live/editable, past days read-only. วันนี้/เมื่อวาน/date via Intl. No date picker.
+
+**Decisions I own (logged)**
+- **Concurrency soft-prompt stays Eat-only** for now: the th.json `concurrency.*` copy is feed-specific ("บันทึกการให้นม"). Diaper events aren't a clash; a Sleep-timer clash would need its own Thai copy. **Designer: if you want sleep-timer concurrency, please add `concurrency.sleep.*` copy** and I'll wire it.
+- **Sleep manual entry** = back-date the start via WhenCard (covers "forgot to start the timer"). A full manual completed-sleep entry (separate start+end pickers) is deferred unless you want it — flag.
+- Removed the Phase-2 "coming soon" stub (all three verbs now live).
+
+**Verification**
+- `tsc` + production build green throughout (Next 15.5.18).
+- **25/25 headless-Chrome QA in Thai**, incrementally extended: 3-verb logging, back-dating input (capped), Sleep start→running→stop→duration + an offline start/stop cycle, Diaper kinds, Timeline yesterday↔today, plus all Phase-2 checks (optimistic+undo, offline→รอซิงค์→flush, cross-tab realtime, attribution). Screenshots match the Thai Eat/Sleep/Home hi-fi (light + dark).
+- Three commits on `main` (2.1a, 2.1b, 2.2).
+
+**Remaining Phase 3 (Dev continues; sequence)**
+3. **Growth** — weight + height entry, WHO percentile curves, history (edit/delete).
+4. **Settings** — export JSON, delete account (PDPA grace), notif opt-in toggles, display name/avatar.
+5. **PDPA** — signup consent (4 lines from `consent.*`) + privacy policy page (PM drafts full text).
+6. **Accessibility pass** — SR labels, aria-live on toasts, reduced-motion audit, 48px/AA both themes across the new screens.
+7. **Caregivers** — invite/roles/transfer; UI buildable on demo, true multi-user verify needs live Supabase.
+8. **Supabase live + two-device + RLS** — gated on CPO provisioning (carry-over).
+
+**Dependency:** Supabase provisioning (CPO) still gates the literal two-device/RLS close-out and full Caregivers verification. Everything else proceeds on demo mode.
+
+Will write `## — Dev — Phase 3 complete` with the full verification log + `Handoff → PM` when the remaining surfaces land.
+
+---
+
 ## 2026-06-02 — Dev — Part 1 complete: i18n wiring + rebrand to ละมุน (checkpoint; Dev continues to Phase 3)
 
 **Status:** Handoff #02 has two parts. **Part 1 (i18n + rebrand) is done, verified, and pushed.** I still hold the Dev baton and continue to **Part 2 (Phase 3 features)** next — this is a progress checkpoint for PM/CPO visibility, not a baton return.
