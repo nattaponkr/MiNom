@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { Baby, DiaperKind, EatDetails, Profile, SessionUser } from "@/lib/types";
+import type { Activity, Baby, DiaperKind, EatDetails, Profile, SessionUser } from "@/lib/types";
 import { ago, clockTime } from "@/lib/format";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
 import HomeScreen from "./HomeScreen";
@@ -32,7 +32,9 @@ export default function Main({
   const [eatOpen, setEatOpen] = useState(false);
   const [diaperOpen, setDiaperOpen] = useState(false);
   const [sleepOpen, setSleepOpen] = useState(false);
+  const [sleepSeed, setSleepSeed] = useState<Activity | null>(null);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string } | null>(null);
+  const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
 
   const openEat = async () => {
@@ -49,6 +51,27 @@ export default function Main({
   const saveDiaper = (kind: DiaperKind, startedAt: string) => {
     log.log("diaper", { kind }, startedAt);
     setDiaperOpen(false);
+  };
+
+  // Sleep: if a timer is already running locally, just open it. Otherwise check
+  // for a near-simultaneous start by another caregiver (concurrency, option A).
+  const openSleep = async () => {
+    if (log.runningSleep) {
+      setSleepSeed(null);
+      setSleepOpen(true);
+      return;
+    }
+    const hit = await log.checkConcurrent("sleep");
+    if (hit && !hit.ended_at) {
+      setSleepConc({ name: hit._mine ? t("timeline.you") : hit.logged_by_name, agoText: ago(hit.started_at), hit });
+    } else {
+      setSleepSeed(null);
+      setSleepOpen(true);
+    }
+  };
+  const closeSleep = () => {
+    setSleepOpen(false);
+    setSleepSeed(null);
   };
 
   const lastWokeAt = log.activities.find((a) => a.type === "sleep" && a.ended_at)?.ended_at ?? null;
@@ -77,7 +100,7 @@ export default function Main({
             forceOffline={log.forceOffline}
             onToggleOffline={() => log.setForceOffline(!log.forceOffline)}
             onLogEat={openEat}
-            onLogSleep={() => setSleepOpen(true)}
+            onLogSleep={openSleep}
             onLogDiaper={() => setDiaperOpen(true)}
             runningSleep={log.runningSleep}
           />
@@ -103,14 +126,33 @@ export default function Main({
 
       {sleepOpen && (
         <SleepSheet
-          running={log.runningSleep}
+          running={log.runningSleep ?? sleepSeed}
           lastWokeAt={lastWokeAt}
           onStart={(startedAt) => log.startSleep(startedAt)}
           onStop={(id) => {
             log.stopSleep(id);
-            setSleepOpen(false);
+            closeSleep();
           }}
-          onClose={() => setSleepOpen(false)}
+          onClose={closeSleep}
+        />
+      )}
+
+      {sleepConc && (
+        <ConcurrencySheet
+          kind="sleep"
+          name={sleepConc.name}
+          agoText={sleepConc.agoText}
+          onViewTheirs={() => {
+            setSleepSeed(sleepConc.hit);
+            setSleepConc(null);
+            setSleepOpen(true);
+          }}
+          onLogAnyway={() => {
+            setSleepSeed(null);
+            setSleepConc(null);
+            setSleepOpen(true);
+          }}
+          onDismiss={() => setSleepConc(null)}
         />
       )}
 

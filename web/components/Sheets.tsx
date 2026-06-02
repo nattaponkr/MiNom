@@ -60,25 +60,28 @@ export function ConfirmSheet({
 }
 
 export function ConcurrencySheet({
+  kind = "eat",
   name,
   agoText,
   onViewTheirs,
   onLogAnyway,
   onDismiss,
 }: {
+  kind?: "eat" | "sleep";
   name: string;
   agoText: string;
   onViewTheirs: () => void;
   onLogAnyway: () => void;
   onDismiss: () => void;
 }) {
+  const k = kind === "sleep" ? "concurrency.sleep" : "concurrency";
   return (
-    <BottomSheet title={t("concurrency.title")} body={t("concurrency.body", { name, dur: agoText })} onDismiss={onDismiss}>
-      <Button kind="primary" block onClick={onViewTheirs}>
-        {t("concurrency.view")}
+    <BottomSheet title={t(`${k}.title`)} body={t(`${k}.body`, { name, dur: agoText })} onDismiss={onDismiss}>
+      <Button kind="primary" block onClick={onViewTheirs} style={kind === "sleep" ? { background: "var(--sleep)" } : undefined}>
+        {t(`${k}.view`)}
       </Button>
       <Button kind="ghost" block onClick={onLogAnyway}>
-        {t("concurrency.logAnyway")}
+        {t(`${k}.logAnyway`)}
       </Button>
     </BottomSheet>
   );
