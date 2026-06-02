@@ -5,7 +5,7 @@
 // architecture proof; this exists so `npm run dev` works with no setup.
 import { colorFromSeed } from "@/components/ui";
 import { t } from "@/i18n";
-import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 type DemoUser = { id: string; email: string; password: string; display_name: string; avatar_color: string };
@@ -19,7 +19,10 @@ const K = {
   links: "minom_demo_links",
   activity: "minom_demo_activity",
   measurements: "minom_demo_measurements",
+  invites: "minom_demo_invites",
 };
+
+type DemoInvite = { id: string; baby_id: string; email: string; token: string; status: string; expires_at: string; invited_by: string };
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -302,6 +305,57 @@ export class DemoRepo implements Repo {
     write(K.links, links);
     const babies = read<Baby[]>(K.babies, []).map((b) => (b.id === babyId ? { ...b, owner_id: userId } : b));
     write(K.babies, babies);
+  }
+
+  // ---- invites (token flow) ----
+  private invites() {
+    return read<DemoInvite[]>(K.invites, []);
+  }
+  private isOwner(babyId: string) {
+    return this.links().some((l) => l.baby_id === babyId && l.user_id === this.myId() && l.role === "owner");
+  }
+  async createInvite(babyId: string, email: string): Promise<{ token: string | null; error: string | null }> {
+    if (!this.isOwner(babyId)) return { token: null, error: "care.error.notOwner" };
+    const em = email.trim().toLowerCase();
+    const invites = this.invites();
+    const pending = invites.filter((i) => i.baby_id === babyId && i.status === "pending");
+    if (this.links().filter((l) => l.baby_id === babyId).length + pending.length >= 10) return { token: null, error: "care.error.full" };
+    const already = this.links().some((l) => l.baby_id === babyId && this.userById(l.user_id)?.email === em);
+    if (already) return { token: null, error: "care.error.already" };
+    const existing = pending.find((i) => i.email === em);
+    if (existing) return { token: existing.token, error: null };
+    const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const inv: DemoInvite = {
+      id: crypto.randomUUID(),
+      baby_id: babyId,
+      email: em,
+      token,
+      status: "pending",
+      expires_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+      invited_by: this.myId() ?? "",
+    };
+    write(K.invites, [...invites, inv]);
+    return { token, error: null };
+  }
+  async listInvites(babyId: string): Promise<Invite[]> {
+    return this.invites()
+      .filter((i) => i.baby_id === babyId && i.status === "pending")
+      .map((i) => ({ id: i.id, email: i.email, status: i.status, expires_at: i.expires_at }));
+  }
+  async revokeInvite(inviteId: string): Promise<void> {
+    write(K.invites, this.invites().map((i) => (i.id === inviteId ? { ...i, status: "revoked" } : i)));
+  }
+  async acceptInvite(token: string): Promise<{ babyId: string | null; error: string | null }> {
+    const me = this.myId();
+    if (!me) return { babyId: null, error: "care.error.generic" };
+    const invites = this.invites();
+    const inv = invites.find((i) => i.token === token);
+    if (!inv || inv.status !== "pending" || inv.expires_at < new Date().toISOString()) return { babyId: null, error: "care.error.invalidInvite" };
+    if (!this.links().some((l) => l.baby_id === inv.baby_id && l.user_id === me)) {
+      write(K.links, [...this.links(), { baby_id: inv.baby_id, user_id: me, role: "caregiver" }]);
+    }
+    write(K.invites, invites.map((i) => (i.id === inv.id ? { ...i, status: "accepted" } : i)));
+    return { babyId: inv.baby_id, error: null };
   }
 
   // ---- cross-tab "realtime" via BroadcastChannel ----

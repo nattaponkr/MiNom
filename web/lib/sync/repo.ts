@@ -3,7 +3,7 @@
 //   - demoRepo:     localStorage + BroadcastChannel (zero-backend UX demo).
 // The factory picks one based on whether Supabase env vars are present, so the
 // entire UI/sync layer above this line is identical in both modes.
-import type { Activity, ActivityRow, Baby, Caregiver, EatDetails, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, EatDetails, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import { SUPABASE_CONFIGURED } from "@/lib/supabase/client";
 
 export type ActivityInsert = {
@@ -67,6 +67,11 @@ export interface Repo {
   addCaregiverByEmail(babyId: string, email: string): Promise<{ error: string | null }>;
   removeCaregiver(babyId: string, userId: string): Promise<void>;
   transferOwnership(babyId: string, userId: string): Promise<void>;
+  // invites by email (token flow)
+  createInvite(babyId: string, email: string): Promise<{ token: string | null; error: string | null }>;
+  listInvites(babyId: string): Promise<Invite[]>; // pending only
+  revokeInvite(inviteId: string): Promise<void>;
+  acceptInvite(token: string): Promise<{ babyId: string | null; error: string | null }>;
 
   // realtime
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void;

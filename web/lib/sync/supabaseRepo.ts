@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
 import { colorFromSeed } from "@/components/ui";
-import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
 
 const SELECT_WITH_LOGGER = "*, logged_by:logged_by_user_id (display_name, avatar_color)";
@@ -246,6 +246,32 @@ export class SupabaseRepo implements Repo {
   async transferOwnership(babyId: string, userId: string): Promise<void> {
     const { error } = await this.sb.rpc("transfer_ownership", { p_baby: babyId, p_user: userId });
     if (error) throw error;
+  }
+
+  async createInvite(babyId: string, email: string): Promise<{ token: string | null; error: string | null }> {
+    const { data, error } = await this.sb.rpc("create_caregiver_invite", { p_baby: babyId, p_email: email });
+    if (error) return { token: null, error: error.message };
+    const res = (data as string | null) ?? "";
+    return res.startsWith("care.error") ? { token: null, error: res } : { token: res, error: null };
+  }
+  async listInvites(babyId: string): Promise<Invite[]> {
+    const { data, error } = await this.sb
+      .from("caregiver_invites")
+      .select("id, email, status, expires_at")
+      .eq("baby_id", babyId)
+      .eq("status", "pending");
+    if (error) throw error;
+    return (data as Invite[]) ?? [];
+  }
+  async revokeInvite(inviteId: string): Promise<void> {
+    const { error } = await this.sb.rpc("revoke_caregiver_invite", { p_invite: inviteId });
+    if (error) throw error;
+  }
+  async acceptInvite(token: string): Promise<{ babyId: string | null; error: string | null }> {
+    const { data, error } = await this.sb.rpc("accept_caregiver_invite", { p_token: token });
+    if (error) return { babyId: null, error: error.message };
+    const res = (data as string | null) ?? "";
+    return res.startsWith("care.error") ? { babyId: null, error: res } : { babyId: res, error: null };
   }
 
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void {

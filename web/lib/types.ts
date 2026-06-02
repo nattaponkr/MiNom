@@ -67,6 +67,8 @@ export type Measurement = {
   created_at: string;
 };
 
+export type Invite = { id: string; email: string; status: string; expires_at: string };
+
 // A caregiver of a baby (roster row joined with profile).
 export type CaregiverRole = "owner" | "caregiver";
 export type Caregiver = {

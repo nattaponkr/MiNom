@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import type { Baby, Caregiver, SessionUser } from "@/lib/types";
+import type { Baby, Caregiver, Invite, SessionUser } from "@/lib/types";
 import { getRepo } from "@/lib/sync/repo";
 import { Avatar, Button } from "./ui";
 import { ConfirmSheet } from "./Sheets";
@@ -12,15 +12,21 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function CaregiversScreen({ me, baby, onChanged }: { me: SessionUser; baby: Baby; onChanged: () => void }) {
   const [rows, setRows] = useState<Caregiver[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [emailed, setEmailed] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [confirm, setConfirm] = useState<{ kind: "remove" | "transfer" | "leave"; cg?: Caregiver } | null>(null);
 
   const reload = useCallback(async () => {
     const repo = await getRepo();
-    setRows(await repo.listCaregivers(baby.id));
+    const [cgs, invs] = await Promise.all([repo.listCaregivers(baby.id), repo.listInvites(baby.id)]);
+    setRows(cgs);
+    setInvites(invs);
     setLoading(false);
   }, [baby.id]);
   useEffect(() => {
@@ -31,19 +37,42 @@ export default function CaregiversScreen({ me, baby, onChanged }: { me: SessionU
   const isOwner = myRole === "owner";
   const emailValid = EMAIL_RE.test(email);
 
+  const myName = rows.find((r) => r.user_id === me.id)?.display_name ?? t("timeline.you");
+
   const add = async () => {
     if (!emailValid) return;
     setAdding(true);
     setError(null);
+    setInviteLink(null);
+    setEmailed(false);
     const repo = await getRepo();
-    const res = await repo.addCaregiverByEmail(baby.id, email);
-    setAdding(false);
-    if (res.error) {
-      setError(t(res.error));
+    const res = await repo.createInvite(baby.id, email);
+    if (res.error || !res.token) {
+      setAdding(false);
+      setError(t(res.error ?? "care.error.generic"));
       return;
     }
-    track("caregiver_invited", { channel: "email-existing" });
+    setInviteLink(`${window.location.origin}/invite/${res.token}`);
+    // Best-effort email; no-ops without RESEND key → the copyable link is the fallback.
+    try {
+      const r = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: res.token, to: email.trim(), inviterName: myName, babyName: baby.name }),
+      });
+      setEmailed(((await r.json()) as { sent?: boolean }).sent === true);
+    } catch {
+      /* link fallback */
+    }
+    track("caregiver_invited", { channel: "email-new" });
     setEmail("");
+    setAdding(false);
+    void reload();
+  };
+
+  const revoke = async (id: string) => {
+    const repo = await getRepo();
+    await repo.revokeInvite(id);
     void reload();
   };
 
@@ -140,6 +169,52 @@ export default function CaregiversScreen({ me, baby, onChanged }: { me: SessionU
               </span>
             )}
           </div>
+
+          {inviteLink && (
+            <div className="note" style={{ marginTop: 4 }} lang="th">
+              <b>{emailed ? t("care.invite.emailed") : t("care.invite.created")}</b>
+              <div style={{ fontSize: 12, color: "var(--fg-muted)", margin: "6px 0 4px" }}>{t("care.invite.linkLabel")}</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input className="input" readOnly value={inviteLink} style={{ flex: 1, fontSize: 12 }} onFocus={(e) => e.currentTarget.select()} />
+                <Button
+                  kind="ghost"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(inviteLink);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1800);
+                  }}
+                >
+                  {copied ? t("care.invite.copied") : t("care.invite.copy")}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {invites.length > 0 && (
+            <>
+              <div className="tl-day" style={{ marginTop: 16 }}>
+                {t("care.pending")}
+              </div>
+              <div className="list">
+                {invites.map((inv) => (
+                  <div className="list-row" key={inv.id}>
+                    <span className="verb-go" style={{ background: "var(--surface-2)", color: "var(--fg-muted)" }}>
+                      <IcMail size={18} />
+                    </span>
+                    <span className="lr-main">
+                      <span className="lr-t">{inv.email}</span>
+                      <span className="lr-d">
+                        <span className="badge pending">{t("care.pending")}</span>
+                      </span>
+                    </span>
+                    <button className="text-link" onClick={() => revoke(inv.id)} type="button" style={{ fontSize: 13, color: "var(--danger)" }}>
+                      {t("care.revoke")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </>
       )}
 
