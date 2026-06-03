@@ -72,23 +72,20 @@ export default function InviteAccept({ token }: { token: string }) {
     })();
   }, [token, acceptAsSignedIn]);
 
-  // POST the auto-confirm endpoint; one retry if the signup row hasn't propagated.
-  const autoConfirm = async (email: string): Promise<boolean> => {
-    for (let i = 0; i < 2; i++) {
-      try {
-        const r = await fetch("/api/invite/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, email }) });
-        const j = (await r.json()) as { ok?: boolean; reason?: string };
-        if (j.ok) return true;
-        if (j.reason === "no_user" && i === 0) {
-          await sleep(900);
-          continue;
-        }
-        return false;
-      } catch {
-        return false;
-      }
+  // Server creates the confirmed invited account (no email), links + accepts.
+  // Returns "ok" or a reason string.
+  const autoConfirm = async (email: string): Promise<string> => {
+    try {
+      const r = await fetch("/api/invite/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, email, password, name }),
+      });
+      const j = (await r.json()) as { ok?: boolean; reason?: string };
+      return j.ok ? "ok" : j.reason || "error";
+    } catch {
+      return "network";
     }
-    return false;
   };
 
   const submitSignup = async (e: React.FormEvent) => {
@@ -98,33 +95,42 @@ export default function InviteAccept({ token }: { token: string }) {
     setPhase("working");
     const repo = await getRepo();
     const email = preview.email;
-    const res = await repo.signUp(email, password, name);
-    if (res.error) {
-      setErr(res.error);
-      setPhase("form");
-      return;
-    }
-    if (!res.needsConfirmation) {
-      // demo / confirmations off → already has a session; just link.
+
+    // Demo: no server/admin — client signUp auto-creates a session, then link.
+    if (repo.isDemo) {
+      const res = await repo.signUp(email, password, name);
+      if (res.error) {
+        setErr(res.error);
+        setPhase("form");
+        return;
+      }
       await repo.acceptInvite(token);
       track("signup_complete", { source: "invited" });
       track("caregiver_accepted", {});
       finish();
       return;
     }
-    // confirmations ON → auto-confirm the invited email, then sign in.
-    if (await autoConfirm(email)) {
+
+    // Real: create the confirmed account server-side (no confirmation email),
+    // link + accept, then sign in. Doesn't depend on the Auth SMTP at all.
+    const res = await autoConfirm(email);
+    if (res === "ok") {
       const si = await repo.signIn(email, password);
-      if (!si.error) {
-        await repo.acceptInvite(token); // idempotent (server already linked)
-        track("signup_complete", { source: "invited" });
-        track("caregiver_accepted", {});
-        finish();
+      if (si.error) {
+        // account already existed with a different password → guide to sign in
+        setSigninEmail(email);
+        setMode("signin");
+        setErr(t("auth.error.badCredentials"));
+        setPhase("form");
         return;
       }
+      track("signup_complete", { source: "invited" });
+      track("caregiver_accepted", {});
+      finish();
+      return;
     }
-    // fallback: couldn't auto-confirm → standard email confirmation path
-    setPhase("checkInbox");
+    setErr(t(res === "not_configured" ? "care.error.notReady" : "care.error.generic"));
+    setPhase("form");
   };
 
   const submitSignin = async (e: React.FormEvent) => {
