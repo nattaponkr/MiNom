@@ -18,6 +18,27 @@
 
 ---
 
+## 2026-06-03 — Dev — Invited on-ramp VERIFIED LIVE (4/4 on production); beta can open invite-only → Handoff → PM
+
+After CPO set the **correct** `service_role` key (first attempt was the anon key — diagnosed via a temporary keyKind probe, since removed) and ran migration **0005**, the caregiver invite path is **verified end-to-end on production**:
+
+- ✅ Owner (pre-confirmed account) creates an invite → copyable link + email.
+- ✅ Invite landing renders (inviter + baby), email **locked** to the invited address.
+- ✅ **Auto-confirm: a brand-new user signs up via the link → lands signed-in on the shared baby with NO confirmation email** (criterion #3). Server admin-creates the account (service-role), links, marks accepted.
+- ✅ **Cross-device realtime owner→invited in ~1.2s** (criterion #4, <5s).
+
+This is the **beta on-ramp** and it's GO — fully independent of the Auth SMTP, so the self-serve SMTP issue below does not block an invite-only beta.
+
+**Still open (CPO; only needed for self-serve, not invite-only beta):**
+- 🔴 Self-serve signup still returns "Error sending confirmation email" — Supabase Auth SMTP (Resend) misconfig; fix in the Supabase dashboard (Auth → SMTP / verified sender). The "เช็คอีเมลของคุณ" screen handles the state once it sends.
+- Human-only dry-run steps: eyeball the real invite/confirmation email Thai content, watch PostHog Live events across the loop, real-cellular two-device pass. (App behaviors verified; email content + analytics dashboard are CPO's to confirm.)
+
+**Net:** Dev side of #04 complete; the invite-only beta path is live-verified. New Thai keys (below) await Designer review.
+
+**Handoff → PM (Claude):** open beta **invite-only** now — invited on-ramp proven on production. Self-serve waits on the CPO SMTP fix (separate, non-blocking). CPO to sign off PostHog live events + email content.
+
+---
+
 ## 2026-06-03 — Dev — Phase 3.5 #04 code complete; dry-run found a self-serve-email P0 (code-side handled; CPO config + keys to close) → Handoff → PM
 
 **Work item 1 — done (code), verified in demo + build.**
@@ -45,6 +66,83 @@
 - Code for both work items is shipped + locally verified. To declare the dry-run 7/7 and open beta, the **CPO checklist above** must land (fix SMTP, set service-role key, run 0005). I'll re-run the automatable live checks the moment the service-role key is set, and support CPO through the inbox/PostHog steps.
 - Recommend beta opens on the **invited on-ramp first** (SMTP-independent) while self-serve SMTP is sorted.
 - CPO: please route to PM.
+
+---
+
+## 2026-06-03 — PM — LINE setup fully closed (Premium ID `@lamoonapp` claimed; OA published)
+
+**What happened**
+- CPO closed all 4 LINE pending items in one pass:
+  1. ✅ Greeting self-test — greeting fires correctly.
+  2. ✅ Custom Thai auto-reply written (CPO edited PM's draft to remove the support-email line — keeps it shorter, less commitment).
+  3. ✅ **Premium ID claimed: `@lamoonapp`** (`@lamoon` presumably taken). Nice incidental alignment with `lamoon.app` if/when we register the domain.
+  4. ✅ OA published / searchable.
+
+**Implications**
+- The OA is now a real, searchable surface. Anyone who searches `@lamoonapp` in LINE can follow → greeting fires → tagline + web URL in front of them.
+- The `@lamoonapp` handle becomes the canonical LINE identity. Any future copy that references the OA should use `@lamoonapp` (not the random auto-generated handle, which is now retired).
+- Phase 5 carries forward: rich menu, LINE Login channel, LIFF/Mini App, webhook + bot, broadcast templates, OA verification (the green shield, requires business registration).
+
+**Files updated**
+- `LINE_BACKLOG.md` — recorded `@lamoonapp`, Public/Searchable status, and the auto-reply edit.
+
+**Status of overall workstream**
+- All defensive LINE prep is done. CPO has been productive for two sessions while Dev's baton runs.
+- Active baton remains Dev (`HANDOFF_dev_04.md`) — auto-confirm-on-invite + 7-scenario dry-run.
+- Next concrete move on this project: **Dev → PM** with dry-run results. Then beta invites.
+
+---
+
+## 2026-06-03 — PM — Designer LINE OA assets accepted; routing upload to CPO
+
+**What happened**
+- Designer shipped the LINE OA asset pack per `HANDOFF_designer_04.md`. Three files in `design/line_oa/` — two for upload, one for reference.
+- Reviewed `preview_in_context.png`: profile glyph holds at 56px chat-list size, cover composition sits cleanly in the safe area with the watermark bleeding lower-right as intended. Accepting as delivered.
+
+**Decisions Designer owned (logged, no PM override)**
+- Monogram (not full wordmark) on the profile photo — the word blurs at 56px.
+- Cover motif: single faint watermark + soft blobs. No illustrations, no people, no emoji.
+- Exact-token colors: clay `#cb7b52`, cream `#fefbf7`. Anuphan Medium 500. One face throughout.
+
+**For CPO — upload (~5 min)**
+- Two upload notes from Designer:
+  - Keep as PNG. JPG re-encoding introduces banding on the cream-on-clay surface.
+  - Don't recenter the cover watermark — the lower-right bleed is intentional.
+- Upload steps in chat below.
+
+**Carry-overs to Phase 5 (unchanged)**
+Rich menu, LINE Login artwork, LIFF assets, broadcast templates, Premium ID claim.
+
+**Status**
+- Dev baton (`HANDOFF_dev_04.md`) remains active — auto-confirm + dry-run, no impact.
+- Designer's small ask is closed. Designer free.
+
+---
+
+## 2026-06-03 — Designer — LINE OA assets shipped
+
+**What happened**
+Shipped the two LINE OA images per `HANDOFF_designer_04.md`, plus a context proof.
+
+**Delivered (in `design/line_oa/`)**
+- `oa_profile.png` (640×640) — ล monogram in cream on warm clay with the soft top-left light. Holds as a clean single mark down to 56px chat-list size.
+- `oa_cover.png` (1080×878) — wordmark ละมุน + tagline "ดูแลลูกอย่างละมุนละไม". Single faint ล watermark bleeding off lower-right as the only motif. Centered in safe area.
+- `preview_in_context.png` — circular-crop checks at LINE sizes + cover safe-area verification. Reference proof, not for upload.
+
+**Decisions I owned**
+- Monogram on the avatar (not full wordmark) — the word blurs at 56px chat-list size.
+- Cover motif: single faint watermark + soft blobs. No illustrations, no people, no emoji.
+- Exact-token colors only: clay `#cb7b52`, cream `#fefbf7`. Anuphan Medium 500. One face throughout.
+
+**Notes for CPO before upload**
+- Keep them as PNG — JPG compression introduces banding on the cream-on-clay surface.
+- Don't recenter the cover watermark — it's meant to bleed off lower-right.
+
+**Out of scope (Phase 5 backlog)**
+Rich menu, LINE Login artwork, LIFF assets, broadcast templates, Premium ID claim.
+
+**Handoff → PM (Claude)**
+Files in `design/line_oa/`. Nothing blocked on Dev. PM routes the upload to CPO.
 
 ---
 
