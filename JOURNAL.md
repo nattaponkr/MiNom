@@ -18,6 +18,235 @@
 
 ---
 
+## 2026-06-03 — Dev — Phase 3.5 #04 code complete; dry-run found a self-serve-email P0 (code-side handled; CPO config + keys to close) → Handoff → PM
+
+**Work item 1 — done (code), verified in demo + build.**
+- **"เช็คอีเมลของคุณ" screen** for self-serve signup: with confirmations ON, `signUp` returns no session → AuthScreen now shows a Thai check-inbox screen with resend, instead of silently bouncing to the form (which is what the *old* live build did — a real bug).
+- **Auto-confirm-on-invite, reworked to the correct design:** `/api/invite/confirm` (service-role, server-only, rate-limited) **admin-creates** the invited account with `email_confirm: true` — so it sends **no** confirmation email at all (criterion #3) and is **independent of the Auth SMTP**. Then it links the user + marks the invite accepted (single-use); the client signs in. Invite landing shows inviter+baby, email locked to the invited address. `invite_preview` RPC (migration **0005**) backs the landing page. (Also fixed a real bug: an inner `Shell` component was remounting the form on every keystroke.)
+
+**Live dry-run — NOT 7/7; it caught a P0.**
+- 🔴 **P0 (config, not code): self-serve signup fails live** — `signUp` returns **"Error sending confirmation email."** Supabase Auth's custom SMTP (Resend) isn't actually sending. Blocks criteria #1 and self-serve onboarding. **Code side is handled** (check-inbox screen renders the state gracefully; invited path is now SMTP-independent), but the **send itself is a CPO infra fix**: Supabase → Authentication → Emails/SMTP — re-check the Resend SMTP host/port/user/pass + verified sender. I can't fix dashboard SMTP.
+- ✅ **#6 Privacy** — full 12-section policy renders with §1 (Nattapon Kraisingkorn) filled; internal note + placeholders do not leak (verified locally; live after redeploy).
+- ⏳ **#2/#3 invite email + invited auto-confirm**, **#4 PostHog events live**, **#5/#7 cross-device + offline on real cellular** — all need CPO execution (real inboxes A/B, PostHog Live view, two devices) and the keys below. Invited auto-confirm also needs the **service-role key** set.
+- Verified by me (automated): demo invited signup → linked → shared baby; 35/35 headless Thai QA; tsc + build green.
+
+**CPO dependencies to close the dry-run (PM to route)**
+1. 🔴 **Fix Supabase Auth SMTP** so confirmation emails send (unblocks self-serve). Test: sign up on the live form → email should arrive.
+2. **Set `SUPABASE_SERVICE_ROLE_KEY`** in Railway (Supabase → Settings → API → service_role) — required for invited auto-confirm (the no-second-email beta on-ramp). Server-only; never NEXT_PUBLIC.
+3. **Run migration `web/supabase/migrations/0005_invite_preview.sql`** (0004 already run).
+4. Then run the full `HANDOFF_dev_04` §2 dry-run with two real inboxes + PostHog Live; bookmark the PostHog project dashboard (eu.posthog.com → MiNom beta) for PM.
+
+> Note: for an **invite-only beta**, the invited on-ramp (server admin-create, no email) sidesteps the SMTP P0 entirely — set the service-role key (#2) and invited families work even before SMTP is fixed. Self-serve signup still needs #1.
+
+**New Thai keys for Designer review (Phase-3.5 process note):**
+`auth.signup.checkInbox.title/body/resend/resent/inviteFallback`, `auth.invite.signup.title/sub/cta`, `auth.invite.haveAccount`, `care.error.notReady`.
+
+**Handoff → PM (Claude)**
+- Code for both work items is shipped + locally verified. To declare the dry-run 7/7 and open beta, the **CPO checklist above** must land (fix SMTP, set service-role key, run 0005). I'll re-run the automatable live checks the moment the service-role key is set, and support CPO through the inbox/PostHog steps.
+- Recommend beta opens on the **invited on-ramp first** (SMTP-independent) while self-serve SMTP is sorted.
+- CPO: please route to PM.
+
+---
+
+## 2026-06-02 — PM — Routing small Designer ask: LINE OA profile assets
+
+**What happened**
+- CPO promoted the LINE asset asks from `LINE_BACKLOG.md` ("queued for next Designer baton") to a proper handoff so they don't sit in the backlog.
+- Wrote `HANDOFF_designer_04.md` — small, focused: two PNG files (profile photo `oa_profile.png` 640×640, cover photo `oa_cover.png` 1080×878) for the ละมุน Official Account, delivered to `design/line_oa/`.
+
+**Why this isn't a workstream violation**
+- Dev's baton (`HANDOFF_dev_04.md`) is the active product workstream — auto-confirm + dry-run.
+- This Designer ask is a discrete asset pack, not a phase. Designer can run it in parallel without competing with Dev's product work. Like requesting a logo PNG, not initiating a design phase.
+- If a real conflict surfaces (Designer's brand decision affects something Dev's mid-implementing), PM intervenes.
+
+**Scope deliberately tight**
+- Only the two LINE OA images. Rich menu icons, LIFF assets, broadcast templates, Premium ID claim → all saved for Phase 5 when the LINE product surface is being designed for real.
+
+**Handoff → Designer (Claude Design)**
+- Brief: `HANDOFF_designer_04.md`. References `design/brand.jsx`, `brand.css`, PRD v0.3 §0.
+- Brand voice rule still applies (no babies-as-cartoon, no off-brand emoji, restraint over fullness).
+- When done: write a journal entry with file paths; `Handoff → PM`; PM tells CPO to upload via OA Manager (~5 min of clicks).
+
+CPO: please route `HANDOFF_designer_04.md` to Claude Design.
+
+---
+
+## 2026-06-02 — PM — LINE account scaffolding done (Phase 5 prep)
+
+**What happened**
+- While Dev's baton is in flight (`HANDOFF_dev_04.md`), CPO and PM walked through LINE account setup as defensive brand + Phase 5 prep.
+- 4 steps completed end-to-end: LINE Business ID → Official Account `ละมุน` (with Thai greeting + bio) → response settings → Developers provider + Messaging API channel.
+- **One LINE flow correction logged:** Messaging API channels can no longer be created directly from Developers Console (LINE changed it). Correct path is OA Manager → Settings → Messaging API → Enable → channel auto-creates in Developers Console. Worth remembering for any future LINE onboarding.
+
+**Foundation now in place**
+- Official Account `ละมุน` (privately unpublished; auto-generated free `@handle` saved by CPO; Premium ID deferred).
+- Developers provider + Messaging API channel, linked to the OA.
+- Three credentials saved by CPO (treated as secrets): `LINE_CHANNEL_ID`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`. Ready to drop into Railway env vars when Phase 5 starts.
+- Auto-reply currently **on** with LINE's stock default (CPO's call — fine while there are no users). Phase 5 replaces with proper bot logic and switches webhook on.
+
+**Designer asset asks queued**
+- Added to `LINE_BACKLOG.md` → "Designer asset asks": OA profile photo (640×640 PNG of the `ล` mark) + cover photo (1080×878 with wordmark + tagline). Pull-based — Designer picks up on next baton; not a formal handoff.
+
+**Status of overall workstream**
+- Dev baton (`HANDOFF_dev_04.md`) is still queued: auto-confirm-on-invite + 7-scenario live dry-run.
+- PM has now landed all sensible pre-beta and pre-Phase-5 prep work that doesn't require Dev. Next concrete move is on Dev → PM, then beta opens.
+
+---
+
+## 2026-06-02 — PM — Phase 5 queued: ละมุน on LINE
+
+**What happened**
+- Support email pivot committed + pushed by CPO. Privacy page + feedback button now route to `nattaponkraisingkorn@gmail.com`; will go live on next Railway redeploy (~2 min).
+- **CPO direction shift:** instead of creating a LINE OpenChat for the beta community (the original task #3), CPO proposed **bringing ละมุน itself into LINE as a primary interface.** This is a meaningful product surface change, not a small enhancement.
+- CPO explicitly queued the work: "Wait after dev complete this phase and we will move to this LINE ticket next."
+
+**Strategic note**
+- Thailand is a LINE-first market (~50M+ MAU). Multi-generational adoption (grandmas, nannies) is one of our biggest activation risks — they already live in LINE and won't install another app. Putting ละมุน inside LINE removes that barrier.
+- This affects identity (LINE Login), invites (LINE share), notifications, and possibly the primary UI surface. Treated as a Phase 5 candidate, not a Phase 4 enhancement.
+
+**Decisions made by PM (flag to override)**
+1. **Phase 4 (web beta) still proceeds as planned.** Don't pause/cancel. The web beta gives us product-loop signal that informs the LINE design. Sunk cost is small relative to learning value.
+2. **The original "create beta LINE OpenChat" task is replaced.** Community/support during web beta will happen via LINE 1:1 chats with the cohort + the in-app feedback button, not a group chat. If CPO wants a group chat later, easy to add.
+3. **LINE work begins after current Dev baton (`HANDOFF_dev_04.md`) closes.** Sequence preserved; no parallel workstreams.
+
+**Files produced this turn**
+- `LINE_BACKLOG.md` — initial framing for the Phase 5 ticket: surface options (LIFF / Mini App / Bot / hybrid), 6 open questions for CPO to mull on, sequencing notes, follow-ups.
+- `PLAN.md` updated: cleaned a duplicate Phase 4 entry, added Phase 5 placeholder, added BETA_RECRUITMENT.md and LINE_BACKLOG.md to file map.
+
+**Open questions for CPO** (no rush — these inform the Phase 5 PRD when we start it)
+- Does the web app survive after LINE launches (fallback) or get sunset?
+- LINE Login only, or LINE-Login-OR-email?
+- Family invites via LINE share or keep email path?
+- Notifications via LINE messages?
+- Should we pre-claim the LINE Official Account name "ละมุน" now (separate from technical integration)?
+
+**No handoff this turn** — workstream stays with PM (waiting on Dev's `HANDOFF_dev_04.md` return). Dev's baton is unchanged.
+
+---
+
+## 2026-06-02 — PM — Pre-beta CPO tasks: §12 sign-offs locked, recruitment tracker shipped, LINE group plan, support email pivoted
+
+**What happened**
+- Walked CPO through all 4 parallel-safe pre-beta tasks (sign-offs, recruitment, LINE group, support email).
+
+**Locked decisions**
+1. `BETA_PLAN.md` §12 — all 5 items now ✅ locked: lifetime-free beta cohort, PostHog as analytics, Resend pulled forward to Phase 3.5, cohort target 15–20 (recruit ~25), Q1 monetization = free in v1.
+2. **Support email pivoted to `nattaponkraisingkorn@gmail.com` for the beta window.** `support@lamoon.app` was on every user-facing surface (privacy policy, feedback button, invite email, privacy page contact line) but the lamoon.app domain isn't registered yet — dead address would have bounced. CPO chose to use personal Gmail "for now" rather than register the domain this session.
+3. **`lamoon.app` domain registration** stays on the PM TODO list — to be done before public launch (or sooner if CPO wants). When done, swap-back is a simple find-and-replace across the same 5 files.
+
+**Files updated this turn**
+- `BETA_PLAN.md` §12 — 3 remaining sign-offs locked.
+- `PRIVACY_TH.md` + `web/content/privacy_th.md` — email pivoted (6 references each).
+- `web/components/SettingsScreen.tsx` — feedback button mailto pivoted.
+- `web/app/privacy/page.tsx` — privacy page contact line pivoted.
+- `BETA_COMMS.md` — invite email template + week-6 interview frame pivoted.
+- New: `BETA_RECRUITMENT.md` — 25-row tracker template + coverage check + workflow notes.
+
+**Internal docs** (`JOURNAL`, `PLAN`, `HANDOFF_dev_*`, `CPO_PROVISIONING_CHECKLIST`) still reference `support@lamoon.app` as historically accurate descriptions of the long-term plan. Not changed; revisit at domain registration.
+
+**Still on CPO** (today/this week, parallel-safe):
+- Commit + push the 5-file pivot via Terminal (instructions delivered in chat).
+- Create the private LINE OpenChat per the walkthrough; save the invite link.
+- Start filling `BETA_RECRUITMENT.md` — aim 25 warm intros over the next week or two, watching the coverage table at the top.
+
+**Note on signature style for outbound**
+- `BETA_COMMS.md` and the Supabase email templates currently sign as **"ทีมละมุน"** (generic). CPO can switch to named at any time; not blocking.
+
+**Status of overall workstream**
+- Dev baton (`HANDOFF_dev_04.md`) is still queued: auto-confirm-on-invite + 7-scenario live dry-run. PM is now free to start finalizing beta comms timing and bookmarking the PostHog dashboard once Dev finishes.
+
+---
+
+## 2026-06-02 — PM — CPO provisioning complete; routing to Dev for auto-confirm + dry-run
+
+**What happened**
+- Walked CPO through the 6-step `CPO_PROVISIONING_CHECKLIST.md` interactively over chat. All 6 steps done: migration 0004 ran, Resend account + API key set up, Supabase custom SMTP wired to Resend with Thai-language email templates (confirmation, password reset, change email), PostHog EU project + key, all 6 env vars in Railway with redeploy, Privacy §1 entity info filled in.
+- **CPO override mid-flight (worth noting): "Let's do a proper signup / invitation system, not just for beta users."** Original plan was to turn email confirmations OFF as a beta shortcut. Instead we kept confirmations ON and pulled forward the "wire Resend as Supabase's SMTP + Thai email templates" work that was originally queued for pre-public. Net effect: no rework before public launch.
+
+**Decisions logged from this turn**
+1. **Email confirmations stay ON** for both beta and public. (Was: off for beta.)
+2. **Supabase custom SMTP via Resend** is live, sending in Thai for confirmation, password reset, change email. (Was: pre-public task.)
+3. **Latin sender "ละมุน"** in all outbound; signature style across email + LINE = generic **"ทีมละมุน"** — CPO can switch to named later if preferred (re-flagged for sign-off).
+4. **Auto-confirm-on-invite** must be added so invited users don't deal with two emails (the invite + a Supabase confirmation). The invite token proves they own the email; we can skip confirmation safely for that path. Small Dev addition; queued in Handoff #04.
+
+**Files produced this turn**
+- `HANDOFF_dev_04.md` — auto-confirm-on-invite implementation + signup UX + full live beta dry-run protocol (7-scenario, 7-pass-criteria).
+- Updated PLAN + this entry.
+
+**Routing to Dev (next baton): `HANDOFF_dev_04.md`**
+Two work items:
+1. **Auto-confirm-on-invite** — server endpoint that admin-confirms a user when they sign up via a valid invite token. Anti-abuse: email field is pre-filled and locked to the invite address. Plus the "check your inbox" screen for self-serve signups (new Thai keys to flag for Designer review per Phase-3.5 process note).
+2. **Live beta dry-run** — full 7-scenario protocol covering real-email signup + invite + cross-device + offline + privacy + feedback, all against real Resend + PostHog + Supabase. Must pass 7/7 before beta invites go out.
+
+**Carry-overs for CPO (parallel-safe; don't block Dev)**
+- Sign-offs on `BETA_PLAN.md` §12 (3 items left): lifetime-free for beta cohort, cohort target 15–20, Q1 monetization.
+- Recruitment list (~25 households) per `BETA_COMMS.md` §1.
+- Create the beta LINE OpenChat (private; PM + CPO co-admin).
+- Confirm `support@lamoon.app` forwards to CPO inbox.
+
+CPO: please route `HANDOFF_dev_04.md` to Claude Code. Dev runs the dry-run; on clean pass, baton returns to PM and we open beta.
+
+---
+
+## 2026-06-02 — PM — Phase 3.5 engineering accepted; CPO checklist + beta comms drafted
+
+**What happened**
+- Reviewed Dev's Phase 3.5 close-out. Five items shipped, 5/7 success criteria verified by construction (Thai copy patch + Sleep concurrency + Privacy page + Feedback button + Invite seeded test). The remaining 2 (live PostHog dashboard, real email over network) are gated on CPO secrets — they'll be confirmed in the live dry-run, not in code review.
+- **Phase 3.5 engineering accepted.** Operationally pending the CPO provisioning checklist below.
+
+**This PM turn (no code work — prep for beta open)**
+Produced two deliverables so that the moment provisioning lands, we open beta with no further drafting needed.
+
+**1. `CPO_PROVISIONING_CHECKLIST.md` — single actionable doc for CPO**
+Six steps, ~45–60 min total, ordered with dependencies:
+1. Run `web/supabase/migrations/0004_invites.sql` in Supabase SQL editor.
+2. Turn email confirmations OFF in Supabase Auth.
+3. Create Resend account; generate `RESEND_API_KEY` (recommend onboarding domain for beta; domain verification deferred to pre-public).
+4. Create PostHog **EU** project; capture `NEXT_PUBLIC_POSTHOG_KEY` + host.
+5. Set four env vars in Railway (`RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`) + trigger redeploy (we know `NEXT_PUBLIC_*` only bakes in on fresh build, per Phase 3 deploy notes).
+6. Fill in `PRIVACY_TH.md` §1 entity placeholders (unlocks the full policy page).
+
+Each step has a "verify done" check and a "if it fails" fallback so CPO doesn't get stuck.
+
+**2. `BETA_COMMS.md` — finalizes BETA_PLAN §6 + §11**
+All in Thai, all passing the brand voice filter (`ละมุน` feeling — warm, plain, not transactional, no internal jargon):
+- Recruitment warm-intro template (CPO uses for the ~25 warm intros).
+- Beta invite email (the one Resend actually sends).
+- LINE OpenChat welcome (when each household joins).
+- Weekly survey (5 questions; the Sean Ellis PMF question first).
+- Week 2 interview guide (first-week friction; invite-flow probe).
+- Week 6 interview guide ("would you miss it?" — the success criterion).
+- Monday weekly digest template.
+- End-of-beta message (two variants: public launch / fix cycle).
+- Beta agreement (short, symmetric "ของเรา / ของคุณ").
+- Operating cadence summary (daily/weekly/per-household).
+
+**Decisions made by PM this turn**
+- **Recruitment list size: 25 to land 15–20 active.** Don't overcrowd.
+- **Resend onboarding domain for beta** — cleanest path to a live invite email today; migrate to `noreply@lamoon.app` once the domain is registered (separate PM TODO).
+- **PostHog EU host** by default — PDPA-friendly, and if EU latency is a complaint we swap to self-host (not US — never US host for TH user data without a real reason).
+- **Privacy §1 unlock = single source of truth** (`PRIVACY_TH.md` itself, not an env var). Simpler for CPO to edit; one place to look. Confirmed Dev's "sync to `content/privacy_th.md` at build time" pattern is fine.
+- **"ของเรา / ของคุณ" framing in the beta agreement** rather than "terms" / "obligations" — symmetric, sets the tone.
+
+**Carry-overs still on PM's list (not blocking provisioning)**
+- Domain `lamoon.app` (or `.co` / `.in.th`) — research availability, recommend, secure. Doesn't block beta; needed before public launch.
+- Legal review of `PRIVACY_TH.md` — needed before public launch, not beta.
+- Hard-delete edge function — build when first user actually requests deletion.
+
+**Handoff → CPO (Nattapon)**
+This baton is unusual — going to CPO directly rather than Designer/Dev. Brief: `CPO_PROVISIONING_CHECKLIST.md`. Six steps, sequenced, ~45–60 min.
+
+In parallel:
+- Sign off on `BETA_PLAN.md` §12 (5 items — recommendations attached).
+- Build the recruitment list per `BETA_COMMS.md` §1 (CPO's network).
+- Confirm: signature style on outbound — generic "ทีมละมุน" or named "จาก [your name]"? (Question in BETA_COMMS.md §11.)
+- Create the beta LINE OpenChat (private; PM + CPO co-admin).
+- Get `support@lamoon.app` forwarding to your inbox.
+
+When you message "provisioning done," the next baton goes to **Dev** (Claude Code) for the live beta dry-run — invite a fresh email → sign up via the link → verify shared baby + PostHog events firing + real invite email arriving. On a clean dry-run, PM opens beta invites per `BETA_COMMS.md`.
+
+---
+
 ## 2026-06-02 — Dev — Pre-beta enablement complete (Phase 3.5) → Handoff → PM
 
 All five items from `HANDOFF_dev_03.md` are built, on `main`, and verified to the extent possible without CPO secrets. Migration to run: **`0004_invites.sql`** (0001–0003 already live).
