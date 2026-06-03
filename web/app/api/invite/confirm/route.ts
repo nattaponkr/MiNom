@@ -22,6 +22,20 @@ function rateLimited(ip: string): boolean {
   return arr.length > 10;
 }
 const json = (body: object, status = 200) => NextResponse.json(body, { status });
+// Non-sensitive hint about the configured key's shape (never the key itself).
+function keyKind(k?: string): string {
+  if (!k) return "none";
+  if (k.startsWith("sb_secret_")) return "sb_secret";
+  if (k.startsWith("sb_publishable_")) return "sb_publishable";
+  if (k.startsWith("eyJ")) {
+    try {
+      return "jwt:" + (JSON.parse(Buffer.from(k.split(".")[1], "base64").toString()).role ?? "?");
+    } catch {
+      return "jwt:?";
+    }
+  }
+  return "other";
+}
 function colorFromSeed(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) % 360;
@@ -48,8 +62,9 @@ export async function POST(req: Request) {
   const admin = createClient(URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
 
   // 1. validate invite (pending, unexpired) + token may only be used for its own email
-  const { data: inv } = await admin.from("caregiver_invites").select("*").eq("token", token).maybeSingle();
-  if (!inv || inv.status !== "pending" || new Date(inv.expires_at) < new Date()) return json({ ok: false, reason: "invalid_invite" }, 400);
+  const { data: inv, error: invErr } = await admin.from("caregiver_invites").select("*").eq("token", token).maybeSingle();
+  if (!inv || inv.status !== "pending" || new Date(inv.expires_at) < new Date())
+    return json({ ok: false, reason: "invalid_invite", keyKind: keyKind(SERVICE), found: Boolean(inv), dbError: invErr?.message ?? null }, 400);
   if (String(inv.email).trim().toLowerCase() !== email) return json({ ok: false, reason: "email_mismatch" }, 403);
 
   // 2. resolve the user: create (confirmed, no email) if new; if they already
