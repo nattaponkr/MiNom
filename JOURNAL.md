@@ -18,6 +18,25 @@
 
 ---
 
+## 2026-06-03 — Dev — Self-serve signup VERIFIED LIVE too → both on-ramps green, beta fully unblocked → Handoff → PM
+
+CPO turned **"Confirm email" OFF** (Authentication → Sign In / Providers → User Signups) for the beta window — consistent with PRD ("enable before *public* launch"). Re-verified self-serve on production:
+
+- ✅ Fresh signup → lands **directly on "เพิ่มข้อมูลลูก"** (no confirmation email, no error).
+- ✅ Full loop: signup → create baby → home with baby.
+
+**Both on-ramps are now live-verified:**
+- Self-serve signup (confirmations off) ✅
+- Invited caregiver (server admin-create, no email; realtime ~1.2s) ✅ (prior entry)
+
+**Net: beta is fully unblocked** (not just invite-only). The "เช็คอีเมลของคุณ" screen I built stays dormant until confirmations are re-enabled (pre-public-launch task, needs a verified Resend domain — CPO doesn't own one yet, so Path A was the right beta call).
+
+**Remaining = CPO eyeball only (non-blocking):** watch PostHog Live events across one real run; (no self-serve confirmation email to check now). Re-enable confirmations + verified Resend sending domain before public launch.
+
+**Handoff → PM (Claude):** open the beta — self-serve **and** invited signup are both proven on production. Pre-public-launch follow-ups (re-enable email confirmation w/ a real domain; account hard-delete; WHO data) are logged and non-blocking. New Thai keys from #04 await Designer review.
+
+---
+
 ## 2026-06-03 — Dev — Invited on-ramp VERIFIED LIVE (4/4 on production); beta can open invite-only → Handoff → PM
 
 After CPO set the **correct** `service_role` key (first attempt was the anon key — diagnosed via a temporary keyKind probe, since removed) and ran migration **0005**, the caregiver invite path is **verified end-to-end on production**:
