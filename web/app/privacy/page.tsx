@@ -45,7 +45,7 @@ export default function PrivacyPage() {
             // gist + contact, hold the full sectioned policy until the CPO fills it.
             <div className="note" style={{ fontSize: 13, lineHeight: 1.65 }}>
               ฉบับเต็มของนโยบายกำลังจัดทำให้สมบูรณ์ก่อนเปิดสาธารณะ ระหว่างนี้สรุปด้านบนคือสาระสำคัญ หากมีคำถามด้านข้อมูลส่วนบุคคล
-              ติดต่อ <b>support@lamoon.app</b>
+              ติดต่อ <b>nattaponkraisingkorn@gmail.com</b>
             </div>
           ) : (
             <>

@@ -74,7 +74,7 @@ export default function SettingsScreen({
     const subject = encodeURIComponent(t("settings.feedback.subject"));
     const body = encodeURIComponent(`\n\n———\n(ข้อมูลช่วยทีม: user ${me.id} · route ${typeof location !== "undefined" ? location.pathname : "/"})`);
     track("feedback_sent", { length: 0 }); // content not captured (privacy)
-    window.location.href = `mailto:support@lamoon.app?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:nattaponkraisingkorn@gmail.com?subject=${subject}&body=${body}`;
   };
 
   const signOut = async () => {
