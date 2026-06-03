@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getRepo } from "@/lib/sync/repo";
 import { Button } from "./ui";
 import { LamoonWordmark } from "./Brand";
-import { IcX } from "@/lib/icons";
+import { IcX, IcMail } from "@/lib/icons";
 import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 import { isDebug } from "@/lib/debug";
@@ -19,6 +19,8 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean; name?: boolean }>({});
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [checkInbox, setCheckInbox] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
 
   const emailValid = EMAIL_RE.test(email);
   const passwordValid = password.length >= 6;
@@ -41,9 +43,43 @@ export default function AuthScreen({ isDemo, onDone }: { isDemo: boolean; onDone
     if (mode === "up") {
       track("consent_accepted", {});
       track("signup_complete", { source: "organic" });
+      if (res.needsConfirmation) {
+        setCheckInbox(email.trim());
+        return; // no session yet — user must confirm via email
+      }
     }
     onDone();
   };
+
+  const resend = async () => {
+    if (!checkInbox) return;
+    const repo = await getRepo();
+    await repo.resendConfirmation(checkInbox);
+    setResent(true);
+    setTimeout(() => setResent(false), 2500);
+  };
+
+  if (checkInbox) {
+    return (
+      <div className="app">
+        <div className="center-screen" style={{ alignItems: "center", textAlign: "center" }} lang="th">
+          <div className="brand-mark">
+            <LamoonWordmark size={42} />
+          </div>
+          <div style={{ width: 64, height: 64, borderRadius: 20, display: "grid", placeItems: "center", background: "var(--primary-tint)", color: "var(--primary)" }}>
+            <IcMail size={30} />
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 18 }}>{t("auth.signup.checkInbox.title")}</div>
+          <div style={{ fontSize: 14, color: "var(--fg-muted)", lineHeight: 1.6, maxWidth: 300 }}>
+            {t("auth.signup.checkInbox.body", { email: checkInbox })}
+          </div>
+          <Button kind="ghost" onClick={resend} disabled={resent}>
+            {resent ? t("auth.signup.checkInbox.resent") : t("auth.signup.checkInbox.resend")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

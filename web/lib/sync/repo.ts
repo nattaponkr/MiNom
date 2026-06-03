@@ -27,7 +27,8 @@ export type RealtimeHandlers = {
   onDelete: (id: string) => void;
 };
 
-export type AuthResult = { error: string | null };
+export type AuthResult = { error: string | null; needsConfirmation?: boolean };
+export type InvitePreview = { email: string; inviter: string; baby: string };
 
 export interface Repo {
   readonly isDemo: boolean;
@@ -37,6 +38,7 @@ export interface Repo {
   onAuthChange(cb: (user: SessionUser | null) => void): () => void;
   signUp(email: string, password: string, displayName: string): Promise<AuthResult>;
   signIn(email: string, password: string): Promise<AuthResult>;
+  resendConfirmation(email: string): Promise<{ error: string | null }>;
   signOut(): Promise<void>;
   getProfile(): Promise<Profile | null>;
   updateProfile(patch: { display_name?: string }): Promise<void>;
@@ -72,6 +74,7 @@ export interface Repo {
   listInvites(babyId: string): Promise<Invite[]>; // pending only
   revokeInvite(inviteId: string): Promise<void>;
   acceptInvite(token: string): Promise<{ babyId: string | null; error: string | null }>;
+  getInvitePreview(token: string): Promise<InvitePreview | null>;
 
   // realtime
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void;

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
 import { colorFromSeed } from "@/components/ui";
 import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
-import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
+import type { ActivityInsert, ActivityPatch, AuthResult, InvitePreview, RealtimeHandlers, Repo } from "./repo";
 
 const SELECT_WITH_LOGGER = "*, logged_by:logged_by_user_id (display_name, avatar_color)";
 
@@ -45,16 +45,22 @@ export class SupabaseRepo implements Repo {
   }
 
   async signUp(email: string, password: string, displayName: string): Promise<AuthResult> {
-    const { error } = await this.sb.auth.signUp({
+    const { data, error } = await this.sb.auth.signUp({
       email,
       password,
       options: { data: { display_name: displayName, avatar_color: colorFromSeed(email) } },
     });
-    return { error: error?.message ?? null };
+    // Confirmations ON → user created but no session until they confirm.
+    return { error: error?.message ?? null, needsConfirmation: !error && !data.session };
   }
 
   async signIn(email: string, password: string): Promise<AuthResult> {
     const { error } = await this.sb.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  }
+
+  async resendConfirmation(email: string): Promise<{ error: string | null }> {
+    const { error } = await this.sb.auth.resend({ type: "signup", email });
     return { error: error?.message ?? null };
   }
 
@@ -272,6 +278,12 @@ export class SupabaseRepo implements Repo {
     if (error) return { babyId: null, error: error.message };
     const res = (data as string | null) ?? "";
     return res.startsWith("care.error") ? { babyId: null, error: res } : { babyId: res, error: null };
+  }
+  async getInvitePreview(token: string): Promise<InvitePreview | null> {
+    const { data } = await this.sb.rpc("invite_preview", { p_token: token });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = Array.isArray(data) && data[0] ? (data[0] as any) : null;
+    return row ? { email: row.email, inviter: row.inviter, baby: row.baby } : null;
   }
 
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void {

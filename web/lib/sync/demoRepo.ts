@@ -6,7 +6,7 @@
 import { colorFromSeed } from "@/components/ui";
 import { t } from "@/i18n";
 import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
-import type { ActivityInsert, ActivityPatch, AuthResult, RealtimeHandlers, Repo } from "./repo";
+import type { ActivityInsert, ActivityPatch, AuthResult, InvitePreview, RealtimeHandlers, Repo } from "./repo";
 
 type DemoUser = { id: string; email: string; password: string; display_name: string; avatar_color: string };
 type Link = { baby_id: string; user_id: string; role: string };
@@ -107,7 +107,11 @@ export class DemoRepo implements Repo {
     write(K.users, [...users, user]);
     write(K.session, user.id);
     this.emitAuth();
-    return { error: null };
+    return { error: null, needsConfirmation: false }; // demo logs in immediately
+  }
+
+  async resendConfirmation(): Promise<{ error: string | null }> {
+    return { error: null }; // no email in demo
   }
 
   async signIn(email: string, password: string): Promise<AuthResult> {
@@ -356,6 +360,13 @@ export class DemoRepo implements Repo {
     }
     write(K.invites, invites.map((i) => (i.id === inv.id ? { ...i, status: "accepted" } : i)));
     return { babyId: inv.baby_id, error: null };
+  }
+  async getInvitePreview(token: string): Promise<InvitePreview | null> {
+    const inv = this.invites().find((i) => i.token === token && i.status === "pending" && i.expires_at > new Date().toISOString());
+    if (!inv) return null;
+    const inviter = this.userById(inv.invited_by)?.display_name ?? "ครอบครัว";
+    const baby = read<Baby[]>(K.babies, []).find((b) => b.id === inv.baby_id)?.name ?? "ลูก";
+    return { email: inv.email, inviter, baby };
   }
 
   // ---- cross-tab "realtime" via BroadcastChannel ----
