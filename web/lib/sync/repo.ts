@@ -58,6 +58,9 @@ export interface Repo {
   // returns the most recent in-progress/just-started activity of a type within
   // `withinSec` seconds, by another caregiver — drives the concurrency prompt.
   recentByOther(babyId: string, type: VerbType, withinSec: number): Promise<Activity | null>;
+  // most recent N eat rows (any day, any caregiver) — drives Eat v2 smart
+  // defaults (last mode/capture/amount/side/portion + past-food autocomplete).
+  recentEats(babyId: string, limit?: number): Promise<Activity[]>;
 
   // growth
   listMeasurements(babyId: string): Promise<Measurement[]>;

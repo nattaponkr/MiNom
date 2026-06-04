@@ -198,6 +198,20 @@ export class SupabaseRepo implements Repo {
     return rows.length ? this.map(rows[0]) : null;
   }
 
+  async recentEats(babyId: string, limit = 20): Promise<Activity[]> {
+    await this.getSession();
+    const { data, error } = await this.sb
+      .from("activity")
+      .select(SELECT_WITH_LOGGER)
+      .eq("baby_id", babyId)
+      .eq("type", "eat")
+      .order("started_at", { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data as any[]) ?? []).map((r) => this.map(r));
+  }
+
   private async profileFor(userId: string) {
     if (this.profileCache.has(userId)) return this.profileCache.get(userId)!;
     const { data } = await this.sb.from("users").select("display_name, avatar_color").eq("id", userId).single();

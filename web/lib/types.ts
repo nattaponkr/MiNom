@@ -16,8 +16,27 @@ export type Baby = {
   owner_id: string;
 };
 
-// Optional metadata captured behind the Eat "Details" expander.
-export type EatDetails = {
+// Eat v2 — baby-centric model: WHAT the baby consumed (PRD §0.1 / §11).
+// Strict discriminated union by `mode` (PM rec, PRD §11 Q6). Stored in
+// activity.details_json (jsonb) — no migration; v1 rows simply lack `mode`.
+export type EatMode = "bm" | "formula" | "solids";
+export type EatCapture = "timer" | "amount";
+export type Side = "L" | "R";
+export type Portion = "S" | "M" | "L";
+
+export type EatDetails =
+  // นมแม่ — breast milk, nursed (timer): per-side durations + ending side.
+  | { mode: "bm"; capture: "timer"; side?: Side; perSideMs?: { L?: number; R?: number }; endingSide?: Side; notes?: string }
+  // นมแม่ — breast milk, pumped (amount): bottle volume.
+  | { mode: "bm"; capture: "amount"; amountMl: number; notes?: string }
+  // นมผง — formula: always an amount.
+  | { mode: "formula"; amountMl: number; notes?: string }
+  // อาหารแข็ง — solids: food name + portion + first-time (allergen) flag.
+  | { mode: "solids"; food?: string; portion: Portion; firstTime?: boolean; notes?: string };
+
+// v1 rows logged before Eat v2 carry no `mode`; render helpers fall back to
+// whatever fields exist (lib/eat.ts) and show a plain "กิน" when unknown.
+export type LegacyEatDetails = {
   amount_ml?: number;
   what?: "milk" | "food";
   source?: "breast_l" | "breast_r" | "bottle" | "solid";

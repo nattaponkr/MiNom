@@ -248,6 +248,14 @@ export class DemoRepo implements Repo {
     return hit ? this.map(hit) : null;
   }
 
+  async recentEats(babyId: string, limit = 20): Promise<Activity[]> {
+    return this.acts()
+      .filter((a) => a.baby_id === babyId && a.type === "eat")
+      .sort((x, y) => (x.started_at < y.started_at ? 1 : -1))
+      .slice(0, limit)
+      .map((a) => this.map(a));
+  }
+
   // ---- growth ----
   async listMeasurements(babyId: string): Promise<Measurement[]> {
     return read<Measurement[]>(K.measurements, [])

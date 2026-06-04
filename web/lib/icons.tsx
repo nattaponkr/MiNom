@@ -167,5 +167,22 @@ export const IcStop = ({ size }: IconProps) => (
     <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none" />
   </Svg>
 );
+// ---- Eat v2 glyphs (ported from design/icons_eat2.jsx) — non-anatomical ----
+export const IcBottle = ({ size, filled }: IconProps) => (
+  <Svg size={size}>
+    <path d="M9 8.5h6v9a3 3 0 0 1-3 3 3 3 0 0 1-3-3v-9Z" fill={filled ? "currentColor" : "none"} />
+    <path d="M9.6 8.5l.5-2h3.8l.5 2" />
+    <path d="M10.2 6.5l-.4-1.2a1 1 0 0 1 .95-1.3h2.5a1 1 0 0 1 .95 1.3l-.4 1.2" />
+    <path d="M11 13h2.5" strokeWidth={1.4} opacity={filled ? 0 : 0.9} />
+  </Svg>
+);
+export const IcRepeat = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <path d="M4 9a8 8 0 0 1 13.5-3.5L20 8" />
+    <path d="M20 4v4h-4" />
+    <path d="M20 15a8 8 0 0 1-13.5 3.5L4 16" />
+    <path d="M4 20v-4h4" />
+  </Svg>
+);
 
 export const VERB_ICON = { eat: IcEat, sleep: IcSleep, diaper: IcDiaper, grow: IcGrow } as const;

@@ -227,3 +227,127 @@
   .wrap, .topbar-inner { padding-left: 16px; padding-right: 16px; }
   .phone { width: 340px; } .phone-screen { width: 322px; }
 }
+
+/* ============================================================
+   Eat v2 (mode-based feeding) — ported from design/eat2.css
+   ============================================================ */
+
+/* keep the Eat sheet title on one line (Thai กิน/นอน/ถ่าย never wraps) */
+.screen-body .appbar .ttl { white-space: nowrap; }
+
+/* ---- mode selector (segmented, sits where v1 Details toggle was) ---- */
+.eat-modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; background: var(--surface-sunken);
+  padding: 5px; border-radius: var(--r-lg); margin-bottom: 14px; }
+.eat-mode { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 60px;
+  border-radius: var(--r-md); border: 1.5px solid transparent; background: transparent; color: var(--fg-muted);
+  font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.eat-mode .emi { opacity: 0.8; }
+.eat-mode.on { background: var(--surface); color: var(--eat); border-color: color-mix(in oklch, var(--eat) 55%, transparent); box-shadow: var(--shadow-sm); }
+.eat-mode.on .emi { opacity: 1; }
+
+/* ---- capture-method toggle inside นมแม่ (จับเวลา / กรอกปริมาณ) ---- */
+.capture-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface-sunken); padding: 5px; border-radius: var(--r-md); margin-bottom: 14px; }
+.cap-opt { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; border-radius: var(--r-sm);
+  border: 1.5px solid transparent; background: transparent; color: var(--fg-muted); font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.cap-opt.on { background: var(--surface); color: var(--fg); border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+
+/* ---- breast timer ---- */
+.bf-timer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl);
+  padding: 22px 20px; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+.bf-status { font-size: 12.5px; font-weight: 700; letter-spacing: 0; color: var(--fg-muted); }
+.bf-status.live { color: var(--eat); }
+.bf-elapsed { font-family: var(--font-mono); font-size: 44px; font-weight: 600; letter-spacing: -0.03em; margin: 6px 0 4px; }
+.bf-elapsed.idle { color: var(--fg-faint); }
+.bf-runline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-muted); margin-top: 2px; flex-wrap: wrap; justify-content: center; }
+.bf-runline .seg { font-family: var(--font-mono); }
+.bf-runline .done { opacity: 0.7; }
+.bf-runline .active { color: var(--eat); font-weight: 700; }
+.bf-runline .arrow { color: var(--fg-faint); }
+
+/* side picker — two large toggles; tapping the other side switches mid-session */
+.side-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.side-btn { position: relative; min-height: 64px; border-radius: var(--r-lg); border: 1.5px solid var(--border-strong);
+  background: var(--surface); color: var(--fg); font-weight: 800; font-size: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; }
+.side-btn .sb-sub { font-size: 11px; font-weight: 600; color: var(--eat); }
+.side-btn.on { background: var(--eat-tint); border-color: var(--eat); color: var(--eat); }
+.side-btn.suggested { border-style: dashed; border-color: color-mix(in oklch, var(--eat) 60%, transparent); }
+.side-btn .sb-elapsed { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--fg-muted); }
+.side-btn.on .sb-elapsed { color: var(--eat); }
+.side-btn:disabled { cursor: default; }
+
+/* tap-a-side-to-switch hint (replaces the removed สลับข้าง button) */
+.switch-hint { text-align: center; font-size: 12.5px; color: var(--fg-muted); margin: -4px 0 14px; }
+
+/* ---- amount body (นมผง and นมแม่ · กรอกปริมาณ) ---- */
+.amt-display { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: 4px 0 12px; }
+.amt-num { font-family: var(--font-mono); font-size: 46px; font-weight: 600; letter-spacing: -0.03em; }
+.amt-unit { font-size: 17px; font-weight: 600; color: var(--fg-muted); }
+.amt-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; }
+.amt-step { width: 48px; height: 48px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--border); color: var(--fg); cursor: pointer; }
+.last-hint { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--eat); background: var(--eat-tint); padding: 3px 9px; border-radius: var(--r-pill); }
+.qa-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 14px; }
+.qa-chip { font-family: var(--font-mono); font-size: 14px; font-weight: 600; padding: 9px 14px; border-radius: var(--r-pill);
+  border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--fg); min-width: 48px; cursor: pointer; }
+.qa-chip.on { background: var(--eat-tint); border-color: var(--eat); color: var(--eat); }
+
+/* ---- solids: autocomplete ---- */
+.ac-wrap { position: relative; margin-bottom: 14px; }
+.ac-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; background: var(--surface);
+  border: 1px solid var(--border-strong); border-radius: var(--r-md); box-shadow: var(--shadow-md); overflow: hidden; }
+.ac-head { font-size: 11px; font-weight: 700; letter-spacing: 0; color: var(--fg-muted); padding: 9px 13px 5px; }
+.ac-item { display: flex; align-items: center; gap: 9px; padding: 10px 13px; font-size: 15px; border-top: 1px solid var(--border); width: 100%; text-align: left; background: none; border-left: none; border-right: none; border-bottom: none; cursor: pointer; color: var(--fg); }
+.ac-item .clock { color: var(--fg-faint); }
+.ac-item:hover { background: var(--surface-2); }
+
+/* allergen flag — zero weight when unchecked, warms to amber when on */
+.allergen { display: flex; align-items: flex-start; gap: 11px; padding: 12px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--r-md); background: var(--surface); margin-bottom: 14px; cursor: pointer; }
+.allergen.on { border-color: color-mix(in oklch, var(--warn) 55%, transparent); background: color-mix(in oklch, var(--warn) 9%, var(--surface)); }
+.allergen .box { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--border-strong); flex: none; display: grid; place-items: center; color: transparent; margin-top: 1px; }
+.allergen.on .box { background: var(--warn); border-color: var(--warn); color: #fff; }
+.allergen .at { font-weight: 700; font-size: 14.5px; }
+.allergen .ah { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+
+/* notes textarea (replaces v1 single-line) */
+.notes-area { width: 100%; min-height: 64px; resize: none; border-radius: var(--r-md); border: 1.5px solid var(--border-strong);
+  background: var(--surface); color: var(--fg); font-family: inherit; font-size: 16px; padding: 12px 14px; line-height: 1.5; }
+.notes-area::placeholder { color: var(--fg-faint); }
+.notes-area:focus { outline: none; border-color: var(--eat); box-shadow: 0 0 0 4px color-mix(in oklch, var(--eat) 16%, transparent); }
+
+/* ---- Home Eat card v2: stat-line hierarchy + repeat affordance ---- */
+.eat-card-v2 { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); box-shadow: var(--shadow-sm); overflow: hidden; }
+.eat-card-v2.just-logged { animation: cardLogged 1s var(--ease-out, ease-out); }
+@keyframes cardLogged {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--eat) 50%, transparent); }
+  28% { box-shadow: 0 0 0 5px color-mix(in oklch, var(--eat) 26%, transparent), var(--shadow-md); }
+  100% { box-shadow: var(--shadow-sm); }
+}
+.eat-card-v2.just-logged .eat-card-detail { animation: statBump .5s var(--ease-out, ease-out); }
+@keyframes statBump { 0% { color: var(--eat); } 100% { color: inherit; } }
+.eat-card-main { display: flex; align-items: center; gap: 15px; padding: 16px; width: 100%; text-align: left; background: none; border: none; cursor: pointer; }
+.eat-card-main .vi { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; background: var(--eat-tint); color: var(--eat); flex: none; }
+.eat-card-meta { flex: 1; min-width: 0; }
+.eat-card-row1 { display: flex; align-items: baseline; gap: 10px; }
+.eat-card-name { font-size: 13px; font-weight: 700; color: var(--fg-muted); }
+.eat-card-when { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--fg-faint); white-space: nowrap; flex: none; }
+.eat-card-detail { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-top: 3px; line-height: 1.3; }
+.eat-card-detail.empty { font-size: 15px; font-weight: 700; color: var(--fg-muted); }
+.eat-card-go { width: 38px; height: 38px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--surface-2); color: var(--fg-muted); flex: none; }
+.repeat-bar { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; border-top: 1px solid var(--border);
+  background: var(--surface-2); color: var(--eat); font-weight: 700; font-size: 14px; white-space: nowrap; cursor: pointer; border-left: none; border-right: none; border-bottom: none; }
+.repeat-bar.disabled { color: var(--fg-faint); background: var(--surface); cursor: default; }
+.repeat-bar .rb-time { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--fg-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; flex: none; }
+
+/* two-row save snackbar with แก้ไข + เลิกทำ */
+.snackbar.snack-v2 { flex-direction: column; align-items: stretch; gap: 10px; }
+.snackbar.snack-v2 .snk-msg { display: flex; align-items: center; gap: 9px; line-height: 1.4; }
+.snackbar.snack-v2 .snk-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.snackbar.snack-v2 .snk-btn { background: color-mix(in oklch, var(--bg) 16%, transparent); border: none; color: var(--bg);
+  font-family: inherit; font-weight: 700; font-size: 13.5px; padding: 9px 18px; border-radius: var(--r-pill); cursor: pointer; }
+.snackbar.snack-v2 .snk-btn.edit { background: var(--bg); color: var(--fg); }
+.snackbar.snack-v2 .snk-btn:active { transform: scale(0.97); }
+
+/* timeline first-time-food tag */
+.ft-tag { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill);
+  background: color-mix(in oklch, var(--warn) 18%, transparent); color: color-mix(in oklch, var(--warn) 80%, var(--fg)); }
