@@ -17,7 +17,7 @@ const UNDO_MS = 5000;
 const FRESH_MS = 600;
 const TOAST_MS = 2600;
 
-type Snackbar = { id: string } | null;
+type Snackbar = { id: string; repeated?: boolean } | null;
 type Toast = { name: string } | null;
 
 // Outbox op. Legacy entries (bare ActivityInsert) are normalized to insert.
@@ -253,6 +253,37 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     [babyId, optimisticRow, enqueue, flush],
   );
 
+  // Repeat the last feed: a fresh insert at `now` with identical details. Names
+  // what it logged via a `repeated` snackbar; the home card flashes (Main).
+  const repeatLast = useCallback(
+    (source: Activity): string | null => {
+      if (!babyId) return null;
+      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type: source.type, started_at: new Date().toISOString(), details_json: source.details_json };
+      setActivities((prev) => [optimisticRow(insert), ...prev]);
+      enqueue({ op: "insert", insert });
+      setSnackbar({ id: insert.id, repeated: true });
+      if (snackTimer.current) clearTimeout(snackTimer.current);
+      snackTimer.current = setTimeout(() => setSnackbar(null), UNDO_MS);
+      void flush();
+      return insert.id;
+    },
+    [babyId, optimisticRow, enqueue, flush],
+  );
+
+  // Edit an existing entry (e.g. the toast's แก้ไข) — optimistic patch + queued update.
+  const update = useCallback(
+    (id: string, details: Record<string, unknown>, startedAtISO: string) => {
+      setActivities((prev) =>
+        prev
+          .map((a) => (a.id === id ? { ...a, details_json: details, started_at: startedAtISO, _sync: "queued" as const } : a))
+          .sort((x, y) => (x.started_at < y.started_at ? 1 : -1)),
+      );
+      enqueue({ op: "update", id, patch: { details_json: details, started_at: startedAtISO } });
+      void flush();
+    },
+    [enqueue, flush],
+  );
+
   // Sleep timer start — an open-ended activity (ended_at null), no undo snackbar.
   const startSleep = useCallback(
     (startedAtISO?: string) => {
@@ -339,6 +370,8 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     toast,
     dismissToast: () => setToast(null),
     log,
+    repeatLast,
+    update,
     startSleep,
     stopSleep,
     runningSleep,
