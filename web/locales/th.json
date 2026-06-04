@@ -249,7 +249,7 @@
   "care.add": "เพิ่มผู้ดูแล",
   "care.email.label": "อีเมลผู้ดูแล",
   "care.email.placeholder": "name@email.com",
-  "care.inviteHelper": "เราจะส่งลิงก์คำเชิญทางอีเมล ใช้ได้ 14 วัน",
+  "care.inviteHelper": "สร้างลิงก์คำเชิญเพื่อส่งให้ผู้ดูแล ใช้ได้ 14 วัน",
   "care.send": "เพิ่ม",
   "care.remove": "นำออก",
   "care.leave": "ออกจากการดูแลลูกคนนี้",
