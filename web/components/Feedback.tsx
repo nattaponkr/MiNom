@@ -3,15 +3,26 @@ import { Avatar } from "./ui";
 import { IcCheck } from "@/lib/icons";
 import { t } from "@/i18n";
 
-// Undo snackbar — appears for 5s after an optimistic log (section 05).
-export function UndoSnackbar({ onUndo }: { onUndo: () => void }) {
+// Save snackbar — appears for 5s after an optimistic log. Names exactly what was
+// recorded (Eat v2), with แก้ไข to open the just-logged entry and เลิกทำ to revert.
+// Two-row layout so the Thai string + actions never overflow on 360px.
+export function UndoSnackbar({ summary, repeated, onUndo, onEdit }: { summary: string; repeated?: boolean; onUndo: () => void; onEdit?: () => void }) {
   return (
     <div className="snackbar-wrap">
-      <div className="snackbar" role="status">
-        <IcCheck size={16} /> {t("feedback.eatLogged")}
-        <button className="undo" onClick={onUndo} type="button">
-          {t("feedback.undo")}
-        </button>
+      <div className="snackbar snack-v2" role="status">
+        <span className="snk-msg">
+          <IcCheck size={16} /> {t(repeated ? "feedback.repeatedNamed" : "feedback.savedNamed", { summary })}
+        </span>
+        <span className="snk-actions">
+          {onEdit && (
+            <button className="snk-btn edit" onClick={onEdit} type="button">
+              {t("feedback.edit")}
+            </button>
+          )}
+          <button className="snk-btn" onClick={onUndo} type="button">
+            {t("feedback.undo")}
+          </button>
+        </span>
         <span className="snk-prog" />
       </div>
     </div>

@@ -61,6 +61,7 @@ export function ConfirmSheet({
 
 export function ConcurrencySheet({
   kind = "eat",
+  timer = false,
   name,
   agoText,
   onViewTheirs,
@@ -68,20 +69,37 @@ export function ConcurrencySheet({
   onDismiss,
 }: {
   kind?: "eat" | "sleep";
+  timer?: boolean; // eat only: the conflicting log is an in-progress นมแม่ timer
   name: string;
   agoText: string;
   onViewTheirs: () => void;
   onLogAnyway: () => void;
   onDismiss: () => void;
 }) {
-  const k = kind === "sleep" ? "concurrency.sleep" : "concurrency";
+  if (kind === "sleep") {
+    return (
+      <BottomSheet title={t("concurrency.sleep.title")} body={t("concurrency.sleep.body", { name, dur: agoText })} onDismiss={onDismiss}>
+        <Button kind="primary" block onClick={onViewTheirs} style={{ background: "var(--sleep)" }}>
+          {t("concurrency.sleep.view")}
+        </Button>
+        <Button kind="ghost" block onClick={onLogAnyway}>
+          {t("concurrency.sleep.logAnyway")}
+        </Button>
+      </BottomSheet>
+    );
+  }
+  // eat — mode-aware: timer (นมแม่·จับเวลา) vs amount (นมผง / นมแม่·กรอกปริมาณ)
   return (
-    <BottomSheet title={t(`${k}.title`)} body={t(`${k}.body`, { name, dur: agoText })} onDismiss={onDismiss}>
-      <Button kind="primary" block onClick={onViewTheirs} style={kind === "sleep" ? { background: "var(--sleep)" } : undefined}>
-        {t(`${k}.view`)}
+    <BottomSheet
+      title={t("concurrency.eat.title")}
+      body={t(timer ? "concurrency.eat.bodyTimer" : "concurrency.eat.bodyAmount", { name, dur: agoText })}
+      onDismiss={onDismiss}
+    >
+      <Button kind="primary" block onClick={onViewTheirs}>
+        {t(timer ? "concurrency.eat.viewTimer" : "concurrency.eat.view")}
       </Button>
       <Button kind="ghost" block onClick={onLogAnyway}>
-        {t(`${k}.logAnyway`)}
+        {t(timer ? "concurrency.eat.newTimer" : "concurrency.eat.logAnyway")}
       </Button>
     </BottomSheet>
   );

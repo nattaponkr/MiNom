@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Activity, Baby, Profile, VerbType } from "@/lib/types";
 import { ago, ageLabel, todayWeekday } from "@/lib/format";
-import { IcChevR, VERB_ICON } from "@/lib/icons";
+import { IcChevR, IcEat, IcRepeat, VERB_ICON } from "@/lib/icons";
+import { eatSummary } from "@/lib/eat";
 import { Avatar } from "./ui";
 import ThemeToggle from "./ThemeToggle";
 import OfflineToggle from "./OfflineToggle";
@@ -54,6 +55,62 @@ function VerbCard({
   );
 }
 
+// Eat v2 home card: muted "กิน · {relative}" context over a bold mode-encoded
+// hero stat-line, plus a visible "ทำซ้ำครั้งล่าสุด" bar (disabled with no feed).
+// `flash` rings the card to confirm a just-logged/repeated feed.
+function EatCardV2({
+  lastEat,
+  now,
+  flash,
+  onOpen,
+  onRepeat,
+}: {
+  lastEat: Activity | null;
+  now: number;
+  flash: boolean;
+  onOpen: () => void;
+  onRepeat: () => void;
+}) {
+  return (
+    <div className={"eat-card-v2" + (flash ? " just-logged" : "")} lang="th">
+      <button className="eat-card-main" onClick={onOpen} aria-label={t("home.eat.name") + (lastEat ? ": " + eatSummary(lastEat.details_json) : "")}>
+        <span className="vi">
+          <IcEat size={28} />
+        </span>
+        <span className="eat-card-meta">
+          <span className="eat-card-row1">
+            <span className="eat-card-name">{t("home.eat.name")}</span>
+            {lastEat && (
+              <span className="eat-card-when">
+                {ago(lastEat.started_at, now)} {t("home.ago")}
+              </span>
+            )}
+          </span>
+          {lastEat ? (
+            <span className="eat-card-detail">{eatSummary(lastEat.details_json)}</span>
+          ) : (
+            <span className="eat-card-detail empty">
+              {t("home.eat.empty.stat")} · {t("home.eat.empty.unit")}
+            </span>
+          )}
+        </span>
+        <span className="eat-card-go">
+          <IcChevR size={18} />
+        </span>
+      </button>
+      {lastEat ? (
+        <button className="repeat-bar" onClick={onRepeat} type="button">
+          <IcRepeat size={16} /> {t("home.eat.repeatLast")}
+        </button>
+      ) : (
+        <div className="repeat-bar disabled" aria-disabled="true">
+          <IcRepeat size={16} /> {t("home.eat.repeatLast")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SkeletonCard() {
   return (
     <div className="verb-card" aria-hidden="true">
@@ -77,6 +134,7 @@ export default function HomeScreen({
   onLogEat,
   onLogSleep,
   onLogDiaper,
+  onRepeatLast,
   runningSleep,
 }: {
   baby: Baby;
@@ -89,6 +147,7 @@ export default function HomeScreen({
   onLogEat: () => void;
   onLogSleep: () => void;
   onLogDiaper: () => void;
+  onRepeatLast: () => void;
   runningSleep: Activity | null;
 }) {
   const [now, setNow] = useState(Date.now());
@@ -99,7 +158,21 @@ export default function HomeScreen({
     return () => clearInterval(id);
   }, []);
 
-  const lastEat = activities.find((a) => a.type === "eat");
+  const lastEat = activities.find((a) => a.type === "eat") ?? null;
+
+  // Flash the Eat card when the latest feed changes (a fresh log or a repeat).
+  const [flash, setFlash] = useState(false);
+  const lastEatId = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const id = lastEat?.id ?? null;
+    if (lastEatId.current !== undefined && id && id !== lastEatId.current) {
+      setFlash(true);
+      const tmr = setTimeout(() => setFlash(false), 1000);
+      lastEatId.current = id;
+      return () => clearTimeout(tmr);
+    }
+    lastEatId.current = id;
+  }, [lastEat?.id]);
   const lastDiaper = activities.find((a) => a.type === "diaper");
   const lastEndedSleep = activities.find((a) => a.type === "sleep" && a.ended_at);
 
@@ -130,15 +203,7 @@ export default function HomeScreen({
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-          <VerbCard
-            verb="eat"
-            name={t("home.eat.name")}
-            stat={lastEat ? ago(lastEat.started_at, now) : t("home.eat.empty.stat")}
-            unit={lastEat ? t("home.ago") : t("home.eat.empty.unit")}
-            by={lastEat && !lastEat._mine ? lastEat.logged_by_name : null}
-            byColor={lastEat?.logged_by_color}
-            onClick={onLogEat}
-          />
+          <EatCardV2 lastEat={lastEat} now={now} flash={flash} onOpen={onLogEat} onRepeat={onRepeatLast} />
           <VerbCard
             verb="sleep"
             name={t("home.sleep.name")}

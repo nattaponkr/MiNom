@@ -1,19 +1,16 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
-import { clockTime, duration, formatDate, num } from "@/lib/format";
+import { clockTime, duration, formatDate } from "@/lib/format";
 import { IcCheck, IcChevL, IcChevR, IcList, IcTrash, VERB_ICON } from "@/lib/icons";
 import { Avatar } from "./ui";
 import { getRepo } from "@/lib/sync/repo";
+import { eatSummary, isFirstTimeFood } from "@/lib/eat";
 import { t } from "@/i18n";
 
 function detailSummary(a: Activity): string {
-  const d = a.details_json as { amount_ml?: number; what?: string; kind?: string };
-  if (a.type === "eat") {
-    if (typeof d.amount_ml === "number") return t("timeline.eat.amount", { n: num(d.amount_ml) });
-    if (d.what === "food") return t("timeline.eat.food");
-    return t("timeline.eat.plain");
-  }
+  const d = a.details_json as { kind?: string };
+  if (a.type === "eat") return eatSummary(a.details_json, "timeline");
   if (a.type === "diaper") return d.kind ? `${t("verb.diaper")} · ${t(`diaper.${d.kind}`)}` : t("verb.diaper");
   if (a.type === "sleep") {
     if (!a.ended_at) return `${t("verb.sleep")} · ${t("sleep.sleeping")}`;
@@ -179,7 +176,10 @@ export default function Timeline({
                   <Ic size={19} />
                 </span>
                 <span className="act-main">
-                  <span className="act-title">{detailSummary(a)}</span>
+                  <span className="act-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {detailSummary(a)}
+                    {isFirstTimeFood(a.details_json) && <span className="ft-tag">{t("timeline.firstTimeTag")}</span>}
+                  </span>
                   <span className="who">
                     <Avatar name={a._mine ? t("timeline.you") : a.logged_by_name} color={a.logged_by_color} />
                     <span className="nm">{a._mine ? t("timeline.you") : a.logged_by_name}</span>
