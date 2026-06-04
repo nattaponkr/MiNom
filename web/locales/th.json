@@ -81,6 +81,7 @@
   "home.eat.statFormula": "นมผง · {amt} มล.",
   "home.eat.statSolids": "อาหารแข็ง{food}",
   "home.sleep.asleep": "กำลังหลับ",
+  "home.sleep.justWoke": "เพิ่งตื่น",
   "home.comingSoon": "เร็วๆ นี้",
   "home.ghost.eat": "ยังไม่มีบันทึก — แตะเพื่อบันทึก",
   "home.ghost.sleep": "เริ่มจับเวลานอน",

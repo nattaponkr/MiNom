@@ -37,6 +37,7 @@ export default function Main({
   const [eatDefs, setEatDefs] = useState<EatDefaults>(DEFAULT_EAT);
   const recentEatsRef = useRef<Activity[]>([]); // server eat history (any day) for smart defaults
   const [diaperOpen, setDiaperOpen] = useState(false);
+  const [editingDiaper, setEditingDiaper] = useState<Activity | null>(null);
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepSeed, setSleepSeed] = useState<Activity | null>(null);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string; timer: boolean } | null>(null);
@@ -130,12 +131,26 @@ export default function Main({
 
   const openDiaper = () => {
     openedAt.current = Date.now();
+    setEditingDiaper(null);
     setDiaperOpen(true);
   };
   const saveDiaper = (kind: DiaperKind, startedAt: string) => {
     track("activity_logged", { type: "diaper", ...logMetrics(startedAt) });
     log.log("diaper", { kind }, startedAt);
     setDiaperOpen(false);
+    setEditingDiaper(null);
+  };
+  // Part-4 parity: [แก้ไข] on the Diaper save toast reopens the entry pre-filled.
+  const openEditDiaper = (a: Activity) => {
+    openedAt.current = Date.now();
+    setEditingDiaper(a);
+    setDiaperOpen(true);
+  };
+  const updateDiaper = (id: string, kind: DiaperKind, startedAt: string) => {
+    track("activity_edited", { type: "diaper" });
+    log.update(id, { kind }, startedAt);
+    setDiaperOpen(false);
+    setEditingDiaper(null);
   };
 
   // Sleep: if a timer is already running locally, just open it. Otherwise check
@@ -220,7 +235,17 @@ export default function Main({
         />
       )}
 
-      {diaperOpen && <DiaperSheet onSave={saveDiaper} onClose={() => setDiaperOpen(false)} />}
+      {diaperOpen && (
+        <DiaperSheet
+          editing={editingDiaper}
+          onSave={saveDiaper}
+          onUpdate={updateDiaper}
+          onClose={() => {
+            setDiaperOpen(false);
+            setEditingDiaper(null);
+          }}
+        />
+      )}
 
       {sleepOpen && (
         <SleepSheet
@@ -306,7 +331,7 @@ export default function Main({
               summary={summary}
               repeated={log.snackbar.repeated}
               onUndo={() => void log.undo(log.snackbar!.id)}
-              onEdit={a?.type === "eat" ? () => openEditEat(a) : undefined}
+              onEdit={a?.type === "eat" ? () => openEditEat(a) : a?.type === "diaper" ? () => openEditDiaper(a) : undefined}
             />
           );
         })()}

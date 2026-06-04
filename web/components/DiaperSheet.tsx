@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { DiaperKind } from "@/lib/types";
+import type { Activity, DiaperKind } from "@/lib/types";
 import { IcCheck, IcDrop, IcLeaf, IcDiaper, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
@@ -8,9 +8,24 @@ import { t } from "@/i18n";
 
 const OPTS: DiaperKind[] = ["wet", "dirty", "both"];
 
-export default function DiaperSheet({ onSave, onClose }: { onSave: (kind: DiaperKind, startedAt: string) => void; onClose: () => void }) {
-  const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
-  const [sel, setSel] = useState<DiaperKind>("wet");
+export default function DiaperSheet({
+  editing,
+  onSave,
+  onUpdate,
+  onClose,
+}: {
+  editing?: Activity | null;
+  onSave: (kind: DiaperKind, startedAt: string) => void;
+  onUpdate?: (id: string, kind: DiaperKind, startedAt: string) => void;
+  onClose: () => void;
+}) {
+  const seedKind = (editing?.details_json as { kind?: DiaperKind } | undefined)?.kind;
+  const [startedAt, setStartedAt] = useState(() => editing?.started_at ?? new Date().toISOString());
+  const [sel, setSel] = useState<DiaperKind>(seedKind ?? "wet");
+  const save = () => {
+    if (editing && onUpdate) onUpdate(editing.id, sel, startedAt);
+    else onSave(sel, startedAt);
+  };
 
   return (
     <div className="sheet-screen" onClick={onClose} role="dialog" aria-modal="true" aria-label={t("diaper.title")}>
@@ -59,7 +74,7 @@ export default function DiaperSheet({ onSave, onClose }: { onSave: (kind: Diaper
 
           <WhenCard verb="diaper" startedAt={startedAt} onChange={setStartedAt} />
 
-          <Button kind="primary" size="lg" icon={<IcCheck size={20} />} onClick={() => onSave(sel, startedAt)}>
+          <Button kind="primary" size="lg" icon={<IcCheck size={20} />} onClick={save}>
             {t("diaper.cta.save")}
           </Button>
           <div style={{ height: 8 }} />
