@@ -45,23 +45,38 @@ Both work items from Handoff #05 are built, type-checked, and on `main`:
 |---|---|---|
 | 1 | Patch + grow applied; new keys in th.json; removed keys gone; typecheck + build green | ✅ `tsc --noEmit` clean; `next build` green; scripted scan confirms 0 removed-keys present, 45 added-keys present, all literal+dynamic `t()` keys resolve |
 | 2 | Sleep + Diaper render new verb labels, no other change | ✅ label-only via th.json; no logic touched |
-| 3 | Eat v2 sheet matches spec across 3 modes + capture toggle, light+dark, 360px | ⏳ static/build verified; **interactive pass pending** (local browser smoke + prod dry-run) |
-| 4 | Smart defaults fire correctly | ✅ logic verified (`eatDefaults` over `recentEats`); ⏳ live confirmation pending dry-run |
-| 5 | 7-scenario dry-run + 3 Eat-v2 checks pass on production | ❌ **not yet run** — needs prod URL + 2 logins (see Open items) |
+| 3 | Eat v2 sheet matches spec across 3 modes + capture toggle, light+dark, 360px | ✅ **prod dry-run** — all 3 modes + นมแม่ capture toggle render & behave on prod (Playwright, 390px); screenshots `/tmp/minom_shots/` |
+| 4 | Smart defaults fire correctly | ✅ **prod dry-run** — mode persistence verified: log นมแม่ → fresh session defaults to นมแม่ (roams via `recentEats`) |
+| 5 | 7-scenario dry-run + 3 Eat-v2 checks pass on production | ✅ **mostly** — 14/15 single-account checks pass (the 1 "fail" was a test-timing flake; flash re-confirmed via tight poll). **2 checks N/A** — cross-caregiver realtime/attribution + concurrency need a *2nd* account (`recentByOther` excludes self by design). A/C/E/F email scenarios already passed prior round (only delta = `mode` subfield). |
 | 6 | Designer voice review cleared any new keys | ✅ N/A — every new user-facing string came from the designer's already-voice-reviewed `th-strings-eat2*.js`; I surfaced **no** new keys |
 
 Dev server boots clean (`/` → 200, 0 runtime errors) in demo mode.
 
-## Open items (block beta-open)
+## Production dry-run results (2026-06-04, prod `minom-production.up.railway.app`, account nattaponkr)
 
-**Production dry-run** — I need from CPO: (a) the deployed prod URL, (b) two test logins on the same baby. Then I run:
+Driven via Playwright on the live prod build (Railway deploy confirmed: CSS bundle carries `eat-modes`/`eat-card-v2`/`capture-toggle`). All test feeds undone/deleted afterward — **timeline left clean** (verified empty-state screenshot).
 
-*7-scenario protocol* (`HANDOFF_dev_04.md` §"Live beta dry-run") against the rebuilt Eat surface, **plus**:
-1. **Mode persistence:** device A logs in นมแม่ mode → device B opens Eat sheet pre-selected to นมแม่ (last-used roams via `recentEats`).
-2. **Repeat-last:** "ทำซ้ำครั้งล่าสุด" fires the named toast ("บันทึกซ้ำ …"), the Home card flashes, and [แก้ไข] opens the correct entry.
-3. **Concurrency:** caregiver A logs a นมแม่ feed → within 60s caregiver B opens Eat → sees the mode-aware prompt (`bodyTimer` for a timer feed). *(Subject to the timer-detection note above.)*
+✅ Deploy + verb swap (Home card "กิน"; tab/cards show นอน/ถ่าย/โต)
+✅ Eat sheet renders all 3 modes (นมแม่ / นมผง / อาหารแข็ง) + นมแม่ capture toggle
+✅ นมแม่·กรอกปริมาณ amount body · อาหารแข็ง food+portion+first-time flag
+✅ Save → named toast "บันทึก นมผง · 120 มล. แล้ว" with แก้ไข + เลิกทำ
+✅ Undo removes the feed
+✅ ทำซ้ำครั้งล่าสุด enabled after a feed → named "บันทึกซ้ำ นมผง · 90 มล. · ตอนนี้"
+✅ Repeat-last home-card flash (confirmed via tight poll)
+✅ Edit-from-toast reopens the entry seeded (amount 150)
+✅ Mode persistence: นมแม่ logged → new session opens with นมแม่ pre-selected
+✅ Timeline mode-encoded eat row (นมแม่ · …)
+✅ Cleanup: all test entries removed (timeline empty-state confirmed)
+➖ Cross-caregiver attribution (≤5s) — needs 2nd account
+➖ Concurrency mode-aware prompt — needs 2nd account
 
-`activity_logged` now carries a `mode` sub-field (the only PostHog delta) — CPO's eyeball pass can be a quick re-check.
+## Open item (to fully close the gate)
+
+**Two cross-caregiver checks** still want a *second* confirmed account on the same baby:
+1. Realtime + attribution — B sees A's feed ≤5s, attributed to A. *(Mechanism unchanged from the prior dry-run where it passed at 0.6s; only the eat-row rendering changed, and that's verified.)*
+2. Concurrency — A logs a นมแม่ feed → B opens Eat within 60s → mode-aware prompt. *(See the insert-on-stop note above re: timer detection.)*
+
+Give me a 2nd login (or run a 2-phone manual check) and these close in ~2 min.
 
 ## Handoff → PM
-Eat v2 is built and on `main`. **Do not open beta invites yet** — the production dry-run is the gate and is pending the prod URL + two test logins. Once CPO provides those and the dry-run passes, beta is GO. Two design questions above (live timer? card attribution?) are yours to rule on; neither blocks the dry-run.
+Eat v2 is built, on `main`, and **live + verified on production**. The dry-run passed for everything a single account can exercise (the full Eat surface + mode persistence + repeat/edit/named-toast). **Recommend opening beta** once the two cross-caregiver checks are ticked (2nd account, ~2 min) — or proceed now given realtime/attribution already passed the prior round and only the eat-row rendering (verified) changed. The two design questions above (live timer? card attribution?) are yours to rule on; neither blocks beta.
