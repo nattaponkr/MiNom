@@ -332,15 +332,25 @@
 .eat-card-when { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--fg-faint); white-space: nowrap; flex: none; }
 .eat-card-detail { display: block; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-top: 3px; line-height: 1.3; }
 .eat-card-detail.empty { font-size: 15px; font-weight: 700; color: var(--fg-muted); }
-.eat-card-go { width: 38px; height: 38px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--surface-2); color: var(--fg-muted); flex: none; }
+/* #07 chevron polish: soft + borderless + faint (drop the filled circle) */
+.eat-card-go { width: 30px; height: 30px; display: grid; place-items: center; background: transparent; color: var(--fg-faint); flex: none; }
 /* Part-4 parity: Sleep/Diaper reuse the Eat card shell with their own verb tint */
 .eat-card-v2.sleep .vi { background: var(--sleep-tint); color: var(--sleep); }
 .eat-card-v2.diaper .vi { background: var(--diaper-tint); color: var(--diaper); }
 .repeat-bar { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; border-top: 1px solid var(--border);
   background: var(--surface-2); color: var(--eat); font-weight: 700; font-size: 14px; white-space: nowrap; cursor: pointer; border-left: none; border-right: none; border-bottom: none; }
-.repeat-bar.disabled { color: var(--fg-faint); background: var(--surface); cursor: default; }
-.repeat-bar .rb-time { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--fg-muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52%; flex: none; }
+.repeat-bar .rp-label { overflow: hidden; text-overflow: ellipsis; }
+.repeat-bar:active { background: var(--surface-sunken); }
+
+/* #07 family hint — no prefix, whole card taps through to Family (only when no co-caregiver) */
+.fam-hint { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; margin-top: 16px; cursor: pointer;
+  background: color-mix(in oklch, var(--primary) 7%, var(--surface)); border: 1px solid color-mix(in oklch, var(--primary) 22%, transparent);
+  border-radius: var(--r-lg); padding: 14px 15px; }
+.fam-hint:active { background: color-mix(in oklch, var(--primary) 12%, var(--surface)); }
+.fh-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: color-mix(in oklch, var(--primary) 16%, transparent); color: var(--primary); }
+.fh-body { flex: 1; font-size: 13.5px; line-height: 1.5; color: var(--fg); }
+.fh-go { color: var(--primary); flex: none; display: grid; place-items: center; }
 
 /* two-row save snackbar with แก้ไข + เลิกทำ */
 .snackbar.snack-v2 { flex-direction: column; align-items: stretch; gap: 10px; }

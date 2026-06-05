@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Activity, Baby, Profile, VerbType } from "@/lib/types";
 import { ago, ageLabel, todayWeekday } from "@/lib/format";
-import { IcChevR, IcEat, IcRepeat, VERB_ICON } from "@/lib/icons";
+import { IcChevR, IcEat, IcRepeat, IcUsers, VERB_ICON } from "@/lib/icons";
 import { eatSummary } from "@/lib/eat";
 import { Avatar } from "./ui";
 import ThemeToggle from "./ThemeToggle";
@@ -96,23 +96,18 @@ function EatCardV2({
           {lastEat ? (
             <span className="eat-card-detail">{eatSummary(lastEat.details_json)}</span>
           ) : (
-            <span className="eat-card-detail empty">
-              {t("home.eat.empty.stat")} · {t("home.eat.empty.unit")}
-            </span>
+            <span className="eat-card-detail empty">{t("home.eat.empty")}</span>
           )}
         </span>
         <span className="eat-card-go">
           <IcChevR size={18} />
         </span>
       </button>
-      {lastEat ? (
+      {/* #07: repeat-last only when there's a last feed (no disabled placeholder), named */}
+      {lastEat && (
         <button className="repeat-bar" onClick={onRepeat} type="button">
-          <IcRepeat size={16} /> {t("home.eat.repeatLast")}
+          <IcRepeat size={16} /> <span className="rp-label">{t("home.eat.repeatNamed", { summary: eatSummary(lastEat.details_json) })}</span>
         </button>
-      ) : (
-        <div className="repeat-bar disabled" aria-disabled="true">
-          <IcRepeat size={16} /> {t("home.eat.repeatLast")}
-        </div>
       )}
     </div>
   );
@@ -142,6 +137,8 @@ export default function HomeScreen({
   onLogSleep,
   onLogDiaper,
   onRepeatLast,
+  onOpenFamily,
+  caregiverCount,
   runningSleep,
 }: {
   baby: Baby;
@@ -155,6 +152,8 @@ export default function HomeScreen({
   onLogSleep: () => void;
   onLogDiaper: () => void;
   onRepeatLast: () => void;
+  onOpenFamily: () => void;
+  caregiverCount: number; // co-caregivers (excludes self); family hint shows when < 1
   runningSleep: Activity | null;
 }) {
   const [now, setNow] = useState(Date.now());
@@ -230,7 +229,7 @@ export default function HomeScreen({
               onClick={onLogSleep}
             />
           ) : (
-            <VerbCardV2 verb="sleep" name={t("home.sleep.name")} detail={`${t("home.eat.empty.stat")} · ${t("home.eat.empty.unit")}`} empty onClick={onLogSleep} />
+            <VerbCardV2 verb="sleep" name={t("home.sleep.name")} detail={t("home.sleep.empty")} empty onClick={onLogSleep} />
           )}
           {lastDiaper ? (
             <VerbCardV2
@@ -241,14 +240,23 @@ export default function HomeScreen({
               onClick={onLogDiaper}
             />
           ) : (
-            <VerbCardV2 verb="diaper" name={t("home.diaper.name")} detail={`${t("home.eat.empty.stat")} · ${t("home.eat.empty.unit")}`} empty onClick={onLogDiaper} />
+            <VerbCardV2 verb="diaper" name={t("home.diaper.name")} detail={t("home.diaper.empty")} empty onClick={onLogDiaper} />
           )}
         </div>
       )}
 
-      <div className="note" style={{ marginTop: 16, fontSize: 12.5 }} lang="th">
-        {t("home.tip")}
-      </div>
+      {/* #07: family hint only when there's no co-caregiver yet; whole card taps to Family */}
+      {!loading && caregiverCount < 1 && (
+        <button className="fam-hint" onClick={onOpenFamily} type="button" lang="th">
+          <span className="fh-ic">
+            <IcUsers size={20} />
+          </span>
+          <span className="fh-body">{t("home.familyHint")}</span>
+          <span className="fh-go">
+            <IcChevR size={18} />
+          </span>
+        </button>
+      )}
     </div>
   );
 }

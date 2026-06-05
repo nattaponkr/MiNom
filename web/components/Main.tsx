@@ -43,7 +43,25 @@ export default function Main({
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string; timer: boolean } | null>(null);
   const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
   const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
+  const [coCaregivers, setCoCaregivers] = useState(0); // caregivers besides me → gates the Home family hint
   const openedAt = useRef(0); // sheet open time → seconds_to_log
+
+  // Co-caregiver count for the Home family-hint visibility (#07).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const repo = await getRepo();
+        const cgs = await repo.listCaregivers(baby.id);
+        if (alive) setCoCaregivers(cgs.filter((c) => c.user_id !== me.id).length);
+      } catch {
+        /* ignore — hint just stays visible until it loads */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [baby.id, me.id]);
 
   // Load this caregiver's recent eat history once per baby → smart last-used
   // defaults (roams across devices via the server, satisfying mode-persistence).
@@ -204,6 +222,8 @@ export default function Main({
             onLogSleep={openSleep}
             onLogDiaper={openDiaper}
             onRepeatLast={repeatLastEat}
+            onOpenFamily={() => setTab("care")}
+            caregiverCount={coCaregivers}
             runningSleep={log.runningSleep}
           />
         )}
