@@ -40,6 +40,15 @@
   --border: oklch(0.90 0.012 76);
   --border-strong: oklch(0.82 0.015 74);
 
+  /*
+   * Text contrast guardrail (WCAG 2.1 AA — Designer audit 2026-06-05).
+   * --fg          primary text. AA-compliant against all card and page surfaces, both themes.
+   * --fg-muted    secondary text. AA-compliant against all card and page surfaces, both themes.
+   *               Use for de-emphasized text (timestamps, labels, helper copy).
+   * --fg-faint    NON-TEXT ONLY (glyphs, dividers, decorative). Clears 3:1, not 4.5:1.
+   *               Text bindings to --fg-faint FAIL WCAG AA. Do not use for any text element.
+   *               Legitimate uses on Home: chevron > (non-text glyph).
+   */
   --fg: oklch(0.28 0.014 64);           /* warm near-black */
   --fg-muted: oklch(0.52 0.013 66);
   --fg-faint: oklch(0.66 0.012 68);
