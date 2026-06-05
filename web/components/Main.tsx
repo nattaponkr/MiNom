@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Activity, Baby, DiaperKind, EatDetails, Profile, SessionUser, VerbType } from "@/lib/types";
-import { ago, clockTime } from "@/lib/format";
+import { ago } from "@/lib/format";
 import { useActivityLog } from "@/lib/sync/useActivityLog";
 import { getRepo } from "@/lib/sync/repo";
 import { DEFAULT_EAT, eatDefaults, eatSummary, isEatV2, type EatDefaults } from "@/lib/eat";
@@ -15,7 +15,7 @@ import GrowthScreen from "./GrowthScreen";
 import SettingsScreen from "./SettingsScreen";
 import CaregiversScreen from "./CaregiversScreen";
 import TabBar, { type Tab } from "./TabBar";
-import { ConcurrencySheet, ConfirmDeleteSheet } from "./Sheets";
+import { ConcurrencySheet } from "./Sheets";
 import { UndoSnackbar, SyncToast } from "./Feedback";
 import { t } from "@/i18n";
 
@@ -40,9 +40,9 @@ export default function Main({
   const [editingDiaper, setEditingDiaper] = useState<Activity | null>(null);
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepSeed, setSleepSeed] = useState<Activity | null>(null);
+  const [editingSleep, setEditingSleep] = useState<Activity | null>(null);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string; timer: boolean } | null>(null);
   const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
-  const [deleteId, setDeleteId] = useState<{ id: string; timeText: string } | null>(null);
   const [coCaregivers, setCoCaregivers] = useState(0); // caregivers besides me → gates the Home family hint
   const openedAt = useRef(0); // sheet open time → seconds_to_log
 
@@ -175,6 +175,7 @@ export default function Main({
   // for a near-simultaneous start by another caregiver (concurrency, option A).
   const openSleep = async () => {
     openedAt.current = Date.now();
+    setEditingSleep(null);
     if (log.runningSleep) {
       setSleepSeed(null);
       setSleepOpen(true);
@@ -191,13 +192,35 @@ export default function Main({
   const closeSleep = () => {
     setSleepOpen(false);
     setSleepSeed(null);
+    setEditingSleep(null);
   };
 
   const lastWokeAt = log.activities.find((a) => a.type === "sleep" && a.ended_at)?.ended_at ?? null;
 
-  const requestDelete = (id: string) => {
+  // Edit a completed sleep from the Timeline detail sheet.
+  const openEditSleep = (a: Activity) => {
+    openedAt.current = Date.now();
+    setSleepSeed(null);
+    setEditingSleep(a);
+    setSleepOpen(true);
+  };
+  const updateSleep = (id: string, startedAt: string, details?: Record<string, unknown>) => {
+    track("activity_edited", { type: "sleep" });
+    log.update(id, details ?? {}, startedAt);
+    closeSleep();
+  };
+
+  // Timeline tap-to-edit → route to the right per-verb sheet, pre-filled.
+  const openEditFromTimeline = (a: Activity) => {
+    if (a.type === "eat") openEditEat(a);
+    else if (a.type === "diaper") openEditDiaper(a);
+    else openEditSleep(a);
+  };
+  // Timeline delete (detail sheet / swipe) — confirm lives in Timeline; this deletes.
+  const deleteActivity = (id: string) => {
     const a = log.activities.find((x) => x.id === id);
-    setDeleteId({ id, timeText: a ? clockTime(a.started_at) : "this" });
+    track("activity_deleted", { type: (a?.type as VerbType) ?? "eat" });
+    void log.remove(id);
   };
 
   return (
@@ -228,7 +251,7 @@ export default function Main({
           />
         )}
 
-        {tab === "timeline" && <Timeline babyId={baby.id} activities={log.activities} loading={log.loading} onDelete={requestDelete} />}
+        {tab === "timeline" && <Timeline babyId={baby.id} babyName={baby.name} activities={log.activities} loading={log.loading} onEdit={openEditFromTimeline} onDelete={deleteActivity} />}
 
         {tab === "grow" && <GrowthScreen baby={baby} />}
 
@@ -270,6 +293,8 @@ export default function Main({
       {sleepOpen && (
         <SleepSheet
           running={log.runningSleep ?? sleepSeed}
+          editing={editingSleep}
+          onUpdate={updateSleep}
           lastWokeAt={lastWokeAt}
           onStart={(startedAt, details) => {
             track("activity_logged", { type: "sleep", ...logMetrics(startedAt) });
@@ -317,20 +342,6 @@ export default function Main({
           }}
           onLogAnyway={() => setConcurrency(null)}
           onDismiss={() => setConcurrency(null)}
-        />
-      )}
-
-      {deleteId && (
-        <ConfirmDeleteSheet
-          timeText={deleteId.timeText}
-          babyName={baby.name}
-          onConfirm={() => {
-            const a = log.activities.find((x) => x.id === deleteId.id);
-            track("activity_deleted", { type: (a?.type as VerbType) ?? "eat" });
-            void log.remove(deleteId.id);
-            setDeleteId(null);
-          }}
-          onCancel={() => setDeleteId(null)}
         />
       )}
 

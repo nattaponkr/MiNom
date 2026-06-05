@@ -151,7 +151,7 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
                 </span>
                 <span className="act-sub">{formatDate(m.measured_at)}</span>
               </span>
-              <button className="iconbtn" style={{ color: "var(--danger)", width: 48, height: 48 }} onClick={() => setDeleteId(m.id)} aria-label={t("a11y.deleteEntry")} type="button">
+              <button className="iconbtn" style={{ color: "var(--danger-text)", width: 48, height: 48 }} onClick={() => setDeleteId(m.id)} aria-label={t("a11y.deleteEntry")} type="button">
                 <IcTrash size={18} />
               </button>
             </div>

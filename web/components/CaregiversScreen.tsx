@@ -150,7 +150,7 @@ export default function CaregiversScreen({ me, baby, onChanged }: { me: SessionU
                       <button className="text-link" onClick={() => setConfirm({ kind: "transfer", cg })} type="button" style={{ fontSize: 13 }}>
                         {t("care.transfer")}
                       </button>
-                      <button className="text-link" onClick={() => setConfirm({ kind: "remove", cg })} type="button" style={{ fontSize: 13, color: "var(--danger)" }}>
+                      <button className="text-link" onClick={() => setConfirm({ kind: "remove", cg })} type="button" style={{ fontSize: 13, color: "var(--danger-text)" }}>
                         {t("care.remove")}
                       </button>
                     </span>

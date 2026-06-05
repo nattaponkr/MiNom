@@ -331,7 +331,9 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
 
   const remove = useCallback(
     async (id: string) => {
-      const wasSynced = activities.find((a) => a.id === id)?._sync === "synced";
+      // Not in today's set → it's a server-persisted (past-day) entry → delete on the server.
+      const found = activities.find((a) => a.id === id);
+      const wasSynced = !found || found._sync === "synced";
       setActivities((prev) => prev.filter((a) => a.id !== id));
       dropOps(id);
       if (wasSynced && repoRef.current) {

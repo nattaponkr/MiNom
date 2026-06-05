@@ -33,6 +33,16 @@ export function formatDate(iso: string | number | Date): string {
   return dateFmt.format(new Date(iso));
 }
 
+// Buddhist-Era full date — "2 มิ.ย. 2569" (PRD §11.1: BE is the default for all
+// full-date displays). The -u-ca-buddhist locale extension flips the year to BE.
+const dateBEFmt = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", { day: "numeric", month: "short", year: "numeric" });
+export function formatDateBE(iso: string | number | Date): string {
+  return dateBEFmt.format(new Date(iso));
+}
+export function dateTimeBE(iso: string): string {
+  return `${dateBEFmt.format(new Date(iso))} · ${clockFmt.format(new Date(iso))}`;
+}
+
 export function num(n: number): string {
   return numFmt.format(n);
 }

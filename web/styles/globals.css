@@ -67,7 +67,7 @@ body {
 .muted-link { background: none; border: none; color: var(--fg-muted); font-weight: 600; font-size: 14px; font-family: inherit; }
 .muted-link b, .text-link { color: var(--primary); font-weight: 700; }
 .text-link { background: none; border: none; font-family: inherit; font-size: 14px; cursor: pointer; }
-.form-error { font-size: 13px; color: var(--danger); display: flex; align-items: center; gap: 7px;
+.form-error { font-size: 13px; color: var(--danger-text); display: flex; align-items: center; gap: 7px;
   background: color-mix(in oklch, var(--danger) 12%, var(--surface)); border: 1px solid color-mix(in oklch, var(--danger) 30%, transparent);
   border-radius: var(--r-md); padding: 11px 13px; }
 
