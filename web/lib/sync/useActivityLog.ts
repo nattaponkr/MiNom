@@ -286,9 +286,9 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
 
   // Sleep timer start — an open-ended activity (ended_at null), no undo snackbar.
   const startSleep = useCallback(
-    (startedAtISO?: string) => {
+    (startedAtISO?: string, details: Record<string, unknown> = {}) => {
       if (!babyId) return null;
-      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type: "sleep", started_at: startedAtISO ?? new Date().toISOString(), ended_at: null, details_json: {} };
+      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type: "sleep", started_at: startedAtISO ?? new Date().toISOString(), ended_at: null, details_json: details };
       setActivities((prev) => [optimisticRow(insert), ...prev]);
       enqueue({ op: "insert", insert });
       void flush();
@@ -297,12 +297,13 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     [babyId, optimisticRow, enqueue, flush],
   );
 
-  // Sleep timer stop — patch ended_at (optimistic), queue an update op.
+  // Sleep timer stop — patch ended_at (+ optional notes details), queue an update op.
   const stopSleep = useCallback(
-    (id: string, endedAtISO?: string) => {
+    (id: string, endedAtISO?: string, details?: Record<string, unknown>) => {
       const ended_at = endedAtISO ?? new Date().toISOString();
-      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ended_at, _sync: "queued" } : a)));
-      enqueue({ op: "update", id, patch: { ended_at } });
+      const patch: ActivityPatch = { ended_at, ...(details ? { details_json: details } : {}) };
+      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ended_at, ...(details ? { details_json: details } : {}), _sync: "queued" } : a)));
+      enqueue({ op: "update", id, patch });
       void flush();
     },
     [enqueue, flush],

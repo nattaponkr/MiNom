@@ -15,16 +15,18 @@ export default function DiaperSheet({
   onClose,
 }: {
   editing?: Activity | null;
-  onSave: (kind: DiaperKind, startedAt: string) => void;
-  onUpdate?: (id: string, kind: DiaperKind, startedAt: string) => void;
+  onSave: (kind: DiaperKind, startedAt: string, notes?: string) => void;
+  onUpdate?: (id: string, kind: DiaperKind, startedAt: string, notes?: string) => void;
   onClose: () => void;
 }) {
-  const seedKind = (editing?.details_json as { kind?: DiaperKind } | undefined)?.kind;
+  const seed = editing?.details_json as { kind?: DiaperKind; notes?: string } | undefined;
   const [startedAt, setStartedAt] = useState(() => editing?.started_at ?? new Date().toISOString());
-  const [sel, setSel] = useState<DiaperKind>(seedKind ?? "wet");
+  const [sel, setSel] = useState<DiaperKind>(seed?.kind ?? "wet");
+  const [notes, setNotes] = useState(seed?.notes ?? "");
   const save = () => {
-    if (editing && onUpdate) onUpdate(editing.id, sel, startedAt);
-    else onSave(sel, startedAt);
+    const n = notes.trim() || undefined;
+    if (editing && onUpdate) onUpdate(editing.id, sel, startedAt, n);
+    else onSave(sel, startedAt, n);
   };
 
   return (
@@ -73,6 +75,13 @@ export default function DiaperSheet({
           </div>
 
           <WhenCard verb="diaper" startedAt={startedAt} onChange={setStartedAt} />
+
+          <div className="field" style={{ marginBottom: 4 }}>
+            <label htmlFor="diaper-notes">
+              {t("eat.notes.label")} <span style={{ fontWeight: 500, color: "var(--fg-faint)" }}>· {t("common.optional")}</span>
+            </label>
+            <textarea id="diaper-notes" className="notes-area" placeholder={t("eat.notes.placeholder")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
 
           <Button kind="primary" size="lg" icon={<IcCheck size={20} />} onClick={save}>
             {t("diaper.cta.save")}

@@ -134,9 +134,9 @@ export default function Main({
     setEditingDiaper(null);
     setDiaperOpen(true);
   };
-  const saveDiaper = (kind: DiaperKind, startedAt: string) => {
+  const saveDiaper = (kind: DiaperKind, startedAt: string, notes?: string) => {
     track("activity_logged", { type: "diaper", ...logMetrics(startedAt) });
-    log.log("diaper", { kind }, startedAt);
+    log.log("diaper", { kind, ...(notes ? { notes } : {}) }, startedAt);
     setDiaperOpen(false);
     setEditingDiaper(null);
   };
@@ -146,9 +146,9 @@ export default function Main({
     setEditingDiaper(a);
     setDiaperOpen(true);
   };
-  const updateDiaper = (id: string, kind: DiaperKind, startedAt: string) => {
+  const updateDiaper = (id: string, kind: DiaperKind, startedAt: string, notes?: string) => {
     track("activity_edited", { type: "diaper" });
-    log.update(id, { kind }, startedAt);
+    log.update(id, { kind, ...(notes ? { notes } : {}) }, startedAt);
     setDiaperOpen(false);
     setEditingDiaper(null);
   };
@@ -251,14 +251,14 @@ export default function Main({
         <SleepSheet
           running={log.runningSleep ?? sleepSeed}
           lastWokeAt={lastWokeAt}
-          onStart={(startedAt) => {
+          onStart={(startedAt, details) => {
             track("activity_logged", { type: "sleep", ...logMetrics(startedAt) });
-            log.startSleep(startedAt);
+            log.startSleep(startedAt, details);
           }}
-          onStop={(id) => {
+          onStop={(id, details) => {
             const a = log.activities.find((x) => x.id === id) ?? sleepSeed;
             track("activity_edited", { type: "sleep", hours_after_create: a ? Math.round((Date.now() - new Date(a.started_at).getTime()) / 3600000) : 0 });
-            log.stopSleep(id);
+            log.stopSleep(id, undefined, details);
             closeSleep();
           }}
           onClose={closeSleep}

@@ -24,13 +24,25 @@ export default function SleepSheet({
 }: {
   running: Activity | null;
   lastWokeAt: string | null;
-  onStart: (startedAt: string) => void;
-  onStop: (id: string) => void;
+  onStart: (startedAt: string, details?: Record<string, unknown>) => void;
+  onStop: (id: string, details?: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
   const [startAt, setStartAt] = useState(() => new Date().toISOString());
   const [manual, setManual] = useState(false);
+  const [notes, setNotes] = useState(() => (running?.details_json as { notes?: string } | undefined)?.notes ?? "");
+
+  const notesField = (
+    <div className="field" style={{ margin: "0 0 4px" }}>
+      <label htmlFor="sleep-notes">
+        {t("eat.notes.label")} <span style={{ fontWeight: 500, color: "var(--fg-faint)" }}>· {t("common.optional")}</span>
+      </label>
+      <textarea id="sleep-notes" className="notes-area" placeholder={t("eat.notes.placeholder")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+    </div>
+  );
+  const startDetails = () => (notes.trim() ? { notes: notes.trim() } : undefined);
+  const stopDetails = () => (notes.trim() ? { ...(running?.details_json ?? {}), notes: notes.trim() } : undefined);
 
   useEffect(() => {
     if (!running) return;
@@ -92,13 +104,17 @@ export default function SleepSheet({
           </div>
 
           {running ? (
-            <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={{ background: "var(--sleep)" }} onClick={() => onStop(running.id)}>
-              {t("sleep.stop")}
-            </Button>
+            <>
+              {notesField}
+              <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={{ background: "var(--sleep)" }} onClick={() => onStop(running.id, stopDetails())}>
+                {t("sleep.stop")}
+              </Button>
+            </>
           ) : (
             <>
               {manual && <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />}
-              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString())}>
+              {notesField}
+              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString(), startDetails())}>
                 {t("sleep.start")}
               </Button>
               <div style={{ textAlign: "center", marginTop: 14 }}>
