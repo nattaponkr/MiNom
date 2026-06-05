@@ -64,6 +64,19 @@ export function todayWeekday(now = Date.now()): string {
   return weekdayFmt.format(new Date(now));
 }
 
+// Whole days until a future ISO (ceil, min 0) — drives invite expiry copy.
+export function daysUntil(iso: string, now = Date.now()): number {
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 86400000));
+}
+
+// "Sent X ago" incl. days: "เพิ่งเมื่อกี้" / "22 นาที ที่แล้ว" / "2 วันที่แล้ว".
+export function sentAgo(iso: string, now = Date.now()): string {
+  const days = Math.floor((now - new Date(iso).getTime()) / 86400000);
+  if (days >= 1) return `${t("age.days", { n: days })}${t("home.ago")}`;
+  const a = ago(iso, now);
+  return a === t("units.justNow") ? a : `${a} ${t("home.ago")}`;
+}
+
 // Fixed-length duration in Thai units, e.g. "1 ชม. 32 นาที" (for a completed sleep).
 export function duration(ms: number): string {
   const min = Math.max(0, Math.floor(ms / 60000));

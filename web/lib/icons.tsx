@@ -184,5 +184,26 @@ export const IcRepeat = ({ size }: IconProps) => (
     <path d="M4 20v-4h4" />
   </Svg>
 );
+// ---- Invite-link UX glyphs (ported from design/icons_invite.jsx) ----
+export const IcShare = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <circle cx="6" cy="12" r="2.4" />
+    <circle cx="17.5" cy="6" r="2.4" />
+    <circle cx="17.5" cy="18" r="2.4" />
+    <path d="M8.1 10.9 15.4 7.1M8.1 13.1l7.3 3.8" strokeWidth={1.7} />
+  </Svg>
+);
+export const IcCopy = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <rect x="8.5" y="8.5" width="11" height="11" rx="2.5" />
+    <path d="M5.5 15.5H5a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 5 3.5h9A1.5 1.5 0 0 1 15.5 5v.5" strokeWidth={1.7} />
+  </Svg>
+);
+export const IcLink = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <path d="M9.5 14.5a3.5 3.5 0 0 1 0-5l2-2a3.5 3.5 0 0 1 5 5l-1 1" />
+    <path d="M14.5 9.5a3.5 3.5 0 0 1 0 5l-2 2a3.5 3.5 0 0 1-5-5l1-1" />
+  </Svg>
+);
 
 export const VERB_ICON = { eat: IcEat, sleep: IcSleep, diaper: IcDiaper, grow: IcGrow } as const;

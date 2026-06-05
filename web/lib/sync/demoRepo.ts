@@ -22,7 +22,7 @@ const K = {
   invites: "minom_demo_invites",
 };
 
-type DemoInvite = { id: string; baby_id: string; email: string; token: string; status: string; expires_at: string; invited_by: string };
+type DemoInvite = { id: string; baby_id: string; email: string; token: string; status: string; created_at: string; expires_at: string; invited_by: string };
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -343,6 +343,7 @@ export class DemoRepo implements Repo {
       email: em,
       token,
       status: "pending",
+      created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 14 * 86400000).toISOString(),
       invited_by: this.myId() ?? "",
     };
@@ -352,7 +353,16 @@ export class DemoRepo implements Repo {
   async listInvites(babyId: string): Promise<Invite[]> {
     return this.invites()
       .filter((i) => i.baby_id === babyId && i.status === "pending")
-      .map((i) => ({ id: i.id, email: i.email, status: i.status, expires_at: i.expires_at }));
+      .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+      .map((i) => ({
+        id: i.id,
+        email: i.email,
+        status: i.status,
+        token: i.token,
+        created_at: i.created_at ?? new Date().toISOString(),
+        expires_at: i.expires_at,
+        inviter: this.userById(i.invited_by)?.display_name ?? "",
+      }));
   }
   async revokeInvite(inviteId: string): Promise<void> {
     write(K.invites, this.invites().map((i) => (i.id === inviteId ? { ...i, status: "revoked" } : i)));

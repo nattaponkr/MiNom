@@ -44,7 +44,7 @@ export type LegacyEatDetails = {
 };
 
 export type DiaperKind = "wet" | "dirty" | "both";
-export type DiaperDetails = { kind: DiaperKind };
+export type DiaperDetails = { kind: DiaperKind; notes?: string };
 
 // As stored / returned by the backend.
 export type ActivityRow = {
@@ -86,7 +86,15 @@ export type Measurement = {
   created_at: string;
 };
 
-export type Invite = { id: string; email: string; status: string; expires_at: string };
+export type Invite = {
+  id: string;
+  email: string;
+  status: string;
+  expires_at: string;
+  token: string; // reconstructs the invite URL client-side
+  created_at: string; // "sent at" / sentMeta time
+  inviter: string; // display_name of invited_by (sentMeta "ส่งโดย {name}")
+};
 
 // A caregiver of a baby (roster row joined with profile).
 export type CaregiverRole = "owner" | "caregiver";

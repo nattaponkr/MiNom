@@ -354,3 +354,76 @@
 /* timeline first-time-food tag */
 .ft-tag { font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill);
   background: color-mix(in oklch, var(--warn) 18%, transparent); color: color-mix(in oklch, var(--warn) 80%, var(--fg)); }
+
+/* ============================================================
+   Invite-link UX (Handoff #06) — ported from design/invite.css
+   ============================================================ */
+.cg-section { font-size: 12.5px; font-weight: 700; color: var(--fg-muted); margin: 18px 2px 8px; letter-spacing: 0; }
+.cg-list { margin-bottom: 6px; border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; }
+.cg-row { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; padding: 13px 15px;
+  background: var(--surface); border: none; border-bottom: 1px solid var(--border); }
+.cg-row:last-child { border-bottom: none; }
+.cg-row.pending { cursor: pointer; }
+.cg-row.pending:active { background: var(--surface-2); }
+.cg-main { flex: 1; min-width: 0; }
+.cg-name { display: block; font-weight: 700; font-size: 15px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cg-sub { display: block; font-size: 12.5px; color: var(--fg-muted); margin-top: 1px; }
+.cg-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: var(--r-pill); background: var(--surface-sunken); color: var(--fg-muted); flex: none; }
+.cg-badge.owner { background: color-mix(in oklch, var(--primary) 16%, transparent); color: var(--primary); }
+.cg-cta { display: flex; gap: 6px; flex: none; }
+
+.cg-avatar-pending { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--surface-sunken); color: var(--fg-faint); border: 1.5px dashed var(--border-strong); }
+.cg-meta-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+.cg-status { font-size: 12px; font-weight: 700; color: var(--warn); }
+.cg-status.expired { color: var(--fg-faint); }
+.cg-dot { color: var(--fg-faint); font-size: 12px; }
+.cg-when { font-size: 12px; color: var(--fg-muted); }
+.cg-when.warn { color: var(--danger); font-weight: 600; }
+.cg-go { width: 34px; height: 34px; border-radius: var(--r-pill); display: grid; place-items: center; background: var(--surface-2); color: var(--fg-muted); flex: none; }
+.cg-go.resend { background: color-mix(in oklch, var(--primary) 14%, transparent); color: var(--primary); }
+
+.cg-add { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 10px;
+  height: 50px; border-radius: var(--r-pill); border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--fg); font-weight: 700; font-size: 15px; cursor: pointer; }
+.cg-add:active { background: var(--surface-2); }
+
+/* empty state */
+.cg-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 34px 20px; }
+.cg-empty-ic { width: 70px; height: 70px; border-radius: 22px; display: grid; place-items: center; background: var(--surface-2); color: var(--primary); }
+.cg-empty-t { font-weight: 800; font-size: 18px; }
+.cg-empty-b { font-size: 14px; color: var(--fg-muted); line-height: 1.55; max-width: 250px; }
+
+/* ---- Invite detail sheet ---- */
+.inv-sheet { padding: 8px 18px 18px; max-height: 92%; }
+.inv-head { display: flex; align-items: center; gap: 12px; margin: 8px 0 12px; }
+.inv-avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: color-mix(in oklch, var(--primary) 14%, transparent); color: var(--primary); }
+.inv-email { display: block; font-weight: 800; font-size: 16px; word-break: break-all; line-height: 1.3; }
+.inv-status { display: block; font-size: 12.5px; color: var(--fg-muted); margin-top: 2px; }
+.inv-hint { font-size: 13.5px; color: var(--fg-muted); line-height: 1.55; margin: 0 0 16px; }
+.inv-sub-hint { font-size: 12.5px; color: var(--fg-faint); text-align: center; margin: 8px 0 4px; }
+
+/* link box */
+.inv-linkbox { margin: 16px 0 6px; }
+.inv-link-label { display: block; font-size: 12px; font-weight: 700; color: var(--fg-muted); margin-bottom: 7px; }
+.inv-link-row { display: flex; align-items: center; gap: 9px; background: var(--surface-sunken); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 11px 12px; color: var(--fg-muted); }
+.inv-url { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 13px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inv-copy-btn { display: inline-flex; align-items: center; gap: 6px; flex: none; background: var(--surface); color: var(--primary);
+  font-family: inherit; font-weight: 700; font-size: 13px; padding: 8px 12px; border-radius: var(--r-sm); border: 1px solid var(--border); cursor: pointer; }
+.inv-copy-btn.done { color: var(--good); border-color: color-mix(in oklch, var(--good) 40%, transparent); }
+.inv-copy-btn:active { transform: scale(0.97); }
+
+/* QR */
+.inv-qr-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 12px;
+  background: none; border: none; color: var(--primary); font-family: inherit; font-weight: 700; font-size: 14px; padding: 8px; cursor: pointer; }
+.inv-qr { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 0 6px; }
+.inv-qr-frame { padding: 14px; background: #fff; border-radius: var(--r-md); box-shadow: var(--shadow-sm); line-height: 0; }
+[data-theme="dark"] .inv-qr-frame { background: oklch(0.92 0.01 80); }
+.inv-qr-hint { font-size: 12px; color: var(--fg-muted); text-align: center; max-width: 220px; line-height: 1.5; }
+
+/* footer */
+.inv-foot { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.inv-meta { font-size: 11.5px; color: var(--fg-faint); flex: 1; line-height: 1.4; }
+.inv-revoke { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; color: var(--danger);
+  font-family: inherit; font-weight: 700; font-size: 13px; padding: 7px 4px; flex: none; cursor: pointer; }

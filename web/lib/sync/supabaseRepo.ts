@@ -277,11 +277,21 @@ export class SupabaseRepo implements Repo {
   async listInvites(babyId: string): Promise<Invite[]> {
     const { data, error } = await this.sb
       .from("caregiver_invites")
-      .select("id, email, status, expires_at")
+      .select("id, email, status, token, created_at, expires_at, inviter:invited_by_user_id (display_name)")
       .eq("baby_id", babyId)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
     if (error) throw error;
-    return (data as Invite[]) ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return ((data as any[]) ?? []).map((r) => ({
+      id: r.id,
+      email: r.email,
+      status: r.status,
+      token: r.token,
+      created_at: r.created_at,
+      expires_at: r.expires_at,
+      inviter: r.inviter?.display_name ?? "",
+    }));
   }
   async revokeInvite(inviteId: string): Promise<void> {
     const { error } = await this.sb.rpc("revoke_caregiver_invite", { p_invite: inviteId });
