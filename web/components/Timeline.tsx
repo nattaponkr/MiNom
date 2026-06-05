@@ -2,17 +2,61 @@
 // Timeline (polish #09) — rows mirror Home (muted context + bold detail); attribution
 // shown only when the caregiver changed from the previous row; tap → activity detail
 // sheet (edit + delete); swipe-left → quick delete; BE dates for full-date displays.
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
 import { clockTime, formatDateBE } from "@/lib/format";
 import { IcChevL, IcChevR, IcCheck, IcTrash, VERB_ICON } from "@/lib/icons";
-import { colorFromSeed } from "./ui";
 import { getRepo } from "@/lib/sync/repo";
-import { activityHierarchy, activitySummary } from "@/lib/activity";
+import { activityHierarchy, activitySummary, daySummaryStats } from "@/lib/activity";
 import { isFirstTimeFood } from "@/lib/eat";
 import ActivityDetailSheet from "./ActivityDetailSheet";
 import { ConfirmSheet } from "./Sheets";
 import { t } from "@/i18n";
+
+// Day summary — count-led hero numbers per verb, on a quiet --surface-2 band, under the
+// day label and above the rows. Hidden entirely when the day has no entries (#10).
+function DaySummary({ activities }: { activities: Activity[] }) {
+  const stats = daySummaryStats(activities);
+  if (!stats.length) return null;
+  return (
+    <div className="dsum" lang="th">
+      <div className="dsum-grid">
+        {stats.map((s, i) => (
+          <Fragment key={s.verb}>
+            {i > 0 && <span className="dsum-div" aria-hidden="true" />}
+            <div className="dsum-stat">
+              <span className="dsum-label">
+                <span className={"dsum-dot " + s.verb} aria-hidden="true" />
+                {s.label}
+              </span>
+              <span className="dsum-hero">
+                {s.value.map((tk, j) => (
+                  <span className="dsum-vg" key={j}>
+                    <span className="dsum-n">{tk.n}</span>
+                    <span className="dsum-u">{tk.u}</span>
+                  </span>
+                ))}
+              </span>
+              {Array.isArray(s.sub) ? (
+                s.sub.map((line, k) => (
+                  <span className="dsum-sub" key={k}>
+                    {line}
+                  </span>
+                ))
+              ) : s.sub ? (
+                <span className="dsum-sub">{s.sub}</span>
+              ) : (
+                <span className="dsum-sub dsum-sub-blank" aria-hidden="true">
+                  &nbsp;
+                </span>
+              )}
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Pill({ status, justSynced }: { status: Activity["_sync"]; justSynced: boolean }) {
   if (status === "queued")
@@ -152,12 +196,11 @@ export default function Timeline({
       ) : (
         <>
           <div className="tl-section">{dayLabel(offset)}</div>
+          <DaySummary activities={rows} />
           <div className="tl-list">
-            {rows.map((a, i) => {
+            {rows.map((a) => {
               const Ic = VERB_ICON[a.type];
               const { context, detail: bold } = activityHierarchy(a);
-              const showWho = i === 0 || a.logged_by_user_id !== rows[i - 1].logged_by_user_id;
-              const who = a._mine ? t("timeline.you") : a.logged_by_name;
               const swiped = swipedId === a.id;
               return (
                 <div
@@ -179,7 +222,9 @@ export default function Timeline({
                       <span>{t("timeline.swipeDelete")}</span>
                     </button>
                   )}
-                  <button className="tlr" type="button" onClick={() => (swiped ? setSwipedId(null) : setDetail(a))}>
+                  {/* #10 Part A: attribution chip + spacer removed product-wide. Who-logged-it
+                      lives only in the detail sheet now. Time sits alone, right. */}
+                  <button className="tlr tlr-noattr" type="button" onClick={() => (swiped ? setSwipedId(null) : setDetail(a))}>
                     <span className={"tlr-ic " + a.type}>
                       <Ic size={22} />
                     </span>
@@ -199,14 +244,6 @@ export default function Timeline({
                     <span className="tlr-right">
                       <span className="tlr-time">{clockTime(a.started_at)}</span>
                       {isToday && <Pill status={a._sync} justSynced={justSynced.has(a.id)} />}
-                      {showWho ? (
-                        <span className="tlr-who">
-                          <span className="tlr-av" style={{ background: a.logged_by_color || colorFromSeed(who) }}>{who[0]}</span>
-                          <span className="tlr-wn">{who}</span>
-                        </span>
-                      ) : (
-                        <span className="tlr-who-spacer" aria-hidden="true" />
-                      )}
                     </span>
                   </button>
                 </div>
