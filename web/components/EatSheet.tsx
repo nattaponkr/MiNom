@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import type { Activity, EatCapture, EatDetails, EatMode, Portion, Side } from "@/lib/types";
 import { isEatV2, type EatDefaults } from "@/lib/eat";
 import { num } from "@/lib/format";
-import { IcBottle, IcCheck, IcClock, IcDrop, IcEat, IcPlay, IcPlus, IcRepeat, IcStop, IcX } from "@/lib/icons";
+import { IcBottle, IcCheck, IcClock, IcDrop, IcEat, IcPlus, IcRepeat, IcStop, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
 import { t } from "@/i18n";
@@ -80,9 +80,8 @@ export default function EatSheet({
   const [firstTime, setFirstTime] = useState(seed?.mode === "solids" ? seed.firstTime === true : false);
   const [acOpen, setAcOpen] = useState(false);
 
-  // breast timer — idle side pick / finished review
+  // breast timer — idle (tap a side to start) / finished review
   const timerSeed = seed?.mode === "bm" && seed.capture === "timer" ? seed : null;
-  const [pickedSide, setPickedSide] = useState<Side | null>(timerSeed?.side ?? null);
   const reviewTimer = !!timerSeed && !live; // editing a finished entry → static review
 
   // Tick while a session is live (display derives from started_at, not mount time).
@@ -99,8 +98,6 @@ export default function EatSheet({
   const liveSegStart = ld?.segStart ? new Date(ld.segStart).getTime() : now;
   const liveTotal = live ? livePer.L + livePer.R + (now - liveSegStart) : 0;
   const liveSideMs = (s: Side) => (s === liveSide ? livePer[s] + (now - liveSegStart) : livePer[s]);
-
-  const startSide: Side = pickedSide ?? defaults.startingSide;
 
   const selectMode = (m: EatMode) => {
     setMode(m);
@@ -122,7 +119,7 @@ export default function EatSheet({
       return;
     }
     if (reviewTimer) return;
-    setPickedSide(s);
+    onStartEat(s); // idle: tapping a side starts the session on it (state machine §05)
   };
 
   const commit = (d: EatDetails) => {
@@ -254,7 +251,7 @@ export default function EatSheet({
                   <div className="ep-sides">
                     {(["L", "R"] as Side[]).map((s) => {
                       const isActive = live ? liveSide === s : false;
-                      const isSuggested = !live && !reviewTimer && pickedSide === null && s === defaults.startingSide;
+                      const isSuggested = !live && !reviewTimer && s === defaults.startingSide;
                       const ms = live ? liveSideMs(s) : reviewTimer ? (timerSeed!.perSideMs?.[s] ?? 0) : 0;
                       return (
                         <button
@@ -286,14 +283,10 @@ export default function EatSheet({
                       {t("common.save")}
                     </Button>
                   ) : (
-                    <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={eatStyle} onClick={() => onStartEat(startSide)}>
-                      {t("eat.breast.start")}
-                    </Button>
-                  )}
-                  {!live && !reviewTimer && (
-                    <button className="text-link" type="button" onClick={onClose} style={{ display: "block", margin: "12px auto 0", color: "var(--fg-muted)", fontSize: 14 }}>
+                    // Idle: no separate start button — a side tap starts. Bottom CTA closes.
+                    <Button kind="ghost" size="lg" onClick={onClose}>
                       {t("eat.breast.closeIdle")}
-                    </button>
+                    </Button>
                   )}
                   <div style={{ height: 8 }} />
                 </>
