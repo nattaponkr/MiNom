@@ -5,7 +5,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
 import { clockTime, formatDateBE } from "@/lib/format";
-import { IcChevL, IcChevR, IcCheck, IcTrash, VERB_ICON } from "@/lib/icons";
+import { IcChevL, IcChevR, IcCheck, IcEat, IcRepeat, IcStop, IcTrash, VERB_ICON } from "@/lib/icons";
 import { getRepo } from "@/lib/sync/repo";
 import { activityHierarchy, activitySummary, daySummaryStats } from "@/lib/activity";
 import { isFirstTimeFood } from "@/lib/eat";
@@ -13,10 +13,26 @@ import ActivityDetailSheet from "./ActivityDetailSheet";
 import { ConfirmSheet } from "./Sheets";
 import { t } from "@/i18n";
 
+// Active feeding session helpers (live elapsed from started_at + accumulators).
+function feedingMs(a: Activity, now: number): number {
+  const d = a.details_json as { perSideMs?: { L?: number; R?: number }; segStart?: string };
+  return (d.perSideMs?.L ?? 0) + (d.perSideMs?.R ?? 0) + (d.segStart ? now - new Date(d.segStart).getTime() : 0);
+}
+function feedingSide(a: Activity): string {
+  return t(`eat.breast.${((a.details_json as { side?: string }).side ?? "L") === "L" ? "left" : "right"}`);
+}
+function fmtMs(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}` : `${p(Math.floor(s / 60))}:${p(s % 60)}`;
+}
+
 // Day summary — count-led hero numbers per verb, on a quiet --surface-2 band, under the
 // day label and above the rows. Hidden entirely when the day has no entries (#10).
-function DaySummary({ activities }: { activities: Activity[] }) {
-  const stats = daySummaryStats(activities);
+// `now` ticks the live eat duration while a session is running (#11).
+function DaySummary({ activities, now }: { activities: Activity[]; now: number }) {
+  const stats = daySummaryStats(activities, now);
   if (!stats.length) return null;
   return (
     <div className="dsum" lang="th">
@@ -96,6 +112,9 @@ export default function Timeline({
   loading,
   onEdit,
   onDelete,
+  runningEat,
+  onStopFeeding,
+  onSwitchFeeding,
 }: {
   babyId: string;
   babyName: string;
@@ -103,6 +122,9 @@ export default function Timeline({
   loading: boolean;
   onEdit: (a: Activity) => void; // route to the per-verb edit sheet (Main)
   onDelete: (id: string) => void; // actual deletion (Main)
+  runningEat: Activity | null;
+  onStopFeeding: () => void;
+  onSwitchFeeding: () => void;
 }) {
   const [offset, setOffset] = useState(0);
   const [past, setPast] = useState<Activity[]>([]);
@@ -111,7 +133,15 @@ export default function Timeline({
   const [confirmDel, setConfirmDel] = useState<Activity | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
   const touch = useRef<{ x: number; id: string } | null>(null);
+
+  // Tick the active-feeding elapsed + day-summary while a session runs.
+  useEffect(() => {
+    if (!runningEat) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [runningEat]);
 
   // Fetch past days on demand (read-only history). Today uses the live prop.
   useEffect(() => {
@@ -196,9 +226,36 @@ export default function Timeline({
       ) : (
         <>
           <div className="tl-section">{dayLabel(offset)}</div>
-          <DaySummary activities={rows} />
+          <DaySummary activities={rows} now={now} />
+          {/* #11: active feeding session — elevated row at top, today only (not a completed row) */}
+          {isToday && runningEat && (
+            <div className="tl-active">
+              <div className="tl-active-top">
+                <span className="vi">
+                  <IcEat size={22} />
+                </span>
+                <span className="tl-active-meta">
+                  <span className="tl-active-k">
+                    <span className="dot" />
+                    {t("timeline.activeFeedingSide", { side: feedingSide(runningEat) })}
+                  </span>
+                  <span className="tl-active-v">
+                    <span className="mono">{fmtMs(feedingMs(runningEat, now))}</span>
+                  </span>
+                </span>
+              </div>
+              <div className="ep-actions">
+                <button className="ep-act stop" onClick={onStopFeeding} type="button">
+                  <IcStop size={16} /> {t("home.eat.stopAction")}
+                </button>
+                <button className="ep-act switch" onClick={onSwitchFeeding} type="button">
+                  <IcRepeat size={16} /> {t("home.eat.switchAction")}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="tl-list">
-            {rows.map((a) => {
+            {(isToday && runningEat ? rows.filter((a) => a.id !== runningEat.id) : rows).map((a) => {
               const Ic = VERB_ICON[a.type];
               const { context, detail: bold } = activityHierarchy(a);
               const swiped = swipedId === a.id;

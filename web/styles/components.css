@@ -133,7 +133,7 @@
   font-family: inherit; font-weight: 700; font-size: 16px; border-radius: var(--r-pill);
   border: 1px solid transparent; padding: 0 20px; height: 52px; transition: background .12s, transform .1s; }
 .btn:active { transform: scale(0.98); }
-.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary { background: var(--primary-strong); color: var(--on-primary); }
 .btn-primary:hover { background: var(--primary-press); }
 .btn-lg { height: 60px; font-size: 18px; width: 100%; }
 .btn-block { width: 100%; }
@@ -199,8 +199,7 @@
 /* #08 global-nav AA fix: inactive --fg-faint(✗)→--fg-muted; active clay too light on the
    light bar at 11px → darker clay in light, --primary in dark (both pass). App-wide. */
 .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--fg-muted); font-size: 10.5px; font-weight: 700; padding: 4px 12px; }
-.tab.on { color: oklch(0.50 0.13 45); }
-[data-theme="dark"] .tab.on { color: var(--primary); }
+.tab.on { color: var(--primary-strong); } /* #11b: retires the #08 ad-hoc nav value */
 
 /* ---------- chart placeholder ---------- */
 .chart-ph { position: relative; height: 188px; border-radius: var(--r-lg); border: 1px solid var(--border);
@@ -527,3 +526,61 @@
 
 /* Part A: timeline row without attribution — time alone, right-aligned */
 .tlr-noattr .tlr-time { margin-left: auto; align-self: center; }
+
+/* ============================================================
+   กิน sheet polish + active feeding (Handoff #11) — ported from design/eat_polish.css
+   --eat-strong carries the eat text/fill signal (soft --eat fails as text in light).
+   ============================================================ */
+/* timer card: idle quiet, running alive */
+.ep-timer { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl);
+  padding: 24px 20px 22px; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 13px; }
+.ep-timer.running { border-color: color-mix(in oklch, var(--eat-strong) 38%, var(--border));
+  background: color-mix(in oklch, var(--eat-strong) 5%, var(--surface)); }
+.ep-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--fg-muted); min-height: 16px; }
+.ep-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--eat-strong); flex: none; }
+.ep-status.live .dot { animation: epPulse 1.4s ease-in-out infinite; }
+@keyframes epPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.82); } }
+.ep-big { font-family: var(--font-mono); font-size: 46px; font-weight: 600; letter-spacing: -0.03em; margin: 7px 0 3px; color: var(--fg); }
+.ep-big.idle { color: var(--fg-faint); }
+.ep-subhint { font-size: 12.5px; color: var(--fg-muted); }
+.ep-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-bottom: 12px; }
+.ep-side { position: relative; min-height: 78px; border-radius: var(--r-lg); border: 1.5px solid var(--border-strong); cursor: pointer;
+  background: var(--surface); color: var(--fg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px; }
+.ep-side .lbl { font-weight: 800; font-size: 18px; }
+.ep-side .val { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--fg-muted); }
+.ep-side .aff { font-size: 11px; font-weight: 700; color: var(--eat-strong); display: inline-flex; align-items: center; gap: 4px; }
+.ep-side.suggested { border-style: dashed; border-color: var(--eat-strong); }
+.ep-side.active { background: var(--eat-strong); border-color: var(--eat-strong); color: var(--on-primary); box-shadow: 0 6px 18px -8px color-mix(in oklch, var(--eat-strong) 70%, transparent); }
+.ep-side.active .lbl, .ep-side.active .val { color: var(--on-primary); }
+.ep-side.active .tick { position: absolute; top: 8px; right: 9px; opacity: .9; display: inline-flex; }
+.ep-side.rest .aff { color: var(--fg-muted); }
+.ep-hint { text-align: center; font-size: 12.5px; color: var(--fg-muted); margin: -2px 0 13px; }
+.cap-opt.locked { opacity: .42; cursor: not-allowed; }
+.cap-lock-hint { text-align: center; font-size: 11.5px; color: var(--fg-faint); margin: -8px 0 13px; }
+
+/* Home — active feeding card */
+.eat-card-v2.feeding { border-color: color-mix(in oklch, var(--eat-strong) 42%, var(--border)); }
+.eat-card-v2.feeding .vi { background: var(--eat-strong); color: var(--on-primary); }
+.ep-live { display: inline-flex; align-items: center; gap: 7px; }
+.ep-live .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--eat-strong); flex: none; animation: epPulse 1.4s ease-in-out infinite; }
+.ep-live .ctx { font-size: 13px; font-weight: 700; color: var(--fg-muted); }
+.ep-live .mono { font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
+.ep-actions { display: flex; gap: 9px; padding: 0 16px 15px; }
+.eat-card-v2.feeding .ep-actions { padding-top: 3px; }
+.ep-act { flex: 1; min-height: 46px; border-radius: var(--r-md); font-weight: 800; font-size: 14.5px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid transparent; }
+.ep-act.stop { background: var(--eat-strong); color: var(--on-primary); }
+.ep-act.stop:active { transform: scale(.98); }
+.ep-act.switch { background: var(--surface-2); color: var(--fg); border-color: var(--border-strong); }
+
+/* Timeline — active feeding row (today only) */
+.tl-active { border: 1.5px solid color-mix(in oklch, var(--eat-strong) 42%, var(--border)); border-radius: var(--r-lg);
+  background: color-mix(in oklch, var(--eat-strong) 6%, var(--surface)); box-shadow: var(--shadow-sm); overflow: hidden; margin: 2px 0 14px; }
+.tl-active-top { display: flex; align-items: center; gap: 13px; padding: 13px 14px 11px; }
+.tl-active .vi { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--eat-strong); color: var(--on-primary); flex: none; }
+.tl-active-meta { flex: 1; min-width: 0; }
+.tl-active-k { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--fg-muted); }
+.tl-active-k .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--eat-strong); animation: epPulse 1.4s ease-in-out infinite; }
+.tl-active-v { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin-top: 1px; color: var(--fg); }
+.tl-active-v .mono { font-family: var(--font-mono); }
+.tl-active .ep-actions { padding: 0 14px 13px; }

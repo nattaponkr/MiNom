@@ -60,7 +60,7 @@ function durTokens(ms: number): SummaryToken[] {
   return [{ n: num(min), u: t("units.m") }];
 }
 
-export function daySummaryStats(activities: Activity[]): DaySummaryStat[] {
+export function daySummaryStats(activities: Activity[], now = Date.now()): DaySummaryStat[] {
   const countUnit = t("timeline.summary.count", { n: "" }).trim(); // "ครั้ง"
   const stats: DaySummaryStat[] = [];
 
@@ -75,6 +75,9 @@ export function daySummaryStats(activities: Activity[]): DaySummaryStat[] {
         if (d.mode === "bm" && (d as { capture?: string }).capture === "timer") {
           const per = (d as { perSideMs?: { L?: number; R?: number } }).perSideMs;
           durMs += (per?.L ?? 0) + (per?.R ?? 0);
+          // live current segment of an in-progress session (ticks the hero while running)
+          const seg = (d as { segStart?: string }).segStart;
+          if (!a.ended_at && seg) durMs += now - new Date(seg).getTime();
         }
       } else if (typeof (d as { amount_ml?: number }).amount_ml === "number") {
         volume += (d as { amount_ml: number }).amount_ml; // legacy v1 amounts → volume

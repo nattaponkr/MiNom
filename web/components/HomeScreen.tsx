@@ -2,8 +2,23 @@
 import { useEffect, useRef, useState } from "react";
 import type { Activity, Baby, Profile, VerbType } from "@/lib/types";
 import { ago, ageLabel, todayWeekday } from "@/lib/format";
-import { IcChevR, IcEat, IcRepeat, IcUsers, VERB_ICON } from "@/lib/icons";
+import { IcChevR, IcEat, IcRepeat, IcStop, IcUsers, VERB_ICON } from "@/lib/icons";
 import { eatSummary } from "@/lib/eat";
+
+// Live elapsed of an active feeding session — accumulated per-side + the current segment.
+function feedingMs(a: Activity, now: number): number {
+  const d = a.details_json as { perSideMs?: { L?: number; R?: number }; segStart?: string };
+  return (d.perSideMs?.L ?? 0) + (d.perSideMs?.R ?? 0) + (d.segStart ? now - new Date(d.segStart).getTime() : 0);
+}
+function feedingSideLabel(a: Activity): string {
+  return t(`eat.breast.${((a.details_json as { side?: string }).side ?? "L") === "L" ? "left" : "right"}`);
+}
+function fmtMs(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}` : `${p(Math.floor(s / 60))}:${p(s % 60)}`;
+}
 import { Avatar } from "./ui";
 import ThemeToggle from "./ThemeToggle";
 import OfflineToggle from "./OfflineToggle";
@@ -67,17 +82,56 @@ function VerbCardV2({
 // `flash` rings the card to confirm a just-logged/repeated feed.
 function EatCardV2({
   lastEat,
+  runningEat,
   now,
   flash,
   onOpen,
   onRepeat,
+  onStop,
+  onSwitch,
 }: {
   lastEat: Activity | null;
+  runningEat: Activity | null;
   now: number;
   flash: boolean;
   onOpen: () => void;
   onRepeat: () => void;
+  onStop: () => void;
+  onSwitch: () => void;
 }) {
+  // Active feeding session — live elapsed + หยุด / สลับข้าง quick actions (#11).
+  if (runningEat) {
+    return (
+      <div className="eat-card-v2 feeding" lang="th">
+        <button className="eat-card-main" onClick={onOpen} aria-label={t("home.eat.feeding")}>
+          <span className="vi">
+            <IcEat size={28} />
+          </span>
+          <span className="eat-card-meta">
+            <span className="eat-card-row1">
+              <span className="eat-card-name">{t("home.eat.name")}</span>
+            </span>
+            <span className="ep-live">
+              <span className="dot" />
+              <span className="ctx">{t("home.eat.feedingSide", { side: feedingSideLabel(runningEat) })}</span>
+              <span className="mono">{fmtMs(feedingMs(runningEat, now))}</span>
+            </span>
+          </span>
+          <span className="eat-card-go">
+            <IcChevR size={18} />
+          </span>
+        </button>
+        <div className="ep-actions">
+          <button className="ep-act stop" onClick={onStop} type="button">
+            <IcStop size={16} /> {t("home.eat.stopAction")}
+          </button>
+          <button className="ep-act switch" onClick={onSwitch} type="button">
+            <IcRepeat size={16} /> {t("home.eat.switchAction")}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={"eat-card-v2" + (flash ? " just-logged" : "")} lang="th">
       <button className="eat-card-main" onClick={onOpen} aria-label={t("home.eat.name") + (lastEat ? ": " + eatSummary(lastEat.details_json) : "")}>
@@ -140,6 +194,9 @@ export default function HomeScreen({
   onOpenFamily,
   caregiverCount,
   runningSleep,
+  runningEat,
+  onStopFeeding,
+  onSwitchFeeding,
 }: {
   baby: Baby;
   profile: Profile | null;
@@ -155,15 +212,18 @@ export default function HomeScreen({
   onOpenFamily: () => void;
   caregiverCount: number; // co-caregivers (excludes self); family hint shows when < 1
   runningSleep: Activity | null;
+  runningEat: Activity | null;
+  onStopFeeding: () => void;
+  onSwitchFeeding: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
   const [debug, setDebug] = useState(false);
   useEffect(() => setDebug(isDebug()), []);
   // Tick every 1s while a sleep timer runs (live mm:ss on the card), else 30s.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), runningSleep ? 1000 : 30000);
+    const id = setInterval(() => setNow(Date.now()), runningSleep || runningEat ? 1000 : 30000);
     return () => clearInterval(id);
-  }, [runningSleep]);
+  }, [runningSleep, runningEat]);
 
   const lastEat = activities.find((a) => a.type === "eat") ?? null;
 
@@ -210,7 +270,7 @@ export default function HomeScreen({
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-          <EatCardV2 lastEat={lastEat} now={now} flash={flash} onOpen={onLogEat} onRepeat={onRepeatLast} />
+          <EatCardV2 lastEat={lastEat} runningEat={runningEat} now={now} flash={flash} onOpen={onLogEat} onRepeat={onRepeatLast} onStop={onStopFeeding} onSwitch={onSwitchFeeding} />
           {runningSleep ? (
             <VerbCardV2
               verb="sleep"

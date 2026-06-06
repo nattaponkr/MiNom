@@ -53,6 +53,13 @@
    * --danger       FILL only — white text on a red fill (buttons, swipe reveal). Don't use as text.
    * --danger-text  danger TEXT on a surface (delete links, error copy, destructive labels).
    *                Light uses a darker clay-red (--danger as text was 4.43 ✗); dark passes as-is.
+   *
+   * Verb / brand hues: SOFT is decorative only (#11/#11b, 2026-06-06).
+   * --eat / --sleep / --diaper / --primary (soft) → icon chips, --*-tint surfaces, dots,
+   *   borders, glows. As TEXT or as a fill behind white text in LIGHT they FAIL 4.5:1.
+   * --eat-strong / --sleep-strong / --primary-strong → any verb/brand TEXT, active labels,
+   *   and white-on-color fills (CTAs, active states). Dark -strong tracks soft (already passes),
+   *   so bind -strong unconditionally. This is the same shape as --fg-faint (#08) and --danger (#09).
    */
   --fg: oklch(0.28 0.014 64);           /* warm near-black */
   --fg-muted: oklch(0.52 0.013 66);
@@ -63,11 +70,14 @@
   --primary-press: oklch(0.60 0.12 46);
   --on-primary: oklch(0.99 0.006 80);
   --primary-tint: oklch(0.94 0.03 56);
+  --primary-strong: oklch(0.53 0.135 48); /* TEXT + white-on-fill in light (#11b: 5.57 / 5.41) */
 
-  /* Verb hues — same L/C, hue varies. Soft. */
+  /* Verb hues — same L/C, hue varies. Soft (decorative). See the verb-hue guardrail below. */
   --eat: oklch(0.70 0.10 62);
+  --eat-strong: oklch(0.53 0.135 50);   /* TEXT + white-on-fill in light (#11: 5.56 / 5.40) */
   --eat-tint: oklch(0.945 0.032 66);
   --sleep: oklch(0.66 0.075 277);
+  --sleep-strong: oklch(0.50 0.11 277); /* TEXT + white-on-fill in light (#11b: 6.16 / 5.99) */
   --sleep-tint: oklch(0.945 0.028 282);
   --diaper: oklch(0.68 0.075 178);
   --diaper-tint: oklch(0.945 0.03 180);
@@ -108,10 +118,13 @@
   --primary-press: oklch(0.71 0.115 50);
   --on-primary: oklch(0.22 0.02 60);
   --primary-tint: oklch(0.36 0.05 52);
+  --primary-strong: oklch(0.76 0.11 52);  /* dark soft already clears AA — -strong tracks soft */
 
   --eat: oklch(0.79 0.10 66);
+  --eat-strong: oklch(0.81 0.105 64);
   --eat-tint: oklch(0.34 0.045 64);
   --sleep: oklch(0.76 0.085 280);
+  --sleep-strong: oklch(0.76 0.085 280);
   --sleep-tint: oklch(0.33 0.04 280);
   --diaper: oklch(0.78 0.08 180);
   --diaper-tint: oklch(0.33 0.04 182);

@@ -1,12 +1,10 @@
 "use client";
-// Eat v2 sheet — one sheet, three baby-centric modes (PRD §0.1, design spec
-// design/section_eat2.jsx + screens_eat2.jsx):
-//   • นมแม่ (bm)      — capture toggle จับเวลา/กรอกปริมาณ; live timer w/ tap-to-switch sides
-//   • นมผง (formula)  — amount only
-//   • อาหารแข็ง (solids) — food + portion + first-time allergen flag
-// Smart last-used defaults keep the 2-tap path. `editing` seeds the sheet from an
-// existing row for the toast's [แก้ไข] quick-correction.
-import { useEffect, useRef, useState } from "react";
+// Eat v2 sheet — three baby-centric modes. นมแม่ · จับเวลา is now a PERSISTED session
+// (#11): tap a side to start (inserts an open-ended row), tap the active side (or the CTA)
+// to stop+save, tap the other side to switch. The session is parent-held (runningEat from
+// Main, mirroring the Sleep timer); closing the sheet does NOT stop it — the timer ticks
+// from started_at across navigation. `editing` seeds the sheet from a finished row (#09 edit).
+import { useEffect, useState } from "react";
 import type { Activity, EatCapture, EatDetails, EatMode, Portion, Side } from "@/lib/types";
 import { isEatV2, type EatDefaults } from "@/lib/eat";
 import { num } from "@/lib/format";
@@ -22,11 +20,13 @@ const PORTIONS: { id: Portion; key: string }[] = [
   { id: "M", key: "eat.solids.medium" },
   { id: "L", key: "eat.solids.large" },
 ];
-
 const other = (s: Side): Side => (s === "L" ? "R" : "L");
+const sideLabel = (s: Side) => t(`eat.breast.${s === "L" ? "left" : "right"}`);
 const fmtBig = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const h = Math.floor(s / 3600);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}` : `${p(Math.floor(s / 60))}:${p(s % 60)}`;
 };
 const fmtSeg = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -36,56 +36,71 @@ const fmtSeg = (ms: number) => {
 export default function EatSheet({
   defaults,
   editing,
+  runningEat,
   onSave,
   onUpdate,
+  onStartEat,
+  onSwitchEat,
+  onStopEat,
+  noteDraft,
+  onNoteDraftChange,
   onClose,
 }: {
   defaults: EatDefaults;
   editing?: Activity | null;
+  runningEat?: Activity | null;
   onSave: (d: EatDetails, startedAt: string) => void;
   onUpdate?: (id: string, d: EatDetails, startedAt: string) => void;
+  onStartEat: (side: Side) => void;
+  onSwitchEat: (side: Side) => void;
+  onStopEat: () => void;
+  noteDraft: string;
+  onNoteDraftChange: (v: string) => void;
   onClose: () => void;
 }) {
   const seed = editing && isEatV2(editing.details_json) ? editing.details_json : null;
+  // Active live session (mode=bm, capture=timer, open-ended) — drives the running UI.
+  const live = runningEat && isEatV2(runningEat.details_json) && runningEat.details_json.mode === "bm" && runningEat.details_json.capture === "timer" ? runningEat : null;
 
-  const [mode, setMode] = useState<EatMode>(seed?.mode ?? defaults.mode);
-  const [capture, setCapture] = useState<EatCapture>(seed?.mode === "bm" ? seed.capture : defaults.capture);
+  const [mode, setMode] = useState<EatMode>(live ? "bm" : (seed?.mode ?? defaults.mode));
+  const [capture, setCapture] = useState<EatCapture>(live ? "timer" : seed?.mode === "bm" ? seed.capture : defaults.capture);
   const [startedAt, setStartedAt] = useState(() => editing?.started_at ?? new Date().toISOString());
   const [notes, setNotes] = useState(seed?.notes ?? "");
+  const [capLockHint, setCapLockHint] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
-  // amount (นมผง + นมแม่·กรอกปริมาณ) — seeded per-mode; one tap on a chip overrides.
   const initialAmount = (): number => {
     if (seed?.mode === "formula") return seed.amountMl;
     if (seed?.mode === "bm" && seed.capture === "amount") return seed.amountMl;
     return (seed?.mode ?? defaults.mode) === "formula" ? defaults.formulaAmount : defaults.bmAmount;
   };
   const [amount, setAmount] = useState<number>(initialAmount);
-
-  // solids
   const [food, setFood] = useState(seed?.mode === "solids" ? (seed.food ?? "") : "");
   const [portion, setPortion] = useState<Portion>(seed?.mode === "solids" ? seed.portion : defaults.portion);
   const [firstTime, setFirstTime] = useState(seed?.mode === "solids" ? seed.firstTime === true : false);
   const [acOpen, setAcOpen] = useState(false);
 
-  // breast timer
+  // breast timer — idle side pick / finished review
   const timerSeed = seed?.mode === "bm" && seed.capture === "timer" ? seed : null;
   const [pickedSide, setPickedSide] = useState<Side | null>(timerSeed?.side ?? null);
-  const [running, setRunning] = useState(false);
-  const [activeSide, setActiveSide] = useState<Side>(timerSeed?.endingSide ?? timerSeed?.side ?? defaults.startingSide);
-  const [accumMs, setAccumMs] = useState<{ L: number; R: number }>({ L: timerSeed?.perSideMs?.L ?? 0, R: timerSeed?.perSideMs?.R ?? 0 });
-  const [segStart, setSegStart] = useState(0);
-  const [now, setNow] = useState(Date.now());
-  const reviewTimer = !!timerSeed; // editing a finished timer entry → static review
+  const reviewTimer = !!timerSeed && !live; // editing a finished entry → static review
 
+  // Tick while a session is live (display derives from started_at, not mount time).
   useEffect(() => {
-    if (!running) return;
+    if (!live) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [live]);
+
+  // Live session geometry (from the row's details_json).
+  const ld = live ? (live.details_json as { side?: Side; perSideMs?: { L?: number; R?: number }; segStart?: string }) : null;
+  const liveSide: Side = ld?.side ?? "L";
+  const livePer = { L: ld?.perSideMs?.L ?? 0, R: ld?.perSideMs?.R ?? 0 };
+  const liveSegStart = ld?.segStart ? new Date(ld.segStart).getTime() : now;
+  const liveTotal = live ? livePer.L + livePer.R + (now - liveSegStart) : 0;
+  const liveSideMs = (s: Side) => (s === liveSide ? livePer[s] + (now - liveSegStart) : livePer[s]);
 
   const startSide: Side = pickedSide ?? defaults.startingSide;
-  const liveActiveMs = accumMs[activeSide] + (running ? now - segStart : 0);
-  const totalMs = accumMs.L + accumMs.R + (running ? now - segStart : 0);
 
   const selectMode = (m: EatMode) => {
     setMode(m);
@@ -93,27 +108,21 @@ export default function EatSheet({
     else if (m === "bm") setAmount(defaults.bmAmount);
   };
   const selectCapture = (c: EatCapture) => {
+    if (live) {
+      setCapLockHint(true);
+      return;
+    }
     setCapture(c);
     if (c === "amount") setAmount(defaults.bmAmount);
   };
-
-  const startTimer = () => {
-    setActiveSide(startSide);
-    setAccumMs({ L: 0, R: 0 });
-    setSegStart(Date.now());
-    setNow(Date.now());
-    setStartedAt(new Date().toISOString());
-    setRunning(true);
-  };
   const tapSide = (s: Side) => {
-    if (!running) {
-      setPickedSide(s);
+    if (live) {
+      if (s === liveSide) onStopEat();
+      else onSwitchEat(s);
       return;
     }
-    if (s === activeSide) return; // tapping the active side is a no-op
-    setAccumMs((p) => ({ ...p, [activeSide]: p[activeSide] + (Date.now() - segStart) }));
-    setActiveSide(s);
-    setSegStart(Date.now());
+    if (reviewTimer) return;
+    setPickedSide(s);
   };
 
   const commit = (d: EatDetails) => {
@@ -121,11 +130,9 @@ export default function EatSheet({
     else onSave(d, startedAt);
   };
   const trimmedNotes = () => (notes.trim() ? { notes: notes.trim() } : {});
-
-  const saveTimer = () => {
-    const acc = { ...accumMs };
-    if (running) acc[activeSide] += Date.now() - segStart;
-    commit({ mode: "bm", capture: "timer", side: startSide, endingSide: activeSide, perSideMs: { L: acc.L, R: acc.R }, ...trimmedNotes() });
+  const saveReviewTimer = () => {
+    const acc = { L: timerSeed?.perSideMs?.L ?? 0, R: timerSeed?.perSideMs?.R ?? 0 };
+    commit({ mode: "bm", capture: "timer", side: timerSeed?.side, endingSide: timerSeed?.endingSide ?? timerSeed?.side, perSideMs: acc, ...trimmedNotes() });
   };
   const saveAmount = () => {
     if (mode === "formula") commit({ mode: "formula", amountMl: amount, ...trimmedNotes() });
@@ -135,7 +142,7 @@ export default function EatSheet({
     commit({ mode: "solids", portion, ...(food.trim() ? { food: food.trim() } : {}), ...(firstTime ? { firstTime: true } : {}), ...trimmedNotes() });
   };
 
-  const eatStyle = { background: "var(--eat)", color: "var(--on-primary)" };
+  const eatStyle = { background: "var(--eat-strong)", color: "var(--on-primary)" };
 
   const AmountBody = (
     <div className="field" style={{ marginBottom: 12 }}>
@@ -168,6 +175,9 @@ export default function EatSheet({
     </div>
   );
 
+  // Notes: the running session keeps a parent-held draft so it survives close+reopen.
+  const noteVal = live ? noteDraft : notes;
+  const setNoteVal = live ? onNoteDraftChange : setNotes;
   const Notes = (
     <div className="field" style={{ marginBottom: 4 }}>
       <label htmlFor="eat-notes">
@@ -177,8 +187,8 @@ export default function EatSheet({
         id="eat-notes"
         className="notes-area"
         placeholder={mode === "solids" ? t("eat.notes.solidsPlaceholder") : t("eat.notes.placeholder")}
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
+        value={noteVal}
+        onChange={(e) => setNoteVal(e.target.value)}
       />
     </div>
   );
@@ -199,20 +209,11 @@ export default function EatSheet({
             </button>
           </div>
 
-          {/* Mode selector — segmented, defaults to last-used (PRD §0.1) */}
           <div className="eat-modes" role="tablist" aria-label={t("eat.title")}>
             {(["bm", "formula", "solids"] as EatMode[]).map((m) => {
               const Ic = MODE_ICON[m];
               return (
-                <button
-                  key={m}
-                  className={"eat-mode" + (m === mode ? " on" : "")}
-                  onClick={() => selectMode(m)}
-                  role="tab"
-                  aria-selected={m === mode}
-                  type="button"
-                  disabled={running}
-                >
+                <button key={m} className={"eat-mode" + (m === mode ? " on" : "")} onClick={() => selectMode(m)} role="tab" aria-selected={m === mode} type="button" disabled={!!live}>
                   <span className="emi">
                     <Ic size={22} />
                   </span>
@@ -222,88 +223,77 @@ export default function EatSheet({
             })}
           </div>
 
-          <WhenCard verb="eat" startedAt={startedAt} onChange={setStartedAt} />
+          <WhenCard verb="eat" startedAt={live ? live.started_at : startedAt} onChange={setStartedAt} hideEdit={!!live} />
 
           {/* ── นมแม่ ── */}
           {mode === "bm" && (
             <>
               <div className="capture-toggle" role="tablist" aria-label={t("eat.mode.bm")}>
-                <button className={"cap-opt" + (capture === "timer" ? " on" : "")} onClick={() => selectCapture("timer")} role="tab" aria-selected={capture === "timer"} type="button" disabled={running}>
+                <button className={"cap-opt" + (capture === "timer" ? " on" : "")} onClick={() => selectCapture("timer")} role="tab" aria-selected={capture === "timer"} type="button">
                   <IcClock size={16} /> {t("eat.bm.captureTimer")}
                 </button>
-                <button className={"cap-opt" + (capture === "amount" ? " on" : "")} onClick={() => selectCapture("amount")} role="tab" aria-selected={capture === "amount"} type="button" disabled={running}>
+                <button className={"cap-opt" + (capture === "amount" ? " on" : "") + (live ? " locked" : "")} onClick={() => selectCapture("amount")} role="tab" aria-selected={capture === "amount"} type="button" aria-disabled={!!live}>
                   <IcBottle size={16} /> {t("eat.bm.captureAmount")}
                 </button>
               </div>
+              {capLockHint && <div className="cap-lock-hint">{t("eat.bm.lockedWhileRunning")}</div>}
 
               {capture === "timer" ? (
                 <>
-                  <div className="bf-timer">
-                    {running || reviewTimer ? (
-                      <>
-                        <div className={"bf-status" + (running ? " live" : "")} aria-live="polite">
-                          {running && <span className="pulse-dot" style={{ background: "var(--eat)" }} />}
-                          {t("eat.breast.running")}
-                        </div>
-                        <div className="bf-elapsed">{fmtBig(totalMs)}</div>
-                        <div className="bf-runline">
-                          {accumMs[other(activeSide)] > 0 ? (
-                            <>
-                              <span className="seg done">{t(`eat.breast.${other(activeSide) === "L" ? "left" : "right"}`)} {fmtSeg(accumMs[other(activeSide)])}</span>
-                              <span className="arrow">→</span>
-                              <span className="seg active">{t(`eat.breast.${activeSide === "L" ? "left" : "right"}`)} <IcClock size={12} /> {fmtSeg(liveActiveMs)}</span>
-                            </>
-                          ) : (
-                            <span className="seg active">{t(`eat.breast.${activeSide === "L" ? "left" : "right"}`)} <IcClock size={12} /> {fmtSeg(liveActiveMs)}</span>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bf-status">{t("eat.breast.pickSide")}</div>
-                        <div className="bf-elapsed idle">00:00</div>
-                        <div className="bf-runline" style={{ color: "var(--fg-faint)" }}>{t("eat.breast.idleHint")}</div>
-                      </>
-                    )}
+                  <div className={"ep-timer" + (live ? " running" : "")}>
+                    <div className={"ep-status" + (live ? " live" : "")} aria-live="polite">
+                      <span className="dot" />
+                      {live ? t("eat.breast.running") : reviewTimer ? t("eat.breast.running") : t("eat.breast.idleTapSide")}
+                    </div>
+                    <div className={"ep-big" + (live || reviewTimer ? "" : " idle")}>
+                      {fmtBig(live ? liveTotal : reviewTimer ? (timerSeed!.perSideMs?.L ?? 0) + (timerSeed!.perSideMs?.R ?? 0) : 0)}
+                    </div>
+                    {!live && !reviewTimer && <div className="ep-subhint">{t("eat.breast.idleSub")}</div>}
                   </div>
 
-                  <div className="side-pick">
+                  <div className="ep-sides">
                     {(["L", "R"] as Side[]).map((s) => {
-                      const isActive = running && activeSide === s;
-                      const isSuggested = !running && !reviewTimer && pickedSide === null && s === defaults.startingSide;
-                      const isPicked = !running && !reviewTimer && pickedSide === s;
-                      const sideMs = running ? (s === activeSide ? liveActiveMs : accumMs[s]) : accumMs[s];
+                      const isActive = live ? liveSide === s : false;
+                      const isSuggested = !live && !reviewTimer && pickedSide === null && s === defaults.startingSide;
+                      const ms = live ? liveSideMs(s) : reviewTimer ? (timerSeed!.perSideMs?.[s] ?? 0) : 0;
                       return (
                         <button
                           key={s}
-                          className={"side-btn" + (isActive || isPicked ? " on" : "") + (isSuggested ? " suggested" : "")}
+                          className={"ep-side" + (isActive ? " active" : "") + (live && !isActive ? " rest" : "") + (isSuggested ? " suggested" : "")}
                           onClick={() => tapSide(s)}
                           disabled={reviewTimer}
                           type="button"
                         >
-                          {t(`eat.breast.${s === "L" ? "left" : "right"}`)}
-                          {(running || reviewTimer) && <span className="sb-elapsed">{sideMs > 0 || isActive ? fmtSeg(sideMs) : "—"}</span>}
-                          {isSuggested && <span className="sb-sub">{t("eat.breast.sideSuggestion")}</span>}
+                          {isActive && <span className="tick"><IcClock size={14} /></span>}
+                          <span className="lbl">{sideLabel(s)}</span>
+                          {(live || reviewTimer) && <span className="val">{ms > 0 || isActive ? fmtSeg(ms) : "—"}</span>}
+                          {isSuggested && <span className="aff">{t("eat.breast.sideSuggestion")}</span>}
+                          {live && !isActive && <span className="aff">{t("eat.breast.switchAff")}</span>}
                         </button>
                       );
                     })}
                   </div>
-                  {running && <div className="switch-hint">{t("eat.breast.tapSwitchHint")}</div>}
+                  {live && <div className="ep-hint">{t("eat.breast.tapStop")}</div>}
 
                   {Notes}
                   <div style={{ height: 10 }} />
-                  {running ? (
-                    <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={eatStyle} onClick={saveTimer}>
+                  {live ? (
+                    <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={eatStyle} onClick={onStopEat}>
                       {t("eat.breast.stop")}
                     </Button>
                   ) : reviewTimer ? (
-                    <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={eatStyle} onClick={saveTimer}>
+                    <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={eatStyle} onClick={saveReviewTimer}>
                       {t("common.save")}
                     </Button>
                   ) : (
-                    <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={eatStyle} onClick={startTimer}>
+                    <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={eatStyle} onClick={() => onStartEat(startSide)}>
                       {t("eat.breast.start")}
                     </Button>
+                  )}
+                  {!live && !reviewTimer && (
+                    <button className="text-link" type="button" onClick={onClose} style={{ display: "block", margin: "12px auto 0", color: "var(--fg-muted)", fontSize: 14 }}>
+                      {t("eat.breast.closeIdle")}
+                    </button>
                   )}
                   <div style={{ height: 8 }} />
                 </>
@@ -373,9 +363,9 @@ export default function EatSheet({
               <div className="field">
                 <label>{t("eat.solids.portionLabel")}</label>
                 <div className="chiprow">
-                  {PORTIONS.map((p) => (
-                    <button key={p.id} className={"chip" + (portion === p.id ? " on" : "")} onClick={() => setPortion(p.id)} type="button">
-                      {t(p.key)}
+                  {PORTIONS.map((pp) => (
+                    <button key={pp.id} className={"chip" + (portion === pp.id ? " on" : "")} onClick={() => setPortion(pp.id)} type="button">
+                      {t(pp.key)}
                     </button>
                   ))}
                 </div>

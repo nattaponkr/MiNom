@@ -79,7 +79,7 @@ export function ConcurrencySheet({
   if (kind === "sleep") {
     return (
       <BottomSheet title={t("concurrency.sleep.title")} body={t("concurrency.sleep.body", { name, dur: agoText })} onDismiss={onDismiss}>
-        <Button kind="primary" block onClick={onViewTheirs} style={{ background: "var(--sleep)" }}>
+        <Button kind="primary" block onClick={onViewTheirs} style={{ background: "var(--sleep-strong)" }}>
           {t("concurrency.sleep.view")}
         </Button>
         <Button kind="ghost" block onClick={onLogAnyway}>

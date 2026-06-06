@@ -75,7 +75,7 @@ export default function SleepSheet({
             <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />
             {notesField}
             <div style={{ height: 10 }} />
-            <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={{ background: "var(--sleep)" }} onClick={saveEdit}>
+            <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={{ background: "var(--sleep-strong)" }} onClick={saveEdit}>
               {t("common.save")}
             </Button>
             <div style={{ height: 8 }} />
@@ -120,8 +120,8 @@ export default function SleepSheet({
           >
             {running ? (
               <>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--sleep)" }} aria-live="polite">
-                  <span className="pulse-dot" style={{ background: "var(--sleep)" }} />
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--sleep-strong)" }} aria-live="polite">
+                  <span className="pulse-dot" style={{ background: "var(--sleep-strong)" }} />
                   {t("sleep.sleeping")}
                 </div>
                 <div className="mono" style={{ fontSize: 46, fontWeight: 600, letterSpacing: "-0.03em", margin: "8px 0 4px" }}>
@@ -147,7 +147,7 @@ export default function SleepSheet({
           {running ? (
             <>
               {notesField}
-              <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={{ background: "var(--sleep)" }} onClick={() => onStop(running.id, stopDetails())}>
+              <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onStop(running.id, stopDetails())}>
                 {t("sleep.stop")}
               </Button>
             </>
@@ -155,7 +155,7 @@ export default function SleepSheet({
             <>
               {manual && <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />}
               {notesField}
-              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString(), startDetails())}>
+              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString(), startDetails())}>
                 {t("sleep.start")}
               </Button>
               <div style={{ textAlign: "center", marginTop: 14 }}>

@@ -8,7 +8,7 @@ import { clockTime, dateTime, fromLocalInput, isNowish, toLocalInput } from "@/l
 import { IcClock } from "@/lib/icons";
 import { t } from "@/i18n";
 
-export default function WhenCard({ verb, startedAt, onChange }: { verb: VerbType | "grow"; startedAt: string; onChange: (iso: string) => void }) {
+export default function WhenCard({ verb, startedAt, onChange, hideEdit }: { verb: VerbType | "grow"; startedAt: string; onChange: (iso: string) => void; hideEdit?: boolean }) {
   const [editing, setEditing] = useState(false);
   const nowMax = toLocalInput(new Date().toISOString());
   const display = isNowish(startedAt) ? t("eat.when.now", { time: clockTime(startedAt) }) : dateTime(startedAt);
@@ -33,11 +33,13 @@ export default function WhenCard({ verb, startedAt, onChange }: { verb: VerbType
           <span style={{ display: "block", fontSize: 18, fontWeight: 800 }}>{display}</span>
         </span>
         <span className="spacer" style={{ flex: 1 }} />
-        <button className="edit-aff" type="button" onClick={() => setEditing((e) => !e)} aria-expanded={editing}>
-          {t("common.edit")}
-        </button>
+        {!hideEdit && (
+          <button className="edit-aff" type="button" onClick={() => setEditing((e) => !e)} aria-expanded={editing}>
+            {t("common.edit")}
+          </button>
+        )}
       </div>
-      {editing && (
+      {!hideEdit && editing && (
         <input
           type="datetime-local"
           className="input"

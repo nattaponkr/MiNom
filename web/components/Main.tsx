@@ -35,6 +35,7 @@ export default function Main({
   const [eatOpen, setEatOpen] = useState(false);
   const [editingEat, setEditingEat] = useState<Activity | null>(null);
   const [eatDefs, setEatDefs] = useState<EatDefaults>(DEFAULT_EAT);
+  const [eatNoteDraft, setEatNoteDraft] = useState(""); // note draft for the active feeding session (survives sheet close)
   const recentEatsRef = useRef<Activity[]>([]); // server eat history (any day) for smart defaults
   const [diaperOpen, setDiaperOpen] = useState(false);
   const [editingDiaper, setEditingDiaper] = useState<Activity | null>(null);
@@ -108,6 +109,7 @@ export default function Main({
     setEditingEat(null);
     setEatDefs(computeEatDefaults());
     setEatOpen(true);
+    if (log.runningEat) return; // an active session is showing — no new-feed concurrency check
     const hit = await log.checkConcurrent("eat");
     if (hit)
       setConcurrency({
@@ -120,6 +122,35 @@ export default function Main({
   const saveEat = (d: EatDetails, startedAt: string) => {
     track("activity_logged", { type: "eat", mode: eatModeOf(d), ...logMetrics(startedAt) });
     log.log("eat", d, startedAt);
+    setEatOpen(false);
+    setEditingEat(null);
+  };
+
+  // ── นมแม่ active feeding session (#11) — parent-held, mirrors Sleep ──
+  // Seed the note draft when a session begins (from the row), clear it when it ends.
+  const runningEatId = log.runningEat?.id ?? null;
+  useEffect(() => {
+    if (!runningEatId) {
+      setEatNoteDraft("");
+      return;
+    }
+    const r = log.activities.find((a) => a.id === runningEatId);
+    setEatNoteDraft(((r?.details_json as { notes?: string } | undefined)?.notes ?? ""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningEatId]);
+
+  const startEatSession = (side: "L" | "R") => log.startEat(side);
+  const switchEatSession = (side: "L" | "R") => {
+    if (log.runningEat) log.switchEat(log.runningEat.id, side);
+  };
+  const toggleEatSide = () => {
+    const cur = (log.runningEat?.details_json as { side?: "L" | "R" } | undefined)?.side ?? "L";
+    switchEatSession(cur === "L" ? "R" : "L");
+  };
+  const stopEatSession = () => {
+    if (!log.runningEat) return;
+    track("activity_logged", { type: "eat", mode: "bm", ...logMetrics(log.runningEat.started_at) });
+    log.stopEat(log.runningEat.id, eatNoteDraft);
     setEatOpen(false);
     setEditingEat(null);
   };
@@ -248,10 +279,25 @@ export default function Main({
             onOpenFamily={() => setTab("care")}
             caregiverCount={coCaregivers}
             runningSleep={log.runningSleep}
+            runningEat={log.runningEat}
+            onStopFeeding={stopEatSession}
+            onSwitchFeeding={toggleEatSide}
           />
         )}
 
-        {tab === "timeline" && <Timeline babyId={baby.id} babyName={baby.name} activities={log.activities} loading={log.loading} onEdit={openEditFromTimeline} onDelete={deleteActivity} />}
+        {tab === "timeline" && (
+          <Timeline
+            babyId={baby.id}
+            babyName={baby.name}
+            activities={log.activities}
+            loading={log.loading}
+            onEdit={openEditFromTimeline}
+            onDelete={deleteActivity}
+            runningEat={log.runningEat}
+            onStopFeeding={stopEatSession}
+            onSwitchFeeding={toggleEatSide}
+          />
+        )}
 
         {tab === "grow" && <GrowthScreen baby={baby} />}
 
@@ -269,8 +315,14 @@ export default function Main({
         <EatSheet
           defaults={eatDefs}
           editing={editingEat}
+          runningEat={editingEat ? null : log.runningEat}
           onSave={saveEat}
           onUpdate={updateEat}
+          onStartEat={startEatSession}
+          onSwitchEat={switchEatSession}
+          onStopEat={stopEatSession}
+          noteDraft={eatNoteDraft}
+          onNoteDraftChange={setEatNoteDraft}
           onClose={() => {
             setEatOpen(false);
             setEditingEat(null);

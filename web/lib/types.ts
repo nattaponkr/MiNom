@@ -26,7 +26,9 @@ export type Portion = "S" | "M" | "L";
 
 export type EatDetails =
   // นมแม่ — breast milk, nursed (timer): per-side durations + ending side.
-  | { mode: "bm"; capture: "timer"; side?: Side; perSideMs?: { L?: number; R?: number }; endingSide?: Side; notes?: string }
+  // segStart (#11): ISO start of the CURRENT segment while the session is live (ended_at null);
+  // live elapsed = perSideMs sum + (now − segStart). Cleared/ignored once stopped.
+  | { mode: "bm"; capture: "timer"; side?: Side; perSideMs?: { L?: number; R?: number }; endingSide?: Side; segStart?: string; notes?: string }
   // นมแม่ — breast milk, pumped (amount): bottle volume.
   | { mode: "bm"; capture: "amount"; amountMl: number; notes?: string }
   // นมผง — formula: always an amount.

@@ -309,6 +309,63 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     [enqueue, flush],
   );
 
+  // ---- Active feeding session (นมแม่ · จับเวลา) — mirrors the Sleep timer. ----
+  // The session is an open-ended eat row (mode=bm, capture=timer, ended_at=null). It
+  // persists across sheet close + syncs across devices; live elapsed derives from started_at
+  // + the per-side accumulators + the current segment (segStart). At most one per baby.
+  const startEat = useCallback(
+    (side: "L" | "R", startedAtISO?: string) => {
+      if (!babyId) return null;
+      const now = startedAtISO ?? new Date().toISOString();
+      const details = { mode: "bm", capture: "timer", side, perSideMs: { L: 0, R: 0 }, segStart: now };
+      const insert: ActivityInsert = { id: crypto.randomUUID(), baby_id: babyId, type: "eat", started_at: now, ended_at: null, details_json: details };
+      setActivities((prev) => [optimisticRow(insert), ...prev]);
+      enqueue({ op: "insert", insert });
+      void flush();
+      return insert.id;
+    },
+    [babyId, optimisticRow, enqueue, flush],
+  );
+
+  // Switch active side: commit the current segment to the old side, start a fresh one.
+  const switchEat = useCallback(
+    (id: string, newSide: "L" | "R") => {
+      const a = activities.find((x) => x.id === id);
+      if (!a) return;
+      const d = a.details_json as { side?: "L" | "R"; perSideMs?: { L?: number; R?: number }; segStart?: string };
+      const cur = d.side ?? "L";
+      const per: { L: number; R: number } = { L: d.perSideMs?.L ?? 0, R: d.perSideMs?.R ?? 0 };
+      if (d.segStart) per[cur] += Date.now() - new Date(d.segStart).getTime();
+      const nd = { ...d, side: newSide, perSideMs: per, segStart: new Date().toISOString() };
+      setActivities((prev) => prev.map((x) => (x.id === id ? { ...x, details_json: nd as Record<string, unknown>, _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch: { details_json: nd as Record<string, unknown> } });
+      void flush();
+    },
+    [activities, enqueue, flush],
+  );
+
+  // Stop + save the session: commit the final segment, set ended_at + endingSide, merge note.
+  const stopEat = useCallback(
+    (id: string, noteDraft?: string) => {
+      const a = activities.find((x) => x.id === id);
+      if (!a) return;
+      const d = a.details_json as { side?: "L" | "R"; perSideMs?: { L?: number; R?: number }; segStart?: string; notes?: string };
+      const cur = d.side ?? "L";
+      const per: { L: number; R: number } = { L: d.perSideMs?.L ?? 0, R: d.perSideMs?.R ?? 0 };
+      if (d.segStart) per[cur] += Date.now() - new Date(d.segStart).getTime();
+      const note = (noteDraft ?? d.notes ?? "").trim();
+      const ended_at = new Date().toISOString();
+      const nd: Record<string, unknown> = { mode: "bm", capture: "timer", side: d.side, endingSide: d.side, perSideMs: per, ...(note ? { notes: note } : {}) };
+      setActivities((prev) => prev.map((x) => (x.id === id ? { ...x, details_json: nd, ended_at, _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch: { details_json: nd, ended_at } });
+      setSnackbar({ id });
+      if (snackTimer.current) clearTimeout(snackTimer.current);
+      snackTimer.current = setTimeout(() => setSnackbar(null), UNDO_MS);
+      void flush();
+    },
+    [activities, enqueue, flush],
+  );
+
   const dropOps = useCallback((id: string) => writeOutbox(readOutbox().filter((o) => opId(o) !== id)), [readOutbox, writeOutbox]);
 
   const undo = useCallback(
@@ -360,6 +417,12 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
   );
 
   const runningSleep = activities.find((a) => a.type === "sleep" && !a.ended_at) ?? null;
+  const runningEat =
+    activities.find((a) => {
+      if (a.type !== "eat" || a.ended_at) return false;
+      const d = a.details_json as { mode?: string; capture?: string };
+      return d.mode === "bm" && d.capture === "timer";
+    }) ?? null;
   const queuedCount = activities.filter((a) => a._sync === "queued").length;
 
   return {
@@ -378,6 +441,10 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     startSleep,
     stopSleep,
     runningSleep,
+    startEat,
+    switchEat,
+    stopEat,
+    runningEat,
     undo,
     remove,
     checkConcurrent,
