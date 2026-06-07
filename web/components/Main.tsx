@@ -335,7 +335,7 @@ export default function Main({
           />
         )}
 
-        {tab === "grow" && <GrowthScreen baby={baby} />}
+        {tab === "grow" && <GrowthScreen baby={baby} me={me} />}
 
         {tab === "care" && <CaregiversScreen me={me} baby={baby} onChanged={onSignOut} />}
 

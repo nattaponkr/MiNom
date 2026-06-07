@@ -270,6 +270,15 @@ export class DemoRepo implements Repo {
     write(K.measurements, [row, ...read<Measurement[]>(K.measurements, [])]);
     return row;
   }
+  async updateMeasurement(id: string, patch: { value?: number; measured_at?: string }): Promise<Measurement> {
+    const all = read<Measurement[]>(K.measurements, []);
+    const idx = all.findIndex((m) => m.id === id);
+    if (idx < 0) throw new Error("not found");
+    const row: Measurement = { ...all[idx], ...patch };
+    all[idx] = row;
+    write(K.measurements, all);
+    return row;
+  }
   async deleteMeasurement(id: string): Promise<void> {
     write(K.measurements, read<Measurement[]>(K.measurements, []).filter((m) => m.id !== id));
   }

@@ -1,26 +1,41 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import type { Baby, GrowthKind, Measurement } from "@/lib/types";
-import { formatDate, num } from "@/lib/format";
+import type { Baby, GrowthKind, Measurement, SessionUser } from "@/lib/types";
+import { formatDateBE, num } from "@/lib/format";
 import { getRepo } from "@/lib/sync/repo";
-import { IcGrow, IcPlus, IcTrash, IcX } from "@/lib/icons";
+import { IcCheck, IcChevR, IcGrow, IcPlus, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
 import PercentileChart from "./PercentileChart";
-import { ConfirmDeleteSheet } from "./Sheets";
+import GrowthDetailSheet from "./GrowthDetailSheet";
+import { ConfirmSheet } from "./Sheets";
 import { track } from "@/lib/analytics";
 import { t } from "@/i18n";
 
-function AddMeasurementSheet({ kind, babyName, onSave, onClose }: { kind: GrowthKind; babyName: string; onSave: (value: number, measuredAt: string) => void; onClose: () => void }) {
-  const [measuredAt, setMeasuredAt] = useState(() => new Date().toISOString());
-  const [raw, setRaw] = useState("");
+const UNDO_MS = 5000;
+
+// Add OR edit a measurement (#13). When `editing` is set, the form pre-fills and the
+// CTA becomes บันทึกการแก้ไข; the parent routes save → add vs update.
+function MeasurementSheet({
+  kind,
+  editing,
+  onSave,
+  onClose,
+}: {
+  kind: GrowthKind;
+  editing?: Measurement | null;
+  onSave: (value: number, measuredAt: string) => void;
+  onClose: () => void;
+}) {
+  const [measuredAt, setMeasuredAt] = useState(() => editing?.measured_at ?? new Date().toISOString());
+  const [raw, setRaw] = useState(() => (editing ? String(editing.value) : ""));
   const [touched, setTouched] = useState(false);
   const value = parseFloat(raw);
   const valid = !Number.isNaN(value) && value > 0;
   const unit = kind === "weight" ? t("growth.unit.kg") : t("growth.unit.cm");
 
   return (
-    <div className="sheet-screen" onClick={onClose} role="dialog" aria-modal="true" aria-label={t("growth.add")}>
+    <div className="sheet-screen" onClick={onClose} role="dialog" aria-modal="true" aria-label={editing ? t("growth.detail.edit") : t("growth.add")}>
       <div className="sheet-panel" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-handle" />
         <div className="screen-body" lang="th" style={{ paddingTop: 2 }}>
@@ -56,8 +71,8 @@ function AddMeasurementSheet({ kind, babyName, onSave, onClose }: { kind: Growth
 
           <WhenCard verb="grow" startedAt={measuredAt} onChange={setMeasuredAt} />
 
-          <Button kind="primary" size="lg" disabled={!valid} onClick={() => valid && onSave(value, measuredAt)}>
-            {t("common.save")}
+          <Button kind="primary" size="lg" disabled={!valid} style={editing ? { background: "var(--grow-strong)" } : undefined} onClick={() => valid && onSave(value, measuredAt)}>
+            {editing ? t("growth.detail.saveEdit") : t("common.save")}
           </Button>
           <div style={{ height: 8 }} />
         </div>
@@ -66,12 +81,16 @@ function AddMeasurementSheet({ kind, babyName, onSave, onClose }: { kind: Growth
   );
 }
 
-export default function GrowthScreen({ baby }: { baby: Baby }) {
+export default function GrowthScreen({ baby, me }: { baby: Baby; me: SessionUser }) {
   const [kind, setKind] = useState<GrowthKind>("weight");
   const [rows, setRows] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Measurement | null>(null);
+  const [detail, setDetail] = useState<Measurement | null>(null);
+  const [confirmDel, setConfirmDel] = useState<Measurement | null>(null);
+  const [undo, setUndo] = useState<{ m: Measurement; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
 
   const reload = useCallback(async () => {
     const repo = await getRepo();
@@ -83,10 +102,32 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
     void reload();
   }, [reload]);
 
+  // Caregiver id→name map for the detail sheet's "บันทึกโดย" field.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const repo = await getRepo();
+        const cgs = await repo.listCaregivers(baby.id);
+        if (!alive) return;
+        const map: Record<string, string> = {};
+        for (const c of cgs) map[c.user_id] = c.display_name;
+        setNameMap(map);
+      } catch {
+        /* names just fall back to a generic caregiver label */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [baby.id]);
+
   const ofKind = rows.filter((m) => m.kind === kind);
   const unit = kind === "weight" ? t("growth.unit.kg") : t("growth.unit.cm");
-  // chart wants chronological (oldest→newest)
-  const chartValues = [...ofKind].reverse().map((m) => m.value);
+  const chrono = [...ofKind].reverse(); // oldest→newest, matches the chart x-order
+  const chartValues = chrono.map((m) => m.value);
+  const whoOf = (m: Measurement) => (m.logged_by_user_id === me.id ? t("timeline.you") : (nameMap[m.logged_by_user_id] ?? t("care.roleCaregiver")));
+  const summaryOf = (m: Measurement) => `${num(m.value)} ${m.kind === "weight" ? t("growth.unit.kg") : t("growth.unit.cm")}`;
 
   const save = async (value: number, measuredAt: string) => {
     const repo = await getRepo();
@@ -95,12 +136,45 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
     setAddOpen(false);
     void reload();
   };
-  const confirmDelete = async () => {
-    if (!deleteId) return;
+
+  const saveEdit = async (value: number, measuredAt: string) => {
+    if (!editing) return;
     const repo = await getRepo();
-    await repo.deleteMeasurement(deleteId);
+    await repo.updateMeasurement(editing.id, { value, measured_at: measuredAt });
+    track("activity_edited", { type: "grow" });
+    setEditing(null);
+    void reload();
+  };
+
+  // Optimistic delete + 5s undo (#13). Measurements aren't in the activity outbox, so
+  // this is a self-contained optimistic remove → server delete → re-add on undo.
+  const doDelete = async (m: Measurement) => {
+    setConfirmDel(null);
+    setDetail(null);
+    setRows((prev) => prev.filter((x) => x.id !== m.id));
+    const repo = await getRepo();
+    try {
+      await repo.deleteMeasurement(m.id);
+    } catch {
+      /* offline: reappears on next reload */
+    }
     track("activity_deleted", { type: "grow" });
-    setDeleteId(null);
+    if (undo) clearTimeout(undo.timer);
+    const timer = setTimeout(() => setUndo(null), UNDO_MS);
+    setUndo({ m, timer });
+  };
+
+  const doUndo = async () => {
+    if (!undo) return;
+    clearTimeout(undo.timer);
+    const m = undo.m;
+    setUndo(null);
+    const repo = await getRepo();
+    try {
+      await repo.addMeasurement({ id: m.id, baby_id: m.baby_id, kind: m.kind, value: m.value, measured_at: m.measured_at });
+    } catch {
+      /* offline: restore locally; syncs on reconnect via reload */
+    }
     void reload();
   };
 
@@ -125,7 +199,8 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
 
       {loading ? (
         <div className="sk sk-line" style={{ height: 188, borderRadius: "var(--r-lg)" }} />
-      ) : ofKind.length === 0 ? (
+      ) : rows.length === 0 ? (
+        // first-launch (both metrics empty) — the full-screen empty, unchanged
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "30px 18px" }}>
           <span style={{ width: 68, height: 68, borderRadius: 20, display: "grid", placeItems: "center", background: "var(--surface-2)", color: "var(--fg-faint)" }}>
             <IcGrow size={30} />
@@ -138,30 +213,101 @@ export default function GrowthScreen({ baby }: { baby: Baby }) {
             </Button>
           </div>
         </div>
+      ) : ofKind.length === 0 ? (
+        // this metric empty but the other has data — per-metric tappable nudge
+        <button className="gr-empty" onClick={() => setAddOpen(true)} type="button" lang="th">
+          <span className="gi">
+            <IcGrow size={26} />
+          </span>
+          <span className="gt">{t("growth.historyEmpty.title")}</span>
+          <span className="gb">{t("growth.historyEmpty.body", { kind: kind === "weight" ? t("growth.weight") : t("growth.height") })}</span>
+          <span className="gcta">
+            <IcPlus size={16} /> {t("growth.historyEmpty.cta")}
+          </span>
+        </button>
       ) : (
         <>
-          <PercentileChart values={chartValues} />
-          <div style={{ fontSize: 12, color: "var(--fg-faint)", textAlign: "center", margin: "6px 0 2px" }}>{t("growth.chartLabel")}</div>
-          <div className="tl-day">{t("growth.history")}</div>
+          <PercentileChart
+            values={chartValues}
+            onPointTap={(i) => setDetail(chrono[i])}
+            labels={chrono.map((m) => `${num(m.value)} ${unit} · ${formatDateBE(m.measured_at)}`)}
+          />
+          <div className="gr-caption">{t("growth.chartLabel")}</div>
+          <div className="tl-day gr-history-h">{t("growth.history")}</div>
           {ofKind.map((m) => (
-            <div className="act-row" key={m.id}>
-              <span className="act-main">
-                <span className="act-title mono">
-                  {num(m.value)} {unit}
-                </span>
-                <span className="act-sub">{formatDate(m.measured_at)}</span>
+            <button className="gr-row" key={m.id} onClick={() => setDetail(m)} type="button" lang="th">
+              <span className="gr-ic">
+                <IcGrow size={20} />
               </span>
-              <button className="iconbtn" style={{ color: "var(--danger-text)", width: 48, height: 48 }} onClick={() => setDeleteId(m.id)} aria-label={t("a11y.deleteEntry")} type="button">
-                <IcTrash size={18} />
-              </button>
-            </div>
+              <span className="gr-meta">
+                <span className="gr-value">
+                  <span className="n">{num(m.value)}</span>
+                  <span className="u">{unit}</span>
+                </span>
+                <span className="gr-date">{formatDateBE(m.measured_at)}</span>
+              </span>
+              <span className="gr-go">
+                <IcChevR size={18} />
+              </span>
+            </button>
           ))}
         </>
       )}
 
-      {addOpen && <AddMeasurementSheet kind={kind} babyName={baby.name} onSave={save} onClose={() => setAddOpen(false)} />}
-      {deleteId && (
-        <ConfirmDeleteSheet timeText="" babyName={baby.name} onConfirm={confirmDelete} onCancel={() => setDeleteId(null)} generic />
+      {(addOpen || editing) && (
+        <MeasurementSheet
+          kind={editing ? editing.kind : kind}
+          editing={editing}
+          onSave={editing ? saveEdit : save}
+          onClose={() => {
+            setAddOpen(false);
+            setEditing(null);
+          }}
+        />
+      )}
+
+      {detail && (
+        <GrowthDetailSheet
+          measurement={detail}
+          whoName={whoOf(detail)}
+          onEdit={(m) => {
+            setDetail(null);
+            setEditing(m);
+          }}
+          onRequestDelete={(m) => {
+            setDetail(null);
+            setConfirmDel(m);
+          }}
+          onClose={() => setDetail(null)}
+        />
+      )}
+
+      {confirmDel && (
+        <ConfirmSheet
+          title={t("growth.detail.delConfirmTitle")}
+          body={t("growth.detail.delBody", { summary: summaryOf(confirmDel) })}
+          confirmLabel={t("growth.detail.delConfirm")}
+          cancelLabel={t("growth.detail.delKeep")}
+          danger
+          onConfirm={() => void doDelete(confirmDel)}
+          onCancel={() => setConfirmDel(null)}
+        />
+      )}
+
+      {undo && (
+        <div className="snackbar-wrap">
+          <div className="snackbar snack-v2" role="status">
+            <span className="snk-msg">
+              <IcCheck size={16} /> {t("timeline.detail.deleted")}
+            </span>
+            <span className="snk-actions">
+              <button className="snk-btn" onClick={() => void doUndo()} type="button">
+                {t("feedback.undo")}
+              </button>
+            </span>
+            <span className="snk-prog" />
+          </div>
+        </div>
       )}
     </div>
   );

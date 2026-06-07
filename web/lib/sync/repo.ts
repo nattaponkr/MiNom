@@ -66,6 +66,7 @@ export interface Repo {
   // growth
   listMeasurements(babyId: string): Promise<Measurement[]>;
   addMeasurement(m: { id: string; baby_id: string; kind: GrowthKind; value: number; measured_at: string }): Promise<Measurement>;
+  updateMeasurement(id: string, patch: { value?: number; measured_at?: string }): Promise<Measurement>; // edit a Growth entry (#13)
   deleteMeasurement(id: string): Promise<void>;
 
   // caregivers (PRD §5a)

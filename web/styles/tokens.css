@@ -57,9 +57,10 @@
    * Verb / brand hues: SOFT is decorative only (#11/#11b, 2026-06-06).
    * --eat / --sleep / --diaper / --primary (soft) → icon chips, --*-tint surfaces, dots,
    *   borders, glows. As TEXT or as a fill behind white text in LIGHT they FAIL 4.5:1.
-   * --eat-strong / --sleep-strong / --primary-strong → any verb/brand TEXT, active labels,
-   *   and white-on-color fills (CTAs, active states). Dark -strong tracks soft (already passes),
-   *   so bind -strong unconditionally. This is the same shape as --fg-faint (#08) and --danger (#09).
+   * --eat-strong / --sleep-strong / --primary-strong / --grow-strong → any verb/brand TEXT,
+   *   active labels, data marks (the Growth chart line+dots, #13), and white-on-color fills
+   *   (CTAs, active states). Dark -strong tracks soft (already passes), so bind -strong
+   *   unconditionally. This is the same shape as --fg-faint (#08) and --danger (#09).
    */
   --fg: oklch(0.28 0.014 64);           /* warm near-black */
   --fg-muted: oklch(0.52 0.013 66);
@@ -82,6 +83,7 @@
   --diaper: oklch(0.68 0.075 178);
   --diaper-tint: oklch(0.945 0.03 180);
   --grow: oklch(0.68 0.10 18);
+  --grow-strong: oklch(0.53 0.14 18); /* TEXT + data marks + white-on-fill in light (#13: on-white 5.68, white-on-fill 5.52). Soft --grow fails 3.02 */
   --grow-tint: oklch(0.95 0.03 22);
 
   /* States */
@@ -129,6 +131,7 @@
   --diaper: oklch(0.78 0.08 180);
   --diaper-tint: oklch(0.33 0.04 182);
   --grow: oklch(0.77 0.10 22);
+  --grow-strong: oklch(0.77 0.10 22); /* dark soft already clears (7.31) — -strong tracks soft (#11b convention) */
   --grow-tint: oklch(0.34 0.045 22);
 
   --good: oklch(0.74 0.11 158);

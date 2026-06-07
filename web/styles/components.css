@@ -648,3 +648,48 @@
 .tl-active.sleep .tl-active-k .dot { background: var(--sleep-strong); animation: spPulse 1.6s ease-in-out infinite; }
 .tl-active.sleep.held .tl-active-k .dot { background: transparent; border: 2px solid var(--fg-muted); animation: none; }
 .tl-active.sleep .sp-chips { padding: 0 14px 13px; }
+
+/* ============================================================
+   Growth (โต) polish (#13) — tap-to-detail history rows (trash removed),
+   tappable chart dots, per-metric empty nudge. Data marks bind --grow-strong
+   (soft --grow failed 3.02 non-text); row text → --fg/--fg-muted (#11b).
+   ============================================================ */
+
+/* 1 · ประวัติ history rows — whole row taps to the detail sheet */
+.gr-row { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  background: none; border: none; padding: 13px 4px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.gr-row:last-child { border-bottom: none; }
+.gr-row:active { background: color-mix(in oklch, var(--grow-strong) 5%, transparent); border-radius: var(--r-md); }
+.gr-ic { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; flex: none;
+  background: var(--grow-tint); color: var(--grow); }
+.gr-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.gr-value { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: var(--fg); }
+.gr-value .n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.gr-value .u { font-size: 13px; font-weight: 700; color: var(--fg-muted); margin-left: 3px; }
+.gr-date { font-size: 13px; font-weight: 600; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.gr-go { color: var(--fg-faint); flex: none; display: inline-flex; }
+.gr-history-h { margin-top: 18px; }
+
+/* 2 · Growth detail sheet reuses #09 .ad-* ; add the grow icon variant */
+.ad-ic.grow { background: var(--grow-tint); color: var(--grow); }
+
+/* 3 · Tappable chart dots — line + dots → --grow-strong; ≥48px hit slop */
+.gr-chart { position: relative; }
+.gr-dot { transition: r 0.12s ease; }
+.gr-hit { cursor: pointer; }
+.gr-hit:hover + .gr-dot, .gr-hit:focus-visible + .gr-dot { r: 6.5; }
+.gr-hit:focus-visible { outline: 2px solid var(--grow-strong); outline-offset: 1px; border-radius: 50%; }
+/* WHO caption — repointed from --fg-faint (3.12 light, FAILS) to --fg-muted */
+.gr-caption { font-size: 12px; color: var(--fg-muted); text-align: center; margin: 7px 0 2px; }
+
+/* 4 · ประวัติ per-metric empty state — tappable, opens the add flow */
+.gr-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 9px;
+  padding: 26px 18px; border: 1.5px dashed var(--border-strong); border-radius: var(--r-lg);
+  background: var(--surface); cursor: pointer; margin-top: 4px; width: 100%; }
+.gr-empty:active { background: var(--surface-2); }
+.gr-empty .gi { width: 56px; height: 56px; border-radius: 17px; display: grid; place-items: center;
+  background: var(--grow-tint); color: var(--grow); }
+.gr-empty .gt { font-weight: 800; font-size: 15.5px; color: var(--fg); }
+.gr-empty .gb { font-size: 12.5px; color: var(--fg-muted); max-width: 230px; line-height: 1.5; }
+.gr-empty .gcta { margin-top: 5px; display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px;
+  font-weight: 800; color: var(--grow-strong); }

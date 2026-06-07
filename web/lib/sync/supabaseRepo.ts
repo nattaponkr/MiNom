@@ -233,6 +233,11 @@ export class SupabaseRepo implements Repo {
     if (error) throw error;
     return data as Measurement;
   }
+  async updateMeasurement(id: string, patch: { value?: number; measured_at?: string }): Promise<Measurement> {
+    const { data, error } = await this.sb.from("measurements").update(patch).eq("id", id).select("*").single();
+    if (error) throw error;
+    return data as Measurement;
+  }
   async deleteMeasurement(id: string): Promise<void> {
     const { error } = await this.sb.from("measurements").delete().eq("id", id);
     if (error) throw error;
