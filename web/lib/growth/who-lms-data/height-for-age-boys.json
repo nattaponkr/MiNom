@@ -1,0 +1,167 @@
+{
+  "indicator": "height-for-age",
+  "metric": "height",
+  "sex": "boy",
+  "unit": "cm",
+  "age_unit": "months",
+  "range_months": [
+    0,
+    24
+  ],
+  "source": "WHO Child Growth Standards (via U.S. CDC/NCHS redistribution)",
+  "source_url": "https://ftp.cdc.gov/pub/Health_Statistics/NCHS/growthcharts/WHO-Boys-Length-for-age-Percentiles.csv",
+  "downloaded": "2026-06-08",
+  "source_sha256": "c99fd12e78c8cc6c3b554a757fa56376ba6b305da48b60297a3b69fd39efbe45",
+  "lms": [
+    {
+      "age_months": 0,
+      "L": 1,
+      "M": 49.8842,
+      "S": 0.03795
+    },
+    {
+      "age_months": 1,
+      "L": 1,
+      "M": 54.7244,
+      "S": 0.03557
+    },
+    {
+      "age_months": 2,
+      "L": 1,
+      "M": 58.4249,
+      "S": 0.03424
+    },
+    {
+      "age_months": 3,
+      "L": 1,
+      "M": 61.4292,
+      "S": 0.03328
+    },
+    {
+      "age_months": 4,
+      "L": 1,
+      "M": 63.886,
+      "S": 0.03257
+    },
+    {
+      "age_months": 5,
+      "L": 1,
+      "M": 65.9026,
+      "S": 0.03204
+    },
+    {
+      "age_months": 6,
+      "L": 1,
+      "M": 67.6236,
+      "S": 0.03165
+    },
+    {
+      "age_months": 7,
+      "L": 1,
+      "M": 69.1645,
+      "S": 0.03139
+    },
+    {
+      "age_months": 8,
+      "L": 1,
+      "M": 70.5994,
+      "S": 0.03124
+    },
+    {
+      "age_months": 9,
+      "L": 1,
+      "M": 71.9687,
+      "S": 0.03117
+    },
+    {
+      "age_months": 10,
+      "L": 1,
+      "M": 73.2812,
+      "S": 0.03118
+    },
+    {
+      "age_months": 11,
+      "L": 1,
+      "M": 74.5388,
+      "S": 0.03125
+    },
+    {
+      "age_months": 12,
+      "L": 1,
+      "M": 75.7488,
+      "S": 0.03137
+    },
+    {
+      "age_months": 13,
+      "L": 1,
+      "M": 76.9186,
+      "S": 0.03154
+    },
+    {
+      "age_months": 14,
+      "L": 1,
+      "M": 78.0497,
+      "S": 0.03174
+    },
+    {
+      "age_months": 15,
+      "L": 1,
+      "M": 79.1458,
+      "S": 0.03197
+    },
+    {
+      "age_months": 16,
+      "L": 1,
+      "M": 80.2113,
+      "S": 0.03222
+    },
+    {
+      "age_months": 17,
+      "L": 1,
+      "M": 81.2487,
+      "S": 0.0325
+    },
+    {
+      "age_months": 18,
+      "L": 1,
+      "M": 82.2587,
+      "S": 0.03279
+    },
+    {
+      "age_months": 19,
+      "L": 1,
+      "M": 83.2418,
+      "S": 0.0331
+    },
+    {
+      "age_months": 20,
+      "L": 1,
+      "M": 84.1996,
+      "S": 0.03342
+    },
+    {
+      "age_months": 21,
+      "L": 1,
+      "M": 85.1348,
+      "S": 0.03376
+    },
+    {
+      "age_months": 22,
+      "L": 1,
+      "M": 86.0477,
+      "S": 0.0341
+    },
+    {
+      "age_months": 23,
+      "L": 1,
+      "M": 86.941,
+      "S": 0.03445
+    },
+    {
+      "age_months": 24,
+      "L": 1,
+      "M": 87.8161,
+      "S": 0.03479
+    }
+  ]
+}
