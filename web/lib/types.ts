@@ -28,7 +28,9 @@ export type EatDetails =
   // นมแม่ — breast milk, nursed (timer): per-side durations + ending side.
   // segStart (#11): ISO start of the CURRENT segment while the session is live (ended_at null);
   // live elapsed = perSideMs sum + (now − segStart). Cleared/ignored once stopped.
-  | { mode: "bm"; capture: "timer"; side?: Side; perSideMs?: { L?: number; R?: number }; endingSide?: Side; segStart?: string; notes?: string }
+  // switches (#14): ISO timestamp + the side being LEFT, appended on each tap-to-switch.
+  // Drives mid-session start-time editing (Risk A "before first switch" + first-side recalc).
+  | { mode: "bm"; capture: "timer"; side?: Side; perSideMs?: { L?: number; R?: number }; endingSide?: Side; segStart?: string; switches?: { at: string; from: Side }[]; notes?: string }
   // นมแม่ — breast milk, pumped (amount): bottle volume.
   | { mode: "bm"; capture: "amount"; amountMl: number; notes?: string }
   // นมผง — formula: always an amount.

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { Activity } from "@/lib/types";
 import { ago, clockTime, duration } from "@/lib/format";
 import { sleepActiveMs } from "@/lib/activity";
-import { IcCheck, IcPause, IcPlay, IcSleep, IcX } from "@/lib/icons";
+import { IcCheck, IcClock, IcPause, IcPlay, IcSleep, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
 import { t } from "@/i18n";
@@ -25,6 +25,7 @@ export default function SleepSheet({
   onPause,
   onResume,
   onComplete,
+  onEditTime,
   onUpdate,
   onClose,
 }: {
@@ -37,6 +38,7 @@ export default function SleepSheet({
   onPause: (id: string) => void; // Running → Paused
   onResume: (id: string) => void; // Paused → Running
   onComplete: (id: string) => void; // Paused/Running → Complete (ended_at = paused_at when paused)
+  onEditTime?: () => void; // #14: open the mid-session start-time picker
   onUpdate?: (id: string, startedAt: string, details?: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
@@ -60,7 +62,14 @@ export default function SleepSheet({
   // Edit a completed sleep (from the Timeline detail sheet): adjust the start time +
   // notes; the recorded (pause-aware) duration shows for context. Saves via onUpdate.
   if (editing && editing.ended_at) {
-    const recorded = duration(sleepActiveMs(editing));
+    // #14 Part 6: started_at editable; duration recomputes live as it changes. Cap the
+    // editable start at min(ended_at, first pause) so it can't cross the end or a pause.
+    const pl = ((editing.details_json as { pause_log?: { paused_at: string; resumed_at: string }[] }).pause_log) ?? [];
+    const pauseMs = pl.reduce((s, p) => s + Math.max(0, new Date(p.resumed_at).getTime() - new Date(p.paused_at).getTime()), 0);
+    const endMs = new Date(editing.ended_at).getTime();
+    const firstPauseMs = pl.length ? Math.min(...pl.map((p) => new Date(p.paused_at).getTime())) : null;
+    const editMaxISO = new Date(firstPauseMs != null ? Math.min(endMs, firstPauseMs) : endMs).toISOString();
+    const recorded = duration(Math.max(0, endMs - new Date(startAt).getTime() - pauseMs));
     const saveEdit = () => onUpdate?.(editing.id, startAt, editNotes.trim() ? { ...(editing.details_json ?? {}), notes: editNotes.trim() } : (editing.details_json ?? {}));
     const editNotesField = (
       <div className="field" style={{ margin: "0 0 4px" }}>
@@ -88,7 +97,7 @@ export default function SleepSheet({
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: "20px", textAlign: "center", marginBottom: 14, boxShadow: "var(--shadow-sm)" }}>
               <div className="mono" style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.02em" }}>{recorded}</div>
             </div>
-            <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />
+            <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} maxISO={editMaxISO} />
             {editNotesField}
             <div style={{ height: 10 }} />
             <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={{ background: "var(--sleep-strong)" }} onClick={saveEdit}>
@@ -148,6 +157,22 @@ export default function SleepSheet({
               </>
             )}
           </div>
+
+          {/* #14: reinstated แก้ไข on the เวลา card during Running + Paused */}
+          {running && onEditTime && (
+            <div className="te-when te-sleep">
+              <span className="te-when-ic">
+                <IcClock size={18} />
+              </span>
+              <span className="te-when-meta">
+                <span className="te-when-k">{t("eat.when.label")}</span>
+                <span className="te-when-v">{t("sleep.startedAt", { time: clockTime(running.started_at) })}</span>
+              </span>
+              <button className="te-edit" type="button" onClick={onEditTime} title={t("time.editHint")}>
+                {t("time.editWhileRunning")}
+              </button>
+            </div>
+          )}
 
           {running ? (
             paused ? (

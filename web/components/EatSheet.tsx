@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import type { Activity, EatCapture, EatDetails, EatMode, Portion, Side } from "@/lib/types";
 import { isEatV2, type EatDefaults } from "@/lib/eat";
-import { num } from "@/lib/format";
+import { clockTime, num } from "@/lib/format";
 import { IcBottle, IcCheck, IcClock, IcDrop, IcEat, IcPlus, IcRepeat, IcStop, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
@@ -42,6 +42,7 @@ export default function EatSheet({
   onStartEat,
   onSwitchEat,
   onStopEat,
+  onEditTime,
   noteDraft,
   onNoteDraftChange,
   onClose,
@@ -54,6 +55,7 @@ export default function EatSheet({
   onStartEat: (side: Side) => void;
   onSwitchEat: (side: Side) => void;
   onStopEat: () => void;
+  onEditTime?: () => void; // #14: open the mid-session start-time picker (live นมแม่ timer)
   noteDraft: string;
   onNoteDraftChange: (v: string) => void;
   onClose: () => void;
@@ -83,6 +85,10 @@ export default function EatSheet({
   // breast timer — idle (tap a side to start) / finished review
   const timerSeed = seed?.mode === "bm" && seed.capture === "timer" ? seed : null;
   const reviewTimer = !!timerSeed && !live; // editing a finished entry → static review
+  // #14 Part 6: cap the editable start at min(ended_at, first side-switch) on a completed entry.
+  const reviewFirstSwitchMs = timerSeed?.switches?.length ? new Date(timerSeed.switches[0].at).getTime() : null;
+  const reviewEndMs = editing?.ended_at ? new Date(editing.ended_at).getTime() : null;
+  const reviewMaxISO = reviewTimer && reviewEndMs != null ? new Date(reviewFirstSwitchMs != null ? Math.min(reviewEndMs, reviewFirstSwitchMs) : reviewEndMs).toISOString() : undefined;
 
   // Tick while a session is live (display derives from started_at, not mount time).
   useEffect(() => {
@@ -129,7 +135,14 @@ export default function EatSheet({
   const trimmedNotes = () => (notes.trim() ? { notes: notes.trim() } : {});
   const saveReviewTimer = () => {
     const acc = { L: timerSeed?.perSideMs?.L ?? 0, R: timerSeed?.perSideMs?.R ?? 0 };
-    commit({ mode: "bm", capture: "timer", side: timerSeed?.side, endingSide: timerSeed?.endingSide ?? timerSeed?.side, perSideMs: acc, ...trimmedNotes() });
+    // #14 Part 6: if the start moved, absorb the delta into the first side so the recorded
+    // duration stays (ended_at − started_at). firstSide = first switch's, else the timed side.
+    if (editing && timerSeed && startedAt !== editing.started_at) {
+      const delta = new Date(editing.started_at).getTime() - new Date(startedAt).getTime();
+      const firstSide: Side = timerSeed.switches?.[0]?.from ?? (acc.L > 0 && acc.R === 0 ? "L" : acc.R > 0 && acc.L === 0 ? "R" : (timerSeed.side ?? timerSeed.endingSide ?? "L"));
+      acc[firstSide] = Math.max(0, acc[firstSide] + delta);
+    }
+    commit({ mode: "bm", capture: "timer", side: timerSeed?.side, endingSide: timerSeed?.endingSide ?? timerSeed?.side, perSideMs: acc, ...(timerSeed?.switches?.length ? { switches: timerSeed.switches } : {}), ...trimmedNotes() });
   };
   const saveAmount = () => {
     if (mode === "formula") commit({ mode: "formula", amountMl: amount, ...trimmedNotes() });
@@ -220,7 +233,23 @@ export default function EatSheet({
             })}
           </div>
 
-          <WhenCard verb="eat" startedAt={live ? live.started_at : startedAt} onChange={setStartedAt} hideEdit={!!live} />
+          {live && onEditTime ? (
+            // #14: live นมแม่ timer — reinstated แก้ไข on the เวลา card, routes to the picker
+            <div className="te-when te-eat">
+              <span className="te-when-ic">
+                <IcClock size={18} />
+              </span>
+              <span className="te-when-meta">
+                <span className="te-when-k">{t("eat.when.label")}</span>
+                <span className="te-when-v">{t("sleep.startedAt", { time: clockTime(live.started_at) })}</span>
+              </span>
+              <button className="te-edit" type="button" onClick={onEditTime} title={t("time.editHint")}>
+                {t("time.editWhileRunning")}
+              </button>
+            </div>
+          ) : (
+            <WhenCard verb="eat" startedAt={live ? live.started_at : startedAt} onChange={setStartedAt} hideEdit={!!live} maxISO={reviewMaxISO} />
+          )}
 
           {/* ── นมแม่ ── */}
           {mode === "bm" && (

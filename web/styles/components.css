@@ -693,3 +693,66 @@
 .gr-empty .gb { font-size: 12.5px; color: var(--fg-muted); max-width: 230px; line-height: 1.5; }
 .gr-empty .gcta { margin-top: 5px; display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px;
   font-weight: 800; color: var(--grow-strong); }
+
+/* ============================================================
+   Mid-session start-time editing (#14) — reinstated แก้ไข on the เวลา card
+   (Running + Paused) + the constrained picker + inline rejects + undo toast.
+   Per-verb accent via .te-sleep / .te-eat. Reject text → --danger-text (#09);
+   affordance + save fills → verb -strong (#11b). All text ≥ AA 4.5.
+   ============================================================ */
+.te-sleep { --te-accent: var(--sleep-strong); --te-tint: var(--sleep-tint); }
+.te-eat { --te-accent: var(--eat-strong); --te-tint: var(--eat-tint); }
+
+/* เวลา card with the reinstated แก้ไข (running + paused) */
+.te-when { width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 13px 15px; display: flex; align-items: center; gap: 12px; margin-bottom: 13px; }
+.te-when-ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--te-tint); color: var(--te-accent); flex: none; }
+.te-when-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.te-when-k { font-size: 12.5px; font-weight: 700; color: var(--fg-muted); }
+.te-when-v { font-size: 17px; font-weight: 800; color: var(--fg); }
+.te-when-v .mono { font-family: var(--font-mono); }
+.te-edit { flex: none; min-height: 44px; padding: 0 6px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 800; color: var(--te-accent); background: none; border: none; cursor: pointer; }
+.te-edit:active { opacity: 0.6; }
+
+/* picker sheet — native datetime idiom + steppers (not a custom wheel) */
+.te-picker { padding: 4px 2px 2px; }
+.te-picker-sub { font-size: 13px; color: var(--fg-muted); line-height: 1.5; margin-bottom: 16px; }
+.te-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  background: var(--surface-2); border: 1.5px solid var(--border-strong); border-radius: var(--r-lg);
+  padding: 16px 18px; margin-bottom: 8px; cursor: pointer; }
+.te-field.invalid { border-color: var(--danger-text); background: color-mix(in oklch, var(--danger-text) 6%, var(--surface)); }
+.te-field-k { font-size: 13px; font-weight: 700; color: var(--fg-muted); }
+.te-field-v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 24px; font-weight: 600; color: var(--fg); letter-spacing: -0.01em; }
+.te-steppers { display: flex; gap: 8px; margin: 6px 0 4px; }
+.te-step { flex: 1; min-height: 44px; border-radius: var(--r-md); border: 1.5px solid var(--border-strong);
+  background: var(--surface); color: var(--fg); font-weight: 700; font-size: 13.5px; font-family: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.te-step:disabled { opacity: 0.4; }
+.te-step:active:not(:disabled) { background: var(--surface-2); }
+.te-hint { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--fg-muted);
+  background: var(--surface-2); border-radius: var(--r-md); padding: 8px 11px; margin-bottom: 10px; }
+.te-error { display: flex; align-items: flex-start; gap: 7px; font-size: 12.5px; font-weight: 600;
+  color: var(--danger-text); line-height: 1.45; margin: 2px 2px 12px; min-height: 18px; }
+.te-error svg { flex: none; margin-top: 1px; }
+.te-preview { display: flex; align-items: baseline; justify-content: center; gap: 7px; margin: 4px 0 14px;
+  font-size: 13px; color: var(--fg-muted); }
+.te-preview .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 20px; font-weight: 700; color: var(--fg); }
+.te-actions { display: flex; gap: 10px; }
+.te-cancel { flex: none; min-width: 100px; height: 50px; border-radius: var(--r-lg); border: 1.5px solid var(--border-strong);
+  background: var(--surface); color: var(--fg); font-weight: 800; font-size: 15px; cursor: pointer; }
+.te-save { flex: 1; height: 50px; border-radius: var(--r-lg); border: none; color: var(--on-primary);
+  font-weight: 800; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.te-save:disabled { opacity: 0.4; }
+.te-cancel:active, .te-save:active:not(:disabled) { transform: scale(0.985); }
+
+/* 5s undo toast (start-time edit) */
+.te-toast { position: fixed; left: 16px; right: 16px; bottom: 22px; z-index: 80; display: flex; align-items: center; gap: 12px;
+  max-width: 460px; margin: 0 auto; background: var(--fg); color: var(--surface); border-radius: var(--r-lg); padding: 13px 15px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.te-toast-msg { flex: 1; font-size: 13.5px; font-weight: 700; }
+.te-toast-undo { flex: none; min-height: 40px; padding: 0 14px; border-radius: var(--r-md); border: none; cursor: pointer;
+  background: color-mix(in oklch, var(--surface) 22%, transparent); color: var(--surface); font-weight: 800; font-size: 14px; }
+.te-toast-undo:active { opacity: 0.7; }
+.te-toast-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--surface); border-radius: 0 0 0 var(--r-lg);
+  animation: teCount 5s linear forwards; }
+@keyframes teCount { from { width: 100%; } to { width: 0%; } }

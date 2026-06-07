@@ -374,11 +374,14 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     (id: string, newSide: "L" | "R") => {
       const a = activities.find((x) => x.id === id);
       if (!a) return;
-      const d = a.details_json as { side?: "L" | "R"; perSideMs?: { L?: number; R?: number }; segStart?: string };
+      const d = a.details_json as { side?: "L" | "R"; perSideMs?: { L?: number; R?: number }; segStart?: string; switches?: { at: string; from: "L" | "R" }[] };
       const cur = d.side ?? "L";
       const per: { L: number; R: number } = { L: d.perSideMs?.L ?? 0, R: d.perSideMs?.R ?? 0 };
+      const switchAt = new Date().toISOString();
       if (d.segStart) per[cur] += Date.now() - new Date(d.segStart).getTime();
-      const nd = { ...d, side: newSide, perSideMs: per, segStart: new Date().toISOString() };
+      // Record the switch marker (#14): timestamp + the side being left. firstEvent = switches[0].at.
+      const switches = [...(d.switches ?? []), { at: switchAt, from: cur }];
+      const nd = { ...d, side: newSide, perSideMs: per, segStart: switchAt, switches };
       setActivities((prev) => prev.map((x) => (x.id === id ? { ...x, details_json: nd as Record<string, unknown>, _sync: "queued" } : x)));
       enqueue({ op: "update", id, patch: { details_json: nd as Record<string, unknown> } });
       void flush();
@@ -406,6 +409,50 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       void flush();
     },
     [activities, enqueue, flush],
+  );
+
+  // Mid-session / completed start-time edit (#14). Verb-aware so the recorded duration
+  // stays consistent: Sleep derives duration from started_at (just patch it); Eat's total
+  // is accumulator-based, so the start-shift delta is absorbed by the FIRST segment — either
+  // the live single segment (move segStart) or the first side's committed perSideMs. Returns
+  // the previous {started_at, details_json} snapshot so the caller can offer undo.
+  const editStartedAt = useCallback(
+    (id: string, newISO: string): { started_at: string; details_json: Record<string, unknown> } | null => {
+      const a = activities.find((x) => x.id === id);
+      if (!a) return null;
+      const prev = { started_at: a.started_at, details_json: a.details_json };
+      const patch: ActivityPatch = { started_at: newISO };
+      if (a.type === "eat" && (a.details_json as { mode?: string }).mode === "bm" && (a.details_json as { capture?: string }).capture === "timer") {
+        const d = { ...(a.details_json as Record<string, unknown>) } as {
+          side?: "L" | "R"; perSideMs?: { L?: number; R?: number }; endingSide?: "L" | "R"; segStart?: string; switches?: { at: string; from: "L" | "R" }[];
+        };
+        const delta = new Date(a.started_at).getTime() - new Date(newISO).getTime(); // >0 ⇒ moved earlier ⇒ more time
+        const per = { L: d.perSideMs?.L ?? 0, R: d.perSideMs?.R ?? 0 };
+        const firstSide: "L" | "R" = d.switches?.[0]?.from ?? (per.L > 0 && per.R === 0 ? "L" : per.R > 0 && per.L === 0 ? "R" : (d.side ?? d.endingSide ?? "L"));
+        if (!a.ended_at && !(d.switches && d.switches.length)) {
+          d.segStart = newISO; // live single segment — extend it
+        } else {
+          per[firstSide] = Math.max(0, per[firstSide] + delta);
+          d.perSideMs = per;
+        }
+        patch.details_json = d as Record<string, unknown>;
+      }
+      setActivities((p) => p.map((x) => (x.id === id ? { ...x, started_at: newISO, ...(patch.details_json ? { details_json: patch.details_json } : {}), _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch });
+      void flush();
+      return prev;
+    },
+    [activities, enqueue, flush],
+  );
+
+  // Restore a row to a prior snapshot (undo of a start-time edit) — direct patch.
+  const patchRow = useCallback(
+    (id: string, snap: { started_at: string; details_json: Record<string, unknown> }) => {
+      setActivities((p) => p.map((x) => (x.id === id ? { ...x, started_at: snap.started_at, details_json: snap.details_json, _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch: { started_at: snap.started_at, details_json: snap.details_json } });
+      void flush();
+    },
+    [enqueue, flush],
   );
 
   const dropOps = useCallback((id: string) => writeOutbox(readOutbox().filter((o) => opId(o) !== id)), [readOutbox, writeOutbox]);
@@ -489,6 +536,8 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     switchEat,
     stopEat,
     runningEat,
+    editStartedAt,
+    patchRow,
     undo,
     remove,
     checkConcurrent,

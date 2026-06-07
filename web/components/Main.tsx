@@ -11,6 +11,7 @@ import Timeline from "./Timeline";
 import EatSheet from "./EatSheet";
 import DiaperSheet from "./DiaperSheet";
 import SleepSheet from "./SleepSheet";
+import TimeEditSheet from "./TimeEditSheet";
 import GrowthScreen from "./GrowthScreen";
 import SettingsScreen from "./SettingsScreen";
 import CaregiversScreen from "./CaregiversScreen";
@@ -43,6 +44,10 @@ export default function Main({
   const [sleepSeed, setSleepSeed] = useState<Activity | null>(null);
   const [editingSleep, setEditingSleep] = useState<Activity | null>(null);
   const [sleepNoteDraft, setSleepNoteDraft] = useState(""); // note draft for the active sleep session (#12) — survives close + pause/resume
+  // Mid-session/completed start-time edit (#14): the picker target + a 5s undo toast.
+  const [timeEdit, setTimeEdit] = useState<{ id: string; verb: "sleep" | "eat"; startedAt: string; endMs: number; pauseMs: number; firstEventMs: number | null; firstEventReason: "pause" | "switch" | null; blockOverlap: boolean } | null>(null);
+  const [timeUndo, setTimeUndo] = useState<{ id: string; prev: { started_at: string; details_json: Record<string, unknown> } } | null>(null);
+  const timeUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string; timer: boolean } | null>(null);
   const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
   const [coCaregivers, setCoCaregivers] = useState(0); // caregivers besides me → gates the Home family hint
@@ -255,6 +260,62 @@ export default function Main({
     closeSleep();
   };
 
+  // ── Start-time editing (#14) — Running/Paused (Sleep+Eat) + completed (Part 6) ──
+  // Compute the constraint set for the picker from the row + the live activity list.
+  const timeConstraints = (a: Activity) => {
+    const now = Date.now();
+    const completed = !!a.ended_at;
+    const endMs = a.ended_at ? new Date(a.ended_at).getTime() : a.paused_at ? new Date(a.paused_at).getTime() : now;
+    let pauseMs = 0;
+    let firstEventMs: number | null = null;
+    let firstEventReason: "pause" | "switch" | null = null;
+    if (a.type === "sleep") {
+      const pl = ((a.details_json as { pause_log?: { paused_at: string; resumed_at: string }[] }).pause_log) ?? [];
+      pauseMs = pl.reduce((s, p) => s + Math.max(0, new Date(p.resumed_at).getTime() - new Date(p.paused_at).getTime()), 0);
+      const pausedAts = [...pl.map((p) => new Date(p.paused_at).getTime()), ...(a.paused_at ? [new Date(a.paused_at).getTime()] : [])];
+      if (pausedAts.length) {
+        firstEventMs = Math.min(...pausedAts);
+        firstEventReason = "pause";
+      }
+    } else {
+      const sw = ((a.details_json as { switches?: { at: string; from: string }[] }).switches) ?? [];
+      if (sw.length) {
+        firstEventMs = new Date(sw[0].at).getTime();
+        firstEventReason = "switch";
+      }
+    }
+    // Risk B: another ACTIVE same-verb session (not this row) → block. Never for completed.
+    const blockOverlap = !completed && log.activities.some((x) => x.type === a.type && !x.ended_at && x.id !== a.id);
+    return { id: a.id, verb: a.type as "sleep" | "eat", startedAt: a.started_at, endMs, pauseMs, firstEventMs, firstEventReason, blockOverlap };
+  };
+  const openTimeEdit = (a: Activity | null) => {
+    if (a && (a.type === "sleep" || a.type === "eat")) setTimeEdit(timeConstraints(a));
+  };
+  const commitTimeEdit = (newISO: string) => {
+    if (!timeEdit) return;
+    const a = log.activities.find((x) => x.id === timeEdit.id);
+    const prev = log.editStartedAt(timeEdit.id, newISO);
+    if (prev) {
+      track("activity_started_at_edited", {
+        verb: timeEdit.verb,
+        state_when_edited: a?.ended_at ? "completed" : a?.paused_at ? "paused" : "running",
+        from_time_iso: prev.started_at,
+        to_time_iso: newISO,
+        delta_seconds: Math.round((new Date(newISO).getTime() - new Date(prev.started_at).getTime()) / 1000),
+      });
+      if (timeUndoTimer.current) clearTimeout(timeUndoTimer.current);
+      setTimeUndo({ id: timeEdit.id, prev });
+      timeUndoTimer.current = setTimeout(() => setTimeUndo(null), 5000);
+    }
+    setTimeEdit(null);
+  };
+  const undoTimeEdit = () => {
+    if (!timeUndo) return;
+    if (timeUndoTimer.current) clearTimeout(timeUndoTimer.current);
+    log.patchRow(timeUndo.id, timeUndo.prev);
+    setTimeUndo(null);
+  };
+
   const lastWokeAt = log.activities.find((a) => a.type === "sleep" && a.ended_at)?.ended_at ?? null;
 
   // Edit a completed sleep from the Timeline detail sheet.
@@ -357,6 +418,7 @@ export default function Main({
           onStartEat={startEatSession}
           onSwitchEat={switchEatSession}
           onStopEat={stopEatSession}
+          onEditTime={() => openTimeEdit(log.runningEat)}
           noteDraft={eatNoteDraft}
           onNoteDraftChange={setEatNoteDraft}
           onClose={() => {
@@ -393,6 +455,7 @@ export default function Main({
           onPause={() => pauseSleepSession()}
           onResume={() => resumeSleepSession()}
           onComplete={() => completeSleepSession()}
+          onEditTime={() => openTimeEdit(log.runningSleep)}
           onClose={closeSleep}
         />
       )}
@@ -430,6 +493,30 @@ export default function Main({
           onLogAnyway={() => setConcurrency(null)}
           onDismiss={() => setConcurrency(null)}
         />
+      )}
+
+      {timeEdit && (
+        <TimeEditSheet
+          verb={timeEdit.verb}
+          startedAt={timeEdit.startedAt}
+          endMs={timeEdit.endMs}
+          pauseMs={timeEdit.pauseMs}
+          firstEventMs={timeEdit.firstEventMs}
+          firstEventReason={timeEdit.firstEventReason}
+          blockOverlap={timeEdit.blockOverlap}
+          onSave={commitTimeEdit}
+          onClose={() => setTimeEdit(null)}
+        />
+      )}
+
+      {timeUndo && (
+        <div className="te-toast" role="status">
+          <span className="te-toast-msg">{t("time.editUndo.msg")}</span>
+          <button className="te-toast-undo" type="button" onClick={undoTimeEdit}>
+            {t("time.editUndo.cta")}
+          </button>
+          <span className="te-toast-bar" />
+        </div>
       )}
 
       {/* Feedback */}

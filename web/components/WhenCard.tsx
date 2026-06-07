@@ -8,9 +8,12 @@ import { clockTime, dateTime, fromLocalInput, isNowish, toLocalInput } from "@/l
 import { IcClock } from "@/lib/icons";
 import { t } from "@/i18n";
 
-export default function WhenCard({ verb, startedAt, onChange, hideEdit }: { verb: VerbType | "grow"; startedAt: string; onChange: (iso: string) => void; hideEdit?: boolean }) {
+// `maxISO` (#14, Part 6): cap the editable start at min(ended_at, firstEvent) for completed
+// timer entries, so a start-time edit can't cross the end or a recorded pause/switch.
+export default function WhenCard({ verb, startedAt, onChange, hideEdit, maxISO }: { verb: VerbType | "grow"; startedAt: string; onChange: (iso: string) => void; hideEdit?: boolean; maxISO?: string }) {
   const [editing, setEditing] = useState(false);
-  const nowMax = toLocalInput(new Date().toISOString());
+  const capISO = maxISO && new Date(maxISO).getTime() < Date.now() ? maxISO : new Date().toISOString();
+  const nowMax = toLocalInput(capISO);
   const display = isNowish(startedAt) ? t("eat.when.now", { time: clockTime(startedAt) }) : dateTime(startedAt);
 
   return (
@@ -49,8 +52,8 @@ export default function WhenCard({ verb, startedAt, onChange, hideEdit }: { verb
           onChange={(e) => {
             if (!e.target.value) return;
             const iso = fromLocalInput(e.target.value);
-            // clamp not-in-future
-            onChange(new Date(iso).getTime() > Date.now() ? new Date().toISOString() : iso);
+            // clamp to the cap (now by default; min(ended_at, firstEvent) for completed timer edits)
+            onChange(new Date(iso).getTime() > new Date(capISO).getTime() ? capISO : iso);
           }}
         />
       )}
