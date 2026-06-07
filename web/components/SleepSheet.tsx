@@ -2,58 +2,74 @@
 import { useEffect, useState } from "react";
 import type { Activity } from "@/lib/types";
 import { ago, clockTime, duration } from "@/lib/format";
-import { IcCheck, IcPlay, IcSleep, IcStop, IcX } from "@/lib/icons";
+import { sleepActiveMs } from "@/lib/activity";
+import { IcCheck, IcPause, IcPlay, IcSleep, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
 import { t } from "@/i18n";
 
-function elapsed(fromISO: string, now: number): string {
-  const s = Math.max(0, Math.floor((now - new Date(fromISO).getTime()) / 1000));
-  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${hh}:${mm}:${ss}`;
+// Active sleep elapsed as HH:MM:SS — pause-aware (excludes resumed false-alarm wakes).
+function fmtHMS(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(Math.floor(s / 3600))}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}`;
 }
 
 export default function SleepSheet({
   running,
   editing,
   lastWokeAt,
+  noteDraft,
+  onNoteDraftChange,
   onStart,
-  onStop,
+  onPause,
+  onResume,
+  onComplete,
   onUpdate,
   onClose,
 }: {
-  running: Activity | null;
+  running: Activity | null; // the active session — running OR paused (carries paused_at)
   editing?: Activity | null; // a completed sleep being edited (from the Timeline detail sheet)
   lastWokeAt: string | null;
+  noteDraft: string; // parent-held (#12), survives close + pause/resume
+  onNoteDraftChange: (v: string) => void;
   onStart: (startedAt: string, details?: Record<string, unknown>) => void;
-  onStop: (id: string, details?: Record<string, unknown>) => void;
+  onPause: (id: string) => void; // Running → Paused
+  onResume: (id: string) => void; // Paused → Running
+  onComplete: (id: string) => void; // Paused/Running → Complete (ended_at = paused_at when paused)
   onUpdate?: (id: string, startedAt: string, details?: Record<string, unknown>) => void;
   onClose: () => void;
 }) {
-  const seed = (running ?? editing) as Activity | null;
+  const paused = !!running?.paused_at;
   const [now, setNow] = useState(Date.now());
   const [startAt, setStartAt] = useState(() => editing?.started_at ?? new Date().toISOString());
   const [manual, setManual] = useState(false);
-  const [notes, setNotes] = useState(() => (seed?.details_json as { notes?: string } | undefined)?.notes ?? "");
+  // Editing a *completed* sleep keeps its own local notes (the parent draft is the
+  // live-session draft); session idle/running/paused uses the parent noteDraft.
+  const [editNotes, setEditNotes] = useState(() => (editing?.details_json as { notes?: string } | undefined)?.notes ?? "");
 
   const notesField = (
     <div className="field" style={{ margin: "0 0 4px" }}>
       <label htmlFor="sleep-notes">
         {t("eat.notes.label")} <span style={{ fontWeight: 500, color: "var(--fg-faint)" }}>· {t("common.optional")}</span>
       </label>
-      <textarea id="sleep-notes" className="notes-area" placeholder={t("eat.notes.placeholder")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <textarea id="sleep-notes" className="notes-area" placeholder={t("eat.notes.placeholder")} value={noteDraft} onChange={(e) => onNoteDraftChange(e.target.value)} />
     </div>
   );
-  const startDetails = () => (notes.trim() ? { notes: notes.trim() } : undefined);
-  const stopDetails = () => (notes.trim() ? { ...(running?.details_json ?? {}), notes: notes.trim() } : undefined);
 
   // Edit a completed sleep (from the Timeline detail sheet): adjust the start time +
-  // notes; the recorded duration shows for context. Saves via onUpdate.
+  // notes; the recorded (pause-aware) duration shows for context. Saves via onUpdate.
   if (editing && editing.ended_at) {
-    const recorded = duration(new Date(editing.ended_at).getTime() - new Date(startAt).getTime());
-    const saveEdit = () => onUpdate?.(editing.id, startAt, notes.trim() ? { ...(editing.details_json ?? {}), notes: notes.trim() } : (editing.details_json ?? {}));
+    const recorded = duration(sleepActiveMs(editing));
+    const saveEdit = () => onUpdate?.(editing.id, startAt, editNotes.trim() ? { ...(editing.details_json ?? {}), notes: editNotes.trim() } : (editing.details_json ?? {}));
+    const editNotesField = (
+      <div className="field" style={{ margin: "0 0 4px" }}>
+        <label htmlFor="sleep-notes-edit">
+          {t("eat.notes.label")} <span style={{ fontWeight: 500, color: "var(--fg-faint)" }}>· {t("common.optional")}</span>
+        </label>
+        <textarea id="sleep-notes-edit" className="notes-area" placeholder={t("eat.notes.placeholder")} value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+      </div>
+    );
     return (
       <div className="sheet-screen" onClick={onClose} role="dialog" aria-modal="true" aria-label={t("sleep.title")}>
         <div className="sheet-panel" onClick={(e) => e.stopPropagation()}>
@@ -73,7 +89,7 @@ export default function SleepSheet({
               <div className="mono" style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-0.02em" }}>{recorded}</div>
             </div>
             <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />
-            {notesField}
+            {editNotesField}
             <div style={{ height: 10 }} />
             <Button kind="primary" size="lg" icon={<IcCheck size={20} />} style={{ background: "var(--sleep-strong)" }} onClick={saveEdit}>
               {t("common.save")}
@@ -85,11 +101,14 @@ export default function SleepSheet({
     );
   }
 
+  // Tick 1s while running; paused freezes (no interval) so the elapsed holds.
   useEffect(() => {
-    if (!running) return;
+    if (!running || paused) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [running, paused]);
+
+  const elapsedMs = running ? sleepActiveMs(running, now) : 0;
 
   return (
     <div className="sheet-screen" onClick={onClose} role="dialog" aria-modal="true" aria-label={t("sleep.title")}>
@@ -107,55 +126,57 @@ export default function SleepSheet({
             </button>
           </div>
 
-          <div
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--r-xl)",
-              padding: "30px 20px 26px",
-              textAlign: "center",
-              marginBottom: 14,
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
+          <div className={"sp-timer" + (running ? (paused ? " paused" : " running") : "")} aria-live="polite">
             {running ? (
               <>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--sleep-strong)" }} aria-live="polite">
-                  <span className="pulse-dot" style={{ background: "var(--sleep-strong)" }} />
-                  {t("sleep.sleeping")}
+                <div className={"sp-status " + (paused ? "held" : "live")}>
+                  <span className="dot" />
+                  {paused ? t("sleep.paused") : t("sleep.sleeping")}
                 </div>
-                <div className="mono" style={{ fontSize: 46, fontWeight: 600, letterSpacing: "-0.03em", margin: "8px 0 4px" }}>
-                  {elapsed(running.started_at, now)}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--fg-muted)" }}>
-                  {t("sleep.startedBy", { time: clockTime(running.started_at), name: running._mine ? t("timeline.you") : running.logged_by_name })}
-                </div>
+                <div className={"sp-big" + (paused ? " paused" : "")}>{fmtHMS(elapsedMs)}</div>
+                {paused ? (
+                  <div className="sp-frozen-cap">{t("sleep.frozenCap")}</div>
+                ) : (
+                  <div className="sp-sub">{t("sleep.startedBy", { time: clockTime(running.started_at), name: running._mine ? t("timeline.you") : running.logged_by_name })}</div>
+                )}
               </>
             ) : (
               <>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--fg-muted)" }}>
-                  {lastWokeAt ? t("sleep.awake", { dur: ago(lastWokeAt, now) }) : t("sleep.idleHint")}
-                </div>
-                <div className="mono" style={{ fontSize: 46, fontWeight: 600, letterSpacing: "-0.03em", margin: "8px 0 4px", color: "var(--fg-faint)" }}>
-                  00:00:00
-                </div>
-                <div style={{ fontSize: 13, color: "var(--fg-muted)" }}>{t("sleep.idleHint")}</div>
+                <div className="sp-status">{lastWokeAt ? t("sleep.awake", { dur: ago(lastWokeAt, now) }) : t("sleep.idleHint")}</div>
+                <div className="sp-big idle">00:00:00</div>
+                <div className="sp-sub">{t("sleep.idleHint")}</div>
               </>
             )}
           </div>
 
           {running ? (
-            <>
-              {notesField}
-              <Button kind="primary" size="lg" icon={<IcStop size={20} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onStop(running.id, stopDetails())}>
-                {t("sleep.stop")}
-              </Button>
-            </>
+            paused ? (
+              <>
+                {notesField}
+                {/* paused: two equal-weight choices — never primary-vs-destructive */}
+                <div className="sp-actions-pair">
+                  <button className="sp-btn resume" type="button" onClick={() => onResume(running.id)}>
+                    <IcPlay size={18} /> {t("sleep.resume")}
+                  </button>
+                  <button className="sp-btn complete" type="button" onClick={() => onComplete(running.id)}>
+                    <IcCheck size={18} /> {t("sleep.complete")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {notesField}
+                {/* running: single หยุด — pause glyph; freezes, does not end */}
+                <Button kind="primary" size="lg" icon={<IcPause size={18} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onPause(running.id)}>
+                  {t("sleep.pause")}
+                </Button>
+              </>
+            )
           ) : (
             <>
               {manual && <WhenCard verb="sleep" startedAt={startAt} onChange={setStartAt} />}
               {notesField}
-              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString(), startDetails())}>
+              <Button kind="primary" size="lg" icon={<IcPlay size={18} />} style={{ background: "var(--sleep-strong)" }} onClick={() => onStart(manual ? startAt : new Date().toISOString(), noteDraft.trim() ? { notes: noteDraft.trim() } : undefined)}>
                 {t("sleep.start")}
               </Button>
               <div style={{ textAlign: "center", marginTop: 14 }}>

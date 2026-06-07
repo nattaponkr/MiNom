@@ -584,3 +584,67 @@
 .tl-active-v { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin-top: 1px; color: var(--fg); }
 .tl-active-v .mono { font-family: var(--font-mono); }
 .tl-active .ep-actions { padding: 0 14px 13px; }
+
+/* ============================================================
+   Sleep pause/resume/complete (#12) — sheet 3-state + Home/Timeline chips.
+   Token discipline (#11b): soft --sleep stays decorative; all text + white-on-fill
+   bind --sleep-strong / --fg / --fg-muted. Running = sleep-tinted-alive (pulsing
+   dot); paused = calm-neutral-held (hollow static ring) — tellable at a glance.
+   ============================================================ */
+
+/* 1 · นอน sheet — big timer card across running / paused (idle reuses the plain shell) */
+.sp-timer { border-radius: var(--r-xl); padding: 30px 20px 26px; text-align: center;
+  box-shadow: var(--shadow-sm); margin-bottom: 14px; border: 1px solid var(--border); background: var(--surface); }
+.sp-timer.running { border-color: color-mix(in oklch, var(--sleep-strong) 36%, var(--border));
+  background: color-mix(in oklch, var(--sleep-strong) 5%, var(--surface)); }
+.sp-timer.paused { border-color: var(--border-strong); background: var(--surface-2); }
+.sp-status { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--fg-muted); min-height: 16px; }
+.sp-status .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sp-status.live .dot { background: var(--sleep-strong); animation: spPulse 1.6s ease-in-out infinite; }
+.sp-status.held .dot { background: transparent; border: 2px solid var(--fg-muted); width: 9px; height: 9px; }
+@keyframes spPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.8); } }
+.sp-big { font-family: var(--font-mono); font-size: 46px; font-weight: 600; letter-spacing: -0.03em; margin: 8px 0 4px; color: var(--fg); }
+.sp-big.idle { color: var(--fg-faint); }
+.sp-sub { font-size: 13px; color: var(--fg-muted); }
+.sp-frozen-cap { font-size: 11.5px; color: var(--fg-faint); margin-top: 3px; }
+
+/* sheet action buttons — paused shows two equal-weight choices (resume vs complete) */
+.sp-actions-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.sp-btn { min-height: 52px; border-radius: var(--r-lg); font-weight: 800; font-size: 15.5px; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid transparent; padding: 0 10px; cursor: pointer; }
+.sp-btn.resume { background: color-mix(in oklch, var(--sleep-strong) 13%, var(--surface)); color: var(--sleep-strong);
+  border-color: color-mix(in oklch, var(--sleep-strong) 32%, var(--border)); }
+.sp-btn.complete { background: var(--surface); color: var(--fg); border-color: var(--border-strong); }
+.sp-btn:active { transform: scale(.985); }
+
+/* 2 · quick-action chips — Home card + Timeline row share these */
+.sp-chips { display: flex; gap: 9px; padding: 0 16px 15px; }
+.sp-chip { flex: 1; min-height: 46px; border-radius: var(--r-md); font-weight: 800; font-size: 14.5px; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1.5px solid transparent; padding: 0 8px; cursor: pointer; }
+.sp-chip.stop { background: var(--sleep-strong); color: var(--on-primary); }
+.sp-chip.resume { background: color-mix(in oklch, var(--sleep-strong) 13%, var(--surface)); color: var(--sleep-strong);
+  border-color: color-mix(in oklch, var(--sleep-strong) 30%, var(--border)); }
+.sp-chip.complete { background: var(--surface-2); color: var(--fg); border-color: var(--border-strong); }
+.sp-chip:active { transform: scale(.98); }
+
+/* Home active sleep card — eat-card-v2 shell with sleep running/paused mods */
+.eat-card-v2.sp-live { border-color: color-mix(in oklch, var(--sleep-strong) 40%, var(--border)); }
+.eat-card-v2.sp-live.held { border-color: var(--border-strong); background: var(--surface-2); }
+.eat-card-v2.sp-live .vi { background: var(--sleep-strong); color: var(--on-primary); }
+.eat-card-v2.sp-live.held .vi { background: var(--sleep-tint); color: var(--sleep-strong); }
+.eat-card-v2.sp-live .sp-chips { padding: 3px 16px 15px; }
+.sp-cardline { display: inline-flex; align-items: center; gap: 7px; margin-top: 3px; }
+.sp-cardline .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.sp-cardline.live .dot { background: var(--sleep-strong); animation: spPulse 1.6s ease-in-out infinite; }
+.sp-cardline.held .dot { background: transparent; border: 2px solid var(--fg-muted); width: 8px; height: 8px; }
+.sp-cardline .ctx { font-size: 13px; font-weight: 700; color: var(--fg-muted); }
+.sp-cardline .mono { font-family: var(--font-mono); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
+
+/* 3 · Timeline active sleep row — tl-active shell with sleep running/paused mods */
+.tl-active.sleep { border-color: color-mix(in oklch, var(--sleep-strong) 40%, var(--border)); background: color-mix(in oklch, var(--sleep-strong) 6%, var(--surface)); }
+.tl-active.sleep.held { border-color: var(--border-strong); background: var(--surface-2); }
+.tl-active.sleep .vi { background: var(--sleep-strong); color: var(--on-primary); }
+.tl-active.sleep.held .vi { background: var(--sleep-tint); color: var(--sleep-strong); }
+.tl-active.sleep .tl-active-k .dot { background: var(--sleep-strong); animation: spPulse 1.6s ease-in-out infinite; }
+.tl-active.sleep.held .tl-active-k .dot { background: transparent; border: 2px solid var(--fg-muted); animation: none; }
+.tl-active.sleep .sp-chips { padding: 0 14px 13px; }

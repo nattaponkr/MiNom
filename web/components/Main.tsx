@@ -42,6 +42,7 @@ export default function Main({
   const [sleepOpen, setSleepOpen] = useState(false);
   const [sleepSeed, setSleepSeed] = useState<Activity | null>(null);
   const [editingSleep, setEditingSleep] = useState<Activity | null>(null);
+  const [sleepNoteDraft, setSleepNoteDraft] = useState(""); // note draft for the active sleep session (#12) — survives close + pause/resume
   const [concurrency, setConcurrency] = useState<{ name: string; agoText: string; timer: boolean } | null>(null);
   const [sleepConc, setSleepConc] = useState<{ name: string; agoText: string; hit: Activity } | null>(null);
   const [coCaregivers, setCoCaregivers] = useState(0); // caregivers besides me → gates the Home family hint
@@ -226,6 +227,34 @@ export default function Main({
     setEditingSleep(null);
   };
 
+  // Sleep note draft (#12) — seed when a session begins (from the row), clear when it ends.
+  // Mirrors the eat draft; keyed on the active session id so it survives close/pause/resume.
+  const runningSleepId = log.runningSleep?.id ?? null;
+  useEffect(() => {
+    if (!runningSleepId) {
+      setSleepNoteDraft("");
+      return;
+    }
+    const r = log.activities.find((a) => a.id === runningSleepId);
+    setSleepNoteDraft((r?.details_json as { notes?: string } | undefined)?.notes ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runningSleepId]);
+
+  // Sleep three-state handlers (#12) — same code path for sheet + Home card + Timeline row.
+  const pauseSleepSession = () => {
+    if (log.runningSleep) log.pauseSleep(log.runningSleep.id);
+  };
+  const resumeSleepSession = () => {
+    if (log.runningSleep) log.resumeSleep(log.runningSleep.id);
+  };
+  const completeSleepSession = () => {
+    if (!log.runningSleep) return;
+    const a = log.runningSleep;
+    track("activity_logged", { type: "sleep", hours_after_create: Math.round((Date.now() - new Date(a.started_at).getTime()) / 3600000) });
+    log.stopSleep(a.id, sleepNoteDraft);
+    closeSleep();
+  };
+
   const lastWokeAt = log.activities.find((a) => a.type === "sleep" && a.ended_at)?.ended_at ?? null;
 
   // Edit a completed sleep from the Timeline detail sheet.
@@ -282,6 +311,9 @@ export default function Main({
             runningEat={log.runningEat}
             onStopFeeding={stopEatSession}
             onSwitchFeeding={toggleEatSide}
+            onPauseSleep={pauseSleepSession}
+            onResumeSleep={resumeSleepSession}
+            onCompleteSleep={completeSleepSession}
           />
         )}
 
@@ -296,6 +328,10 @@ export default function Main({
             runningEat={log.runningEat}
             onStopFeeding={stopEatSession}
             onSwitchFeeding={toggleEatSide}
+            runningSleep={log.runningSleep}
+            onPauseSleep={pauseSleepSession}
+            onResumeSleep={resumeSleepSession}
+            onCompleteSleep={completeSleepSession}
           />
         )}
 
@@ -344,20 +380,19 @@ export default function Main({
 
       {sleepOpen && (
         <SleepSheet
-          running={log.runningSleep ?? sleepSeed}
+          running={editingSleep ? null : (log.runningSleep ?? sleepSeed)}
           editing={editingSleep}
           onUpdate={updateSleep}
           lastWokeAt={lastWokeAt}
+          noteDraft={sleepNoteDraft}
+          onNoteDraftChange={setSleepNoteDraft}
           onStart={(startedAt, details) => {
             track("activity_logged", { type: "sleep", ...logMetrics(startedAt) });
             log.startSleep(startedAt, details);
           }}
-          onStop={(id, details) => {
-            const a = log.activities.find((x) => x.id === id) ?? sleepSeed;
-            track("activity_edited", { type: "sleep", hours_after_create: a ? Math.round((Date.now() - new Date(a.started_at).getTime()) / 3600000) : 0 });
-            log.stopSleep(id, undefined, details);
-            closeSleep();
-          }}
+          onPause={() => pauseSleepSession()}
+          onResume={() => resumeSleepSession()}
+          onComplete={() => completeSleepSession()}
           onClose={closeSleep}
         />
       )}

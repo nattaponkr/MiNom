@@ -5,9 +5,9 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { Activity } from "@/lib/types";
 import { clockTime, formatDateBE } from "@/lib/format";
-import { IcChevL, IcChevR, IcCheck, IcEat, IcRepeat, IcStop, IcTrash, VERB_ICON } from "@/lib/icons";
+import { IcChevL, IcChevR, IcCheck, IcEat, IcPause, IcPlay, IcRepeat, IcSleep, IcStop, IcTrash, VERB_ICON } from "@/lib/icons";
 import { getRepo } from "@/lib/sync/repo";
-import { activityHierarchy, activitySummary, daySummaryStats } from "@/lib/activity";
+import { activityHierarchy, activitySummary, daySummaryStats, sleepActiveMs } from "@/lib/activity";
 import { isFirstTimeFood } from "@/lib/eat";
 import ActivityDetailSheet from "./ActivityDetailSheet";
 import { ConfirmSheet } from "./Sheets";
@@ -115,6 +115,10 @@ export default function Timeline({
   runningEat,
   onStopFeeding,
   onSwitchFeeding,
+  runningSleep,
+  onPauseSleep,
+  onResumeSleep,
+  onCompleteSleep,
 }: {
   babyId: string;
   babyName: string;
@@ -125,6 +129,10 @@ export default function Timeline({
   runningEat: Activity | null;
   onStopFeeding: () => void;
   onSwitchFeeding: () => void;
+  runningSleep: Activity | null;
+  onPauseSleep: () => void;
+  onResumeSleep: () => void;
+  onCompleteSleep: () => void;
 }) {
   const [offset, setOffset] = useState(0);
   const [past, setPast] = useState<Activity[]>([]);
@@ -136,12 +144,14 @@ export default function Timeline({
   const [now, setNow] = useState(Date.now());
   const touch = useRef<{ x: number; id: string } | null>(null);
 
-  // Tick the active-feeding elapsed + day-summary while a session runs.
+  // Tick the active-feeding/sleep elapsed + day-summary while a session runs.
+  // A paused sleep is frozen, so only tick for a running (non-paused) sleep.
+  const sleepTicking = !!runningSleep && !runningSleep.paused_at;
   useEffect(() => {
-    if (!runningEat) return;
+    if (!runningEat && !sleepTicking) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [runningEat]);
+  }, [runningEat, sleepTicking]);
 
   // Fetch past days on demand (read-only history). Today uses the live prop.
   useEffect(() => {
@@ -254,8 +264,43 @@ export default function Timeline({
               </div>
             </div>
           )}
+          {/* #12: active sleep session — running (หยุด) / paused (หลับต่อ + บันทึก), today only */}
+          {isToday && runningSleep && (
+            <div className={"tl-active sleep" + (runningSleep.paused_at ? " held" : "")}>
+              <div className="tl-active-top">
+                <span className="vi">
+                  <IcSleep size={22} />
+                </span>
+                <span className="tl-active-meta">
+                  <span className="tl-active-k">
+                    <span className="dot" />
+                    {t(runningSleep.paused_at ? "timeline.sleepPaused" : "timeline.sleepActive")}
+                  </span>
+                  <span className="tl-active-v">
+                    <span className="mono">{fmtMs(sleepActiveMs(runningSleep, now))}</span>
+                  </span>
+                </span>
+              </div>
+              <div className="sp-chips">
+                {runningSleep.paused_at ? (
+                  <>
+                    <button className="sp-chip resume" onClick={onResumeSleep} type="button">
+                      <IcPlay size={15} /> {t("sleep.resume")}
+                    </button>
+                    <button className="sp-chip complete" onClick={onCompleteSleep} type="button">
+                      <IcCheck size={15} /> {t("sleep.completeShort")}
+                    </button>
+                  </>
+                ) : (
+                  <button className="sp-chip stop" onClick={onPauseSleep} type="button">
+                    <IcPause size={15} /> {t("sleep.pause")}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <div className="tl-list">
-            {(isToday && runningEat ? rows.filter((a) => a.id !== runningEat.id) : rows).map((a) => {
+            {rows.filter((a) => !(isToday && ((runningEat && a.id === runningEat.id) || (runningSleep && a.id === runningSleep.id)))).map((a) => {
               const Ic = VERB_ICON[a.type];
               const { context, detail: bold } = activityHierarchy(a);
               const swiped = swipedId === a.id;

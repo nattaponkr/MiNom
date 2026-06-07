@@ -2,8 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Activity, Baby, Profile, VerbType } from "@/lib/types";
 import { ago, ageLabel, todayWeekday } from "@/lib/format";
-import { IcChevR, IcEat, IcRepeat, IcStop, IcUsers, VERB_ICON } from "@/lib/icons";
+import { IcCheck, IcChevR, IcEat, IcPause, IcPlay, IcRepeat, IcSleep, IcStop, IcUsers, VERB_ICON } from "@/lib/icons";
 import { eatSummary } from "@/lib/eat";
+import { sleepActiveMs } from "@/lib/activity";
 
 // Live elapsed of an active feeding session — accumulated per-side + the current segment.
 function feedingMs(a: Activity, now: number): number {
@@ -24,14 +25,6 @@ import ThemeToggle from "./ThemeToggle";
 import OfflineToggle from "./OfflineToggle";
 import { t } from "@/i18n";
 import { isDebug } from "@/lib/debug";
-
-// Live mm:ss (h:mm:ss past an hour) for the running-sleep card timer.
-function liveElapsed(fromISO: string, now: number): string {
-  const s = Math.max(0, Math.floor((now - new Date(fromISO).getTime()) / 1000));
-  const h = Math.floor(s / 3600);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return h > 0 ? `${h}:${p(Math.floor((s % 3600) / 60))}:${p(s % 60)}` : `${p(Math.floor(s / 60))}:${p(s % 60)}`;
-}
 
 // Part-4 parity: Sleep/Diaper share the Eat card's muted-context + bold-detail
 // hierarchy (no modes / repeat bar — those are Eat-only). Verb-colored icon.
@@ -167,6 +160,64 @@ function EatCardV2({
   );
 }
 
+// Active sleep card (#12) — running (single หยุด) / paused (หลับต่อ + บันทึก). Same
+// handlers as the sheet; live elapsed ticks while running, frozen while paused.
+function SleepActiveCard({
+  running,
+  now,
+  onOpen,
+  onPause,
+  onResume,
+  onComplete,
+}: {
+  running: Activity;
+  now: number;
+  onOpen: () => void;
+  onPause: () => void;
+  onResume: () => void;
+  onComplete: () => void;
+}) {
+  const paused = !!running.paused_at;
+  return (
+    <div className={"eat-card-v2 sleep sp-live" + (paused ? " held" : "")} lang="th">
+      <button className="eat-card-main" onClick={onOpen} aria-label={t(paused ? "home.sleep.paused" : "home.sleep.sleeping")}>
+        <span className="vi">
+          <IcSleep size={28} />
+        </span>
+        <span className="eat-card-meta">
+          <span className="eat-card-row1">
+            <span className="eat-card-name">{t("home.sleep.name")}</span>
+          </span>
+          <span className={"sp-cardline " + (paused ? "held" : "live")}>
+            <span className="dot" />
+            <span className="ctx">{t(paused ? "sleep.paused" : "sleep.sleeping")}</span>
+            <span className="mono">{fmtMs(sleepActiveMs(running, now))}</span>
+          </span>
+        </span>
+        <span className="eat-card-go">
+          <IcChevR size={18} />
+        </span>
+      </button>
+      <div className="sp-chips">
+        {paused ? (
+          <>
+            <button className="sp-chip resume" onClick={onResume} type="button">
+              <IcPlay size={15} /> {t("sleep.resume")}
+            </button>
+            <button className="sp-chip complete" onClick={onComplete} type="button">
+              <IcCheck size={15} /> {t("sleep.completeShort")}
+            </button>
+          </>
+        ) : (
+          <button className="sp-chip stop" onClick={onPause} type="button">
+            <IcPause size={15} /> {t("sleep.pause")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SkeletonCard() {
   return (
     <div className="verb-card" aria-hidden="true">
@@ -197,6 +248,9 @@ export default function HomeScreen({
   runningEat,
   onStopFeeding,
   onSwitchFeeding,
+  onPauseSleep,
+  onResumeSleep,
+  onCompleteSleep,
 }: {
   baby: Baby;
   profile: Profile | null;
@@ -215,6 +269,9 @@ export default function HomeScreen({
   runningEat: Activity | null;
   onStopFeeding: () => void;
   onSwitchFeeding: () => void;
+  onPauseSleep: () => void;
+  onResumeSleep: () => void;
+  onCompleteSleep: () => void;
 }) {
   const [now, setNow] = useState(Date.now());
   const [debug, setDebug] = useState(false);
@@ -272,14 +329,7 @@ export default function HomeScreen({
         <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           <EatCardV2 lastEat={lastEat} runningEat={runningEat} now={now} flash={flash} onOpen={onLogEat} onRepeat={onRepeatLast} onStop={onStopFeeding} onSwitch={onSwitchFeeding} />
           {runningSleep ? (
-            <VerbCardV2
-              verb="sleep"
-              name={t("home.sleep.name")}
-              context={t("home.sleep.asleep")}
-              detail={<span className="mono">{liveElapsed(runningSleep.started_at, now)}</span>}
-              isLive
-              onClick={onLogSleep}
-            />
+            <SleepActiveCard running={runningSleep} now={now} onOpen={onLogSleep} onPause={onPauseSleep} onResume={onResumeSleep} onComplete={onCompleteSleep} />
           ) : lastEndedSleep ? (
             <VerbCardV2
               verb="sleep"

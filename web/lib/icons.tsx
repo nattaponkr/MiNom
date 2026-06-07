@@ -167,6 +167,13 @@ export const IcStop = ({ size }: IconProps) => (
     <rect x="6.5" y="6.5" width="11" height="11" rx="2.5" fill="currentColor" stroke="none" />
   </Svg>
 );
+// Pause glyph (#12) — two bars. Sleep หยุด *freezes* the nap (not a stop square).
+export const IcPause = ({ size }: IconProps) => (
+  <Svg size={size}>
+    <rect x="7" y="6" width="3.5" height="12" rx="1.4" fill="currentColor" stroke="none" />
+    <rect x="13.5" y="6" width="3.5" height="12" rx="1.4" fill="currentColor" stroke="none" />
+  </Svg>
+);
 // ---- Eat v2 glyphs (ported from design/icons_eat2.jsx) — non-anatomical ----
 export const IcBottle = ({ size, filled }: IconProps) => (
   <Svg size={size}>

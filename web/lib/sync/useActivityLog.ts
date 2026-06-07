@@ -127,6 +127,7 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
             type: o.insert.type,
             started_at: o.insert.started_at,
             ended_at: o.insert.ended_at ?? null,
+            paused_at: null,
             details_json: o.insert.details_json as Record<string, unknown>,
             logged_by_user_id: me?.id ?? "",
             created_at: o.insert.started_at,
@@ -190,7 +191,7 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       onUpdate: (row) => {
         setActivities((prev) =>
           prev.some((a) => a.id === row.id)
-            ? prev.map((a) => (a.id === row.id ? { ...a, ended_at: row.ended_at, details_json: row.details_json, started_at: row.started_at, _sync: "synced" } : a))
+            ? prev.map((a) => (a.id === row.id ? { ...a, ended_at: row.ended_at, paused_at: row.paused_at, details_json: row.details_json, started_at: row.started_at, _sync: "synced" } : a))
             : prev,
         );
       },
@@ -225,6 +226,7 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
       type: insert.type,
       started_at: insert.started_at,
       ended_at: insert.ended_at ?? null,
+      paused_at: null,
       details_json: insert.details_json as Record<string, unknown>,
       logged_by_user_id: me?.id ?? "",
       created_at: insert.started_at,
@@ -297,16 +299,56 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     [babyId, optimisticRow, enqueue, flush],
   );
 
-  // Sleep timer stop — patch ended_at (+ optional notes details), queue an update op.
-  const stopSleep = useCallback(
-    (id: string, endedAtISO?: string, details?: Record<string, unknown>) => {
-      const ended_at = endedAtISO ?? new Date().toISOString();
-      const patch: ActivityPatch = { ended_at, ...(details ? { details_json: details } : {}) };
-      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, ended_at, ...(details ? { details_json: details } : {}), _sync: "queued" } : a)));
-      enqueue({ op: "update", id, patch });
+  // ---- Sleep three-state machine (#12) — Running ⇄ Paused → Complete. ----
+  // The active sleep is the open-ended row (ended_at null). `paused_at` non-null ⇒ paused.
+  // Active duration excludes resumed pauses (false-alarm wakes); see lib/activity.ts.
+
+  // Running → Paused: freeze the timer by stamping paused_at = now.
+  const pauseSleep = useCallback(
+    (id: string) => {
+      const paused_at = new Date().toISOString();
+      setActivities((prev) => prev.map((a) => (a.id === id ? { ...a, paused_at, _sync: "queued" } : a)));
+      enqueue({ op: "update", id, patch: { paused_at } });
       void flush();
     },
     [enqueue, flush],
+  );
+
+  // Paused → Running: close the pause (push {paused_at, resumed_at} to pause_log), clear paused_at.
+  const resumeSleep = useCallback(
+    (id: string) => {
+      const a = activities.find((x) => x.id === id);
+      if (!a || !a.paused_at) return;
+      const d = (a.details_json ?? {}) as { pause_log?: { paused_at: string; resumed_at: string }[] };
+      const pause_log = [...(d.pause_log ?? []), { paused_at: a.paused_at, resumed_at: new Date().toISOString() }];
+      const nd = { ...d, pause_log };
+      setActivities((prev) => prev.map((x) => (x.id === id ? { ...x, paused_at: null, details_json: nd as Record<string, unknown>, _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch: { paused_at: null, details_json: nd as Record<string, unknown> } });
+      void flush();
+    },
+    [activities, enqueue, flush],
+  );
+
+  // Complete from paused (or directly from running): close the session + 5s undo.
+  // Load-bearing: ended_at = paused_at when paused, so the open pause tail is excluded
+  // and the record holds active sleep, not wall-clock. Direct-from-running ends at now.
+  const stopSleep = useCallback(
+    (id: string, noteDraft?: string) => {
+      const a = activities.find((x) => x.id === id);
+      if (!a) return;
+      const d = (a.details_json ?? {}) as { notes?: string };
+      const ended_at = a.paused_at ?? new Date().toISOString();
+      const note = (noteDraft ?? d.notes ?? "").trim();
+      const nd: Record<string, unknown> = { ...d, ...(note ? { notes: note } : {}) };
+      const patch: ActivityPatch = { ended_at, paused_at: null, details_json: nd };
+      setActivities((prev) => prev.map((x) => (x.id === id ? { ...x, ended_at, paused_at: null, details_json: nd, _sync: "queued" } : x)));
+      enqueue({ op: "update", id, patch });
+      setSnackbar({ id });
+      if (snackTimer.current) clearTimeout(snackTimer.current);
+      snackTimer.current = setTimeout(() => setSnackbar(null), UNDO_MS);
+      void flush();
+    },
+    [activities, enqueue, flush],
   );
 
   // ---- Active feeding session (นมแม่ · จับเวลา) — mirrors the Sleep timer. ----
@@ -439,6 +481,8 @@ export function useActivityLog(babyId: string | null, me: SessionUser | null) {
     repeatLast,
     update,
     startSleep,
+    pauseSleep,
+    resumeSleep,
     stopSleep,
     runningSleep,
     startEat,

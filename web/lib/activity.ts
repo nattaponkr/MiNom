@@ -3,7 +3,23 @@
 import { t } from "@/i18n";
 import { duration, num } from "@/lib/format";
 import { eatSummary, isEatV2 } from "@/lib/eat";
-import type { Activity, VerbType } from "@/lib/types";
+import type { Activity, PauseEntry, VerbType } from "@/lib/types";
+
+// Active sleep duration (#12) — excludes resumed pauses (false-alarm wakes) so a
+// 30-min nap that paused 5 min for a stir records as 30, not 35. Ticks live while
+// running; frozen at paused_at while paused; settles at ended_at on complete.
+//   active = (end − started_at) − Σ (resumed_at − paused_at over pause_log)
+// where end = ended_at (completed) ?? paused_at (paused) ?? now (running).
+function sumPauses(log?: PauseEntry[]): number {
+  if (!Array.isArray(log)) return 0;
+  return log.reduce((s, p) => s + Math.max(0, new Date(p.resumed_at).getTime() - new Date(p.paused_at).getTime()), 0);
+}
+export function sleepActiveMs(a: Activity, now = Date.now()): number {
+  const start = new Date(a.started_at).getTime();
+  const end = a.ended_at ? new Date(a.ended_at).getTime() : a.paused_at ? new Date(a.paused_at).getTime() : now;
+  const pauses = sumPauses((a.details_json as { pause_log?: PauseEntry[] }).pause_log);
+  return Math.max(0, end - start - pauses);
+}
 
 // Split into a muted context line + a bold detail line. Fallback (no mode detail):
 // context empty, detail = the verb itself (rendered solo/bold).
@@ -18,8 +34,8 @@ export function activityHierarchy(a: Activity): { context: string; detail: strin
     return k ? { context: t("verb.diaper"), detail: t(`diaper.${k}`) } : { context: "", detail: t("verb.diaper") };
   }
   if (a.type === "sleep") {
-    if (!a.ended_at) return { context: t("verb.sleep"), detail: t("sleep.sleeping") };
-    return { context: t("verb.sleep"), detail: duration(new Date(a.ended_at).getTime() - new Date(a.started_at).getTime()) };
+    if (!a.ended_at) return { context: t("verb.sleep"), detail: t(a.paused_at ? "sleep.paused" : "sleep.sleeping") };
+    return { context: t("verb.sleep"), detail: duration(sleepActiveMs(a)) };
   }
   return { context: "", detail: t(`verb.${a.type}`) };
 }
@@ -91,8 +107,10 @@ export function daySummaryStats(activities: Activity[], now = Date.now()): DaySu
 
   const sleeps = activities.filter((a) => a.type === "sleep");
   if (sleeps.length) {
+    // Pause-aware (#12): active duration excludes resumed pauses. The live session
+    // ticks while running (via `now`) and freezes while paused — settles on complete.
     let ms = 0;
-    for (const a of sleeps) if (a.ended_at) ms += new Date(a.ended_at).getTime() - new Date(a.started_at).getTime();
+    for (const a of sleeps) ms += sleepActiveMs(a, now);
     stats.push({ verb: "sleep", label: t("timeline.summary.sleep"), value: durTokens(ms) });
   }
 

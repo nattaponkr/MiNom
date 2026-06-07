@@ -18,6 +18,7 @@ export type ActivityInsert = {
 export type ActivityPatch = {
   started_at?: string;
   ended_at?: string | null;
+  paused_at?: string | null; // sleep pause/resume (#12)
   details_json?: Record<string, unknown>;
 };
 

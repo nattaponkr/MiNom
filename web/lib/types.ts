@@ -48,6 +48,14 @@ export type LegacyEatDetails = {
 export type DiaperKind = "wet" | "dirty" | "both";
 export type DiaperDetails = { kind: DiaperKind; notes?: string };
 
+// Sleep — a continuous state (vs Eat's discrete event; see PRD §0.1 asymmetry).
+// pause_log records resumed false-alarm wakes so active duration excludes them:
+// active = (end − started_at) − Σ (resumed_at − paused_at). The current (open)
+// pause isn't in the log yet — the live row's top-level `paused_at` carries it,
+// and complete-from-paused sets ended_at = paused_at so the pause tail is excluded.
+export type PauseEntry = { paused_at: string; resumed_at: string }; // ISO timestamps
+export type SleepDetails = { pause_log?: PauseEntry[]; notes?: string };
+
 // As stored / returned by the backend.
 export type ActivityRow = {
   id: string;
@@ -55,6 +63,7 @@ export type ActivityRow = {
   type: VerbType;
   started_at: string;
   ended_at: string | null;
+  paused_at: string | null; // sleep three-state (#12): non-null ⇒ paused; null ⇒ running or completed
   details_json: Record<string, unknown>;
   logged_by_user_id: string;
   created_at: string;

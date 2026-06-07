@@ -212,6 +212,7 @@ export class DemoRepo implements Repo {
       type: a.type,
       started_at: a.started_at,
       ended_at: a.ended_at ?? null,
+      paused_at: null,
       details_json: a.details_json as Record<string, unknown>,
       logged_by_user_id: id,
       created_at: now,

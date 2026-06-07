@@ -1,0 +1,14 @@
+-- 0006_sleep_paused.sql — Sleep pause/resume/complete (Handoff #12)
+--
+-- Adds the `paused_at` column backing the three-state sleep machine
+-- (Idle → Running → Paused → Complete). The pause/resume history lives in
+-- details_json.pause_log[] (jsonb) — no column needed for it.
+--
+-- Back-compat (PM-approved, Part 1c): additive + nullable. Existing rows default
+-- NULL, which is correct for both "running" and "completed" (paused_at NULL is
+-- exactly what was true before the column existed). No backfill. In-flight sleep
+-- sessions at deploy simply gain the new state on their next หยุด tap.
+--
+-- NOTE: the live table is public.activity (singular). The handoff brief wrote
+-- `ALTER TABLE activities` — corrected here to the real table name.
+alter table public.activity add column if not exists paused_at timestamptz null;
