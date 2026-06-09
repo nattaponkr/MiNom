@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase } from "@/lib/supabase/client";
 import { colorFromSeed } from "@/components/ui";
-import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, BabySex, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, InvitePreview, RealtimeHandlers, Repo } from "./repo";
 
 const SELECT_WITH_LOGGER = "*, logged_by:logged_by_user_id (display_name, avatar_color)";
@@ -114,8 +114,19 @@ export class SupabaseRepo implements Repo {
     return (data as Baby[]) ?? [];
   }
 
-  async createBaby(name: string, birthdate: string): Promise<Baby> {
+  async createBaby(name: string, birthdate: string, sex?: BabySex | null): Promise<Baby> {
     const { data, error } = await this.sb.rpc("create_baby", { p_name: name, p_birthdate: birthdate });
+    if (error) throw error;
+    const baby = data as Baby;
+    // sex isn't a create_baby RPC param (no migration this fold); set it in a
+    // follow-up update when provided. The babies_update RLS policy allows any
+    // caregiver, so the just-created owner can write it.
+    if (sex) return this.updateBaby(baby.id, { sex });
+    return baby;
+  }
+
+  async updateBaby(id: string, patch: { name?: string; sex?: BabySex | null }): Promise<Baby> {
+    const { data, error } = await this.sb.from("babies").update(patch).eq("id", id).select("*").single();
     if (error) throw error;
     return data as Baby;
   }
@@ -341,6 +352,18 @@ export class SupabaseRepo implements Repo {
         { event: "DELETE", schema: "public", table: "activity", filter: `baby_id=eq.${babyId}` },
         (payload) => handlers.onDelete((payload.old as { id: string }).id),
       )
+      .subscribe();
+    return () => {
+      this.sb.removeChannel(channel);
+    };
+  }
+
+  // #15: measurements realtime — its own channel/table. Any change (a peer's new
+  // weight, an edit, a delete) fires onChange so the growth chart re-plots ~1s.
+  subscribeMeasurements(babyId: string, onChange: () => void): () => void {
+    const channel = this.sb
+      .channel(`measurements:${babyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "measurements", filter: `baby_id=eq.${babyId}` }, () => onChange())
       .subscribe();
     return () => {
       this.sb.removeChannel(channel);

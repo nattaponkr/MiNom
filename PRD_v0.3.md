@@ -33,7 +33,7 @@
 - **Warm, plain Thai that leaves a ละมุน feeling.** Speak like a calm friend who's done this before — never a manual, never baby-talk, never a marketer. Own mistakes softly; never blame the parent. Concrete on-brand vs off-brand examples live in `design/brand.jsx` → `voice-grid` section.
 
 **Open brand TODOs (PM tracks):**
-- Domain: `lamoon.app` / `lamoon.co` / `lamoon.in.th` — research availability, recommend, secure.
+- Domain: `lamoon.app` / `lamoon.co` / `lamoon.in.th` — research availability, recommend, secure. **Now load-bearing for re-enabling email confirmations** — Supabase Auth SMTP via Resend requires a verified sender domain to relay reliably. Resend's onboarding domain failed the dry-run for confirmation emails. Pre-public-launch blocker.
 - Logo design — Designer brief covered separately when typography lock-in is done.
 - App icon — placeholder OK for staging; final for beta.
 - Social handles — bundled with domain decision.
@@ -47,6 +47,32 @@ Same product, narrower target. Thailand is now the **only** market for v1, and t
 Resolves Q2 (market = Thailand, units = metric), Q3 (positioning anchored in Thai context), and Q4 (residency = Singapore, per Dev rec). Q1 (monetization) and Q5 (auth provider — Supabase, per Dev rec) recommended for confirmation.
 
 This is a re-targeting, not a re-scoping. The four verbs, multi-caregiver model, screens, and exit criteria are unchanged.
+
+---
+
+## 0.2. Growth chart — WHO LMS percentile semantics (added 2026-06-07; restored 2026-06-09)
+
+*Restoration note (2026-06-09): the 2026-06-07 journal entry recorded this subsection as added, but the edit was never written to the PRD file. Restored here, faithful to the agreed Designer #15 / Dev #15 semantics, with the editable-sex update from Dev #15's return folded in.*
+
+**Principle — the chart is diagnostic, never decorative.** A "WHO" label on placeholder or sex-combined curves reads authoritative-but-false. We never fake data. The chart shows only what is real for this baby.
+
+**The five percentile curves.** P3 / P15 / P50 / P85 / P97, computed from the bundled WHO Child Growth Standards LMS tables via `X(z) = M·(1+L·S·z)^(1/L)` (and `M·e^(S·z)` when L=0); z = −1.881 / −1.036 / 0 / +1.036 / +1.881. P50 is weighted heavier; P3/P97 are thin + dashed; the P15–P85 band is a soft "expected range" tint. Per-point readout exposes the exact `P{n}` via `valueToPercentile`.
+
+**Axes & marker.** X = age (weeks if window ≤6mo, else months — smart switch); Y = kg or cm per metric tab, ranged from the percentile envelope at the baby's age and auto-expanding to fit any out-of-range point. A dashed "today's-age" vertical marker uses actual age (not date; BE-lock N/A to age axes).
+
+**Mandatory citation.** `ข้อมูลอ้างอิงจาก WHO Child Growth Standards` rendered as real text (`--fg-muted`, never `--fg-faint`), tappable to the WHO source.
+
+**Sex is required for curves, and degrades honestly (three states):**
+
+| `sex` state | What the chart shows |
+|---|---|
+| set (boy/girl) | full sex-specific curves + band + axes + today-marker + data points |
+| unset | axes + today-marker + data points only — **no curves**, never faked or sex-combined — plus a low-weight prompt `ระบุเพศของลูก` whose CTA navigates to Settings |
+| set later | curves render; existing points stay (no migration) |
+
+**Sex is optional at setup and now editable post-setup (updated 2026-06-09, per Dev #15).** See §5.
+
+**Scope locks.** v1 uses actual age (premature corrected-age deferred). >60mo deferred. The bundled LMS data currently covers **0–24mo**; the full official 0–60mo WHO tables (weight-for-age + length/height-for-age, boys + girls) remain a pre-public-launch data task — `growth.outOfRange` microcopy exists, and >24mo currently clamps to the last row. Fine for the 0–12mo beta.
 
 ---
 
@@ -88,6 +114,8 @@ Eat / Sleep / Diaper / Grow. Content from v0.2 §3 stands, with one addition:
 
 Same ten items. See v0.2 §5.
 
+**Baby profile — sex field (updated 2026-06-09, per Dev #15).** Baby setup stays minimized to name + birthdate; **sex (ชาย/หญิง) is optional**. As of Dev #15 it is **settable at onboarding (BabySetup, skippable) and editable post-setup in Settings** (tapping the active value clears it). This is required for the WHO growth chart: the chart needs sex to draw percentile curves and degrades honestly without it (see §0.2). The earlier assumption that "sex is already collected" was false — no setter existed before #15, so without this every real baby had `sex = null` and curves would never have rendered.
+
 ## 5a. Multi-caregiver model (unchanged from v0.2)
 
 Up to 10 caregivers per baby; one Owner + N equals; activity attribution on every entry; full spec in v0.2 §5a.
@@ -105,7 +133,7 @@ Eight screens. See v0.2 §6.
 - Encrypted in transit + at rest. Account deletion + data export available.
 - **Language: Thai only in v1.** Architected for i18n so EN can be added post-launch without rewrite — all UI strings extracted to a locale file from day one.
 - **Typography: must support Thai script.** Tone targets calm/modern; designer chooses a Thai-first pair (see §11).
-- **Date/time formatting:** Gregorian calendar, Thai locale (`th-TH`). Buddhist Era year display deferred — flag for designer to consider in growth chart axes if it adds clarity.
+- **Date/time formatting:** **Buddhist Era (พ.ศ.) for full-date displays** (locked 2026-06-05 per CPO via Timeline empty-state polish — reads more Thai-first than Gregorian). Thai locale (`th-TH`) underlying formatting; year display is BE. Relative durations on Home like "3 สัปดาห์" are unaffected (not full dates). Applies consistently across all surfaces where a full date appears (Timeline header, future Growth chart axes, exports, etc.).
 - **Region & residency:** Single region `ap-southeast-1` (Singapore), per Dev's Phase 2 recommendation. Lowest latency for Thai users; baby data kept in one region; encrypted at rest + RLS.
 - **PDPA (พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล) compliance.** Thailand's data-protection law applies. Required surface in MVP:
   - Plain-Thai privacy notice on signup.
@@ -151,7 +179,7 @@ See v0.2 §10. Plus: post-MVP, **English locale** is the natural first expansion
 - Voice: warm, plain-spoken Thai. Polite but not overly formal (avoid stiff โบราณ / academic register). Match the calm tone the visual system already targets.
 - Examples in copy use Thai names (น้องฟ้า, etc.) and Thai contexts (พี่เลี้ยง, คุณยาย).
 - Numerals: Arabic numerals (1, 2, 3) — what Thai users already use in digital contexts. Thai numerals (๑, ๒, ๓) are a no.
-- Date format: `d MMM yyyy` Thai locale (e.g. "1 มิ.ย. 2569" if BE display is later adopted, else "1 มิ.ย. 2026").
+- Date format: `d MMM yyyy` Thai locale, **Buddhist Era year** (e.g. "1 มิ.ย. 2569"). Locked 2026-06-05.
 - Time: 24-hour. Common in TH contexts and avoids AM/PM translation friction.
 
 ### 11.3 Typography requirements
@@ -183,7 +211,7 @@ See v0.2 §10. Plus: post-MVP, **English locale** is the natural first expansion
 ## 12. What we're not doing in v1 (Thailand-specific)
 
 - Multiple languages / language switcher.
-- Buddhist Era (พ.ศ.) calendar (default Gregorian; consider in Phase 3+ if data shows users want it).
+- ~~Buddhist Era (พ.ศ.) calendar~~ — **adopted 2026-06-05; moved out of "not doing" section.** See §7 + §11.1.
 - LINE login or LINE notifications (popular in TH; deferred to phase 2 — would compete with our "opt-in only" notification stance and add OAuth complexity).
 - PromptPay / payment integration (no monetization in v1).
 - Thai-specific health log content (Thai vaccination schedule, etc.) — relevant when Health Log ships post-MVP.

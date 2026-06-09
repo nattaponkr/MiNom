@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { getRepo } from "@/lib/sync/repo";
+import type { BabySex } from "@/lib/types";
 import { Button } from "./ui";
 import { IcX } from "@/lib/icons";
 import { track } from "@/lib/analytics";
@@ -11,6 +12,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 export default function BabySetup({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [birthdate, setBirthdate] = useState("");
+  const [sex, setSex] = useState<BabySex | null>(null);
   const [touched, setTouched] = useState<{ name?: boolean; birthdate?: boolean }>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
     setError(null);
     try {
       const repo = await getRepo();
-      await repo.createBaby(name, birthdate);
+      await repo.createBaby(name, birthdate, sex);
       track("baby_created", {});
       onDone();
     } catch {
@@ -83,6 +85,21 @@ export default function BabySetup({ onDone }: { onDone: () => void }) {
                 <IcX size={13} /> {t("setup.birthday.error")}
               </span>
             )}
+          </div>
+
+          <div className="field">
+            <label htmlFor="bsex">
+              {t("setup.sex.label")} <span style={{ color: "var(--fg-faint)", fontWeight: 600 }}>{t("setup.sex.optional")}</span>
+            </label>
+            <div id="bsex" className="seg" role="group" aria-label={t("setup.sex.label")} style={{ marginTop: 2 }}>
+              <button type="button" className={"seg-opt" + (sex === "boy" ? " on" : "")} style={{ minHeight: 48 }} aria-pressed={sex === "boy"} onClick={() => setSex(sex === "boy" ? null : "boy")}>
+                {t("setup.sex.boy")}
+              </button>
+              <button type="button" className={"seg-opt" + (sex === "girl" ? " on" : "")} style={{ minHeight: 48 }} aria-pressed={sex === "girl"} onClick={() => setSex(sex === "girl" ? null : "girl")}>
+                {t("setup.sex.girl")}
+              </button>
+            </div>
+            <span className="input-help">{t("setup.sex.hint")}</span>
           </div>
 
           <div className="note" style={{ fontSize: 12.5, marginTop: 4 }}>
