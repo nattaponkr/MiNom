@@ -9,10 +9,12 @@ export type Profile = {
   avatar_color: string;
 };
 
+export type BabySex = "boy" | "girl";
 export type Baby = {
   id: string;
   name: string;
   birthdate: string; // ISO date
+  sex?: BabySex | null; // optional (PRD §5); gates the WHO percentile curves (#15)
   owner_id: string;
 };
 

@@ -1,6 +1,4 @@
-# ละมุน (Lamoon) — Project Journal
-
-> **App name:** ละมุน (Lamoon, *lah-MOON*) — chosen 2026-06-01. Project/folder/repo name MiNom unchanged internally.
+# MiNom — Project Journal
 
 > **Single source of truth.** All decisions, completions, and handoff notes live here.
 > Newest entries on top. Format: `## YYYY-MM-DD — [Role] — Topic`.
@@ -18,859 +16,1494 @@
 
 ---
 
-## 2026-06-03 — Dev — Self-serve signup VERIFIED LIVE too → both on-ramps green, beta fully unblocked → Handoff → PM
+## 2026-06-09 — Dev — #15 WHO LMS chart committed + PR opened
 
-CPO turned **"Confirm email" OFF** (Authentication → Sign In / Providers → User Signups) for the beta window — consistent with PRD ("enable before *public* launch"). Re-verified self-serve on production:
+PM approved (`HANDOFF_dev_15_commit.md`). Committed the #15 working tree to branch `feat/who-lms-growth-chart-15` and opened the PR.
 
-- ✅ Fresh signup → lands **directly on "เพิ่มข้อมูลลูก"** (no confirmation email, no error).
-- ✅ Full loop: signup → create baby → home with baby.
+**Shipped (Parts 1–5):** real WHO percentile chart (`PercentileChart.tsx` rewrite — 5 curves, 15–85 band, smart weeks/months × kg/cm axes, today's-age marker, tappable dots → #13 sheet, per-point `P{n}` tooltip, tappable WHO citation), honest sex-degrade (no curves when sex unset + prompt → Settings), and measurements realtime re-plot (`subscribeMeasurements` + migration `0007`). Sex-input layer added per PM's call: `Baby.sex` + `updateBaby`, optional selector in BabySetup + editable row in Settings. `tsc` clean · `next build` green · 6/6 tests · WHO spot-checks pass.
 
-**Both on-ramps are now live-verified:**
-- Self-serve signup (confirmations off) ✅
-- Invited caregiver (server admin-create, no email; realtime ~1.2s) ✅ (prior entry)
+**Scope hygiene:** staged only #15 files (web/** code, migration, `*_15`/`who_chart` docs, and the PM's #15 PRD/PLAN/JOURNAL edits). Left the unrelated design/localization backlog (brand/thai/styles css, other handoffs) out of this PR.
 
-**Net: beta is fully unblocked** (not just invite-only). The "เช็คอีเมลของคุณ" screen I built stays dormant until confirmations are re-enabled (pre-public-launch task, needs a verified Resend domain — CPO doesn't own one yet, so Path A was the right beta call).
+**Not in this PR — CPO/hardware-owned (per closeout):** run `0007_measurements_realtime.sql` on prod; #12 two-device prod smoke check; visual canvas-resolved AA spot-check both themes.
 
-**Remaining = CPO eyeball only (non-blocking):** watch PostHog Live events across one real run; (no self-serve confirmation email to check now). Re-enable confirmations + verified Resend sending domain before public launch.
-
-**Handoff → PM (Claude):** open the beta — self-serve **and** invited signup are both proven on production. Pre-public-launch follow-ups (re-enable email confirmation w/ a real domain; account hard-delete; WHO data) are logged and non-blocking. New Thai keys from #04 await Designer review.
+**Handoff → PM:** WHO chart code is on `feat/who-lms-growth-chart-15` — commit `b2e9329`, **PR #1** (https://github.com/nattaponkr/MiNom/pull/1). Reviewable + locally runnable (`cd web && npm run dev`, โต tab). Open items are the three non-code prod gates above.
 
 ---
 
-## 2026-06-03 — Dev — Invited on-ramp VERIFIED LIVE (4/4 on production); beta can open invite-only → Handoff → PM
+## 2026-06-09 — PM — Accept Dev #15 return; approve commit+PR; fix missing PRD edit; route closeout
 
-After CPO set the **correct** `service_role` key (first attempt was the anon key — diagnosed via a temporary keyKind probe, since removed) and ran migration **0005**, the caregiver invite path is **verified end-to-end on production**:
+Dev #15 returned (`HANDOFF_dev_to_pm_15.md`). WHO chart is real: five percentile curves (P3/15/50/85/97) from the bundled LMS tables, smart weeks/months × kg/cm axes, today's-age marker, tappable `P{n}` readouts, tappable WHO citation; honest degrade when sex is unset (points + axes + marker, no curves, soft prompt). `tsc` clean · `next build` green · 6/6 unit tests · WHO math spot-checks pass. **Code is in the working tree, not yet committed.**
 
-- ✅ Owner (pre-confirmed account) creates an invite → copyable link + email.
-- ✅ Invite landing renders (inviter + baby), email **locked** to the invited address.
-- ✅ **Auto-confirm: a brand-new user signs up via the link → lands signed-in on the shared baby with NO confirmation email** (criterion #3). Server admin-creates the account (service-role), links, marks accepted.
-- ✅ **Cross-device realtime owner→invited in ~1.2s** (criterion #4, <5s).
+**PM decisions this turn**
+1. **Approve commit + PR.** Build is green, math is validated, degrade behaves. No reason to hold. `HANDOFF_dev_15_commit.md` written authorizing Dev to commit + open the PR.
+2. **Accept the sex-setter scope addition.** The brief (and Designer §08) assumed sex was already collected — it wasn't; no setter existed, so every real baby had `sex = null` and curves would never have rendered. Dev correctly added a setter in onboarding (BabySetup, skippable) + Settings (editable, tap-to-clear). This was the right call and is accepted.
+3. **Accept the empty-state deviation (Flag #3) as a conscious choice.** Chart appears once a metric has ≥1 point; we keep the existing #13 empty states rather than rendering curves on zero data. Low-risk; revisit post-beta if it reads as missing.
+4. **0–24mo LMS is fine for beta (Flag #2).** Beta is 0–12mo. Full 0–60mo WHO tables stay a pre-public-launch data task; >24mo clamps to the last row for now. Logged to PLAN as a pre-public gate.
 
-This is the **beta on-ramp** and it's GO — fully independent of the Auth SMTP, so the self-serve SMTP issue below does not block an invite-only beta.
+**Discrepancy found + fixed (SSOT integrity).** The 2026-06-07 PM entry below claims "PRD §0.1 extended" with the WHO LMS semantics — but `PRD_v0.3.md` (last modified Jun 5) contained **no** WHO/percentile content. The edit was never actually written to the file. Fixed this turn: added **§0.2 "Growth chart — WHO LMS percentile semantics"** (chart-is-diagnostic principle, the 5 curves + formula, smart axes, today-marker, mandatory real-text citation, sex three-state degrade table, actual-age/>60mo/0–24mo scope locks) and updated **§5** to record that **sex is optional and now editable post-setup** (Dev #15 Flag #1). Process note: future "PRD updated" claims in the journal should cite the file + section actually changed so this can't silently drift again.
 
-**Still open (CPO; only needed for self-serve, not invite-only beta):**
-- 🔴 Self-serve signup still returns "Error sending confirmation email" — Supabase Auth SMTP (Resend) misconfig; fix in the Supabase dashboard (Auth → SMTP / verified sender). The "เช็คอีเมลของคุณ" screen handles the state once it sends.
-- Human-only dry-run steps: eyeball the real invite/confirmation email Thai content, watch PostHog Live events across the loop, real-cellular two-device pass. (App behaviors verified; email content + analytics dashboard are CPO's to confirm.)
+**Still open — needs CPO / hardware, not code (carried to closeout handoff):**
+- Run migration `0007_measurements_realtime.sql` on prod (without it the chart works but won't live-update on a peer's measurement — Part 5).
+- Run the #12 two-device prod smoke check (two physical devices + two prod accounts); log the verdict. Never run from the dev environment.
+- Visual AA spot-check both themes (canvas-resolved) before merge — Dev satisfied AA by construction (tokens bound to Designer §07) but couldn't run headless canvas measurement.
 
-**Net:** Dev side of #04 complete; the invite-only beta path is live-verified. New Thai keys (below) await Designer review.
+**Files this turn:** `PRD_v0.3.md` (§0.2 added, §5 updated), `HANDOFF_dev_15_commit.md` (new), this entry.
 
-**Handoff → PM (Claude):** open beta **invite-only** now — invited on-ramp proven on production. Self-serve waits on the CPO SMTP fix (separate, non-blocking). CPO to sign off PostHog live events + email content.
-
----
-
-## 2026-06-03 — Dev — Phase 3.5 #04 code complete; dry-run found a self-serve-email P0 (code-side handled; CPO config + keys to close) → Handoff → PM
-
-**Work item 1 — done (code), verified in demo + build.**
-- **"เช็คอีเมลของคุณ" screen** for self-serve signup: with confirmations ON, `signUp` returns no session → AuthScreen now shows a Thai check-inbox screen with resend, instead of silently bouncing to the form (which is what the *old* live build did — a real bug).
-- **Auto-confirm-on-invite, reworked to the correct design:** `/api/invite/confirm` (service-role, server-only, rate-limited) **admin-creates** the invited account with `email_confirm: true` — so it sends **no** confirmation email at all (criterion #3) and is **independent of the Auth SMTP**. Then it links the user + marks the invite accepted (single-use); the client signs in. Invite landing shows inviter+baby, email locked to the invited address. `invite_preview` RPC (migration **0005**) backs the landing page. (Also fixed a real bug: an inner `Shell` component was remounting the form on every keystroke.)
-
-**Live dry-run — NOT 7/7; it caught a P0.**
-- 🔴 **P0 (config, not code): self-serve signup fails live** — `signUp` returns **"Error sending confirmation email."** Supabase Auth's custom SMTP (Resend) isn't actually sending. Blocks criteria #1 and self-serve onboarding. **Code side is handled** (check-inbox screen renders the state gracefully; invited path is now SMTP-independent), but the **send itself is a CPO infra fix**: Supabase → Authentication → Emails/SMTP — re-check the Resend SMTP host/port/user/pass + verified sender. I can't fix dashboard SMTP.
-- ✅ **#6 Privacy** — full 12-section policy renders with §1 (Nattapon Kraisingkorn) filled; internal note + placeholders do not leak (verified locally; live after redeploy).
-- ⏳ **#2/#3 invite email + invited auto-confirm**, **#4 PostHog events live**, **#5/#7 cross-device + offline on real cellular** — all need CPO execution (real inboxes A/B, PostHog Live view, two devices) and the keys below. Invited auto-confirm also needs the **service-role key** set.
-- Verified by me (automated): demo invited signup → linked → shared baby; 35/35 headless Thai QA; tsc + build green.
-
-**CPO dependencies to close the dry-run (PM to route)**
-1. 🔴 **Fix Supabase Auth SMTP** so confirmation emails send (unblocks self-serve). Test: sign up on the live form → email should arrive.
-2. **Set `SUPABASE_SERVICE_ROLE_KEY`** in Railway (Supabase → Settings → API → service_role) — required for invited auto-confirm (the no-second-email beta on-ramp). Server-only; never NEXT_PUBLIC.
-3. **Run migration `web/supabase/migrations/0005_invite_preview.sql`** (0004 already run).
-4. Then run the full `HANDOFF_dev_04` §2 dry-run with two real inboxes + PostHog Live; bookmark the PostHog project dashboard (eu.posthog.com → MiNom beta) for PM.
-
-> Note: for an **invite-only beta**, the invited on-ramp (server admin-create, no email) sidesteps the SMTP P0 entirely — set the service-role key (#2) and invited families work even before SMTP is fixed. Self-serve signup still needs #1.
-
-**New Thai keys for Designer review (Phase-3.5 process note):**
-`auth.signup.checkInbox.title/body/resend/resent/inviteFallback`, `auth.invite.signup.title/sub/cta`, `auth.invite.haveAccount`, `care.error.notReady`.
-
-**Handoff → PM (Claude)**
-- Code for both work items is shipped + locally verified. To declare the dry-run 7/7 and open beta, the **CPO checklist above** must land (fix SMTP, set service-role key, run 0005). I'll re-run the automatable live checks the moment the service-role key is set, and support CPO through the inbox/PostHog steps.
-- Recommend beta opens on the **invited on-ramp first** (SMTP-independent) while self-serve SMTP is sorted.
-- CPO: please route to PM.
+**Handoff → CPO:** route `HANDOFF_dev_15_commit.md` to Claude Code (approves commit + PR). The three open items above are CPO/hardware-owned — please run or assign them before #15 is called live on prod.
 
 ---
 
-## 2026-06-03 — PM — LINE setup fully closed (Premium ID `@lamoonapp` claimed; OA published)
+## 2026-06-07 — PM — Accept Designer #15; extend PRD §5; route Dev #15
 
-**What happened**
-- CPO closed all 4 LINE pending items in one pass:
-  1. ✅ Greeting self-test — greeting fires correctly.
-  2. ✅ Custom Thai auto-reply written (CPO edited PM's draft to remove the support-email line — keeps it shorter, less commitment).
-  3. ✅ **Premium ID claimed: `@lamoonapp`** (`@lamoon` presumably taken). Nice incidental alignment with `lamoon.app` if/when we register the domain.
-  4. ✅ OA published / searchable.
+Designer #15 returned (`HANDOFF_designer_to_pm_who_chart.md`). All 9 files present in `MiNom/design/`. Five chart states + 13 edge cases + AA gate passed (both themes, true sRGB). Math validated against published WHO values (boy median 3.35→9.65kg at 0→12mo; 3mo 6.8kg boy → 71st pct). Standalone `JOURNAL_designer_15.md` merged into this file (entry directly below); standalone file removed.
 
-**Implications**
-- The OA is now a real, searchable surface. Anyone who searches `@lamoonapp` in LINE can follow → greeting fires → tagline + web URL in front of them.
-- The `@lamoonapp` handle becomes the canonical LINE identity. Any future copy that references the OA should use `@lamoonapp` (not the random auto-generated handle, which is now retired).
-- Phase 5 carries forward: rich menu, LINE Login channel, LIFF/Mini App, webhook + bot, broadcast templates, OA verification (the green shield, requires business registration).
+**PM confirmed both Designer calls:**
+1. **Sex-required graceful degrade.** Sex stays optional in PRD §5; chart degrades, never blocks. When sex unset → real points + axes + today-marker, **no curves** (never faked / sex-combined), low-weight prompt → baby settings. The "never faked" rule is the principle: a "WHO" label on placeholder curves reads authoritative-but-false.
+2. **LMS bundle is Dev's domain.** Prototype 0–24mo subset is for curve shape only; official 0–60mo tables (4 tables: weight-for-age + length/height-for-age, boys + girls) get bundled as static JSON ~1MB, offline-first, sourced from `https://www.who.int/tools/child-growth-standards`.
 
-**Files updated**
-- `LINE_BACKLOG.md` — recorded `@lamoonapp`, Public/Searchable status, and the auto-reply edit.
+**PRD §0.1 extended** with new subsection "Growth chart — WHO LMS percentile semantics (added 2026-06-07)" — chart-is-diagnostic principle, the 5 percentile curves + math formula, smart axes, today's-age marker, mandatory citation as real text, sex-degrade three-state table, v1 uses actual age (premature corrected-age deferred), >60mo deferred, LMS bundling as Dev's domain. Captures the audit trail for the next PM/LLM so the "never faked" rule survives future edits.
 
-**Status of overall workstream**
-- All defensive LINE prep is done. CPO has been productive for two sessions while Dev's baton runs.
-- Active baton remains Dev (`HANDOFF_dev_04.md`) — auto-confirm-on-invite + 7-scenario dry-run.
-- Next concrete move on this project: **Dev → PM** with dry-run results. Then beta invites.
+**`HANDOFF_dev_15.md` written.** 6 parts (~3 days, heaviest in the polish series): (1) bundle the 4 WHO LMS JSONs + conversion script + unit tests, (2) port LMS→percentile math to TS with edge handling + WHO-validated spot-checks, (3) render `PercentileChart.tsx` mirroring the prototype (curves + smart axes + today-marker + data series + citation), (4) sex-required graceful degrade + prompt nav, (5) realtime re-plot via existing activity path + #13 detail-sheet integration, (6) **bundle the long-pending #12 prod two-caregiver smoke check** (same realtime path it's already exercising: Sleep + Eat-นมแม่ + start_at edit, on two Leon accounts). AA gate per Designer §07. Deferred items called out so Dev doesn't expand scope.
+
+**Microcopy patch** — `TH_WHO_CHART` (axes, today-marker, percentile label, citation, sex-required prompt, out-of-range). No removals. `growth.chartLabel` from #13 superseded by real axes + citation; retire if no other reference.
+
+**Diaper polish stays parked** behind #15 close. Beta open status unchanged.
+
+**Handoff → CPO:** route to Claude Code with `HANDOFF_dev_15.md`. Designer/Dev briefs + the PRD update are in place.
 
 ---
 
-## 2026-06-03 — PM — Designer LINE OA assets accepted; routing upload to CPO
+## 2026-06-07 — Designer — Growth chart (real WHO LMS) shipped
 
-**What happened**
-- Designer shipped the LINE OA asset pack per `HANDOFF_designer_04.md`. Three files in `design/line_oa/` — two for upload, one for reference.
-- Reviewed `preview_in_context.png`: profile glyph holds at 56px chat-list size, cover composition sits cleanly in the safe area with the watermark bleeding lower-right as intended. Accepting as delivered.
+**Scope:** Handoff #15 — upgrade the โต chart from decorative to real WHO Child Growth Standards percentile curves. CPO chose Tier 2 (real data, not polish-on-placeholder). Brings forward the queued pre-public-launch data work. No schema change (sex + birthdate + measurements already collected). Under the §0 AA gate.
 
-**Decisions Designer owned (logged, no PM override)**
-- Monogram (not full wordmark) on the profile photo — the word blurs at 56px.
-- Cover motif: single faint watermark + soft blobs. No illustrations, no people, no emoji.
-- Exact-token colors: clay `#cb7b52`, cream `#fefbf7`. Anuphan Medium 500. One face throughout.
-
-**For CPO — upload (~5 min)**
-- Two upload notes from Designer:
-  - Keep as PNG. JPG re-encoding introduces banding on the cream-on-clay surface.
-  - Don't recenter the cover watermark — the lower-right bleed is intentional.
-- Upload steps in chat below.
-
-**Carry-overs to Phase 5 (unchanged)**
-Rich menu, LINE Login artwork, LIFF assets, broadcast templates, Premium ID claim.
-
-**Status**
-- Dev baton (`HANDOFF_dev_04.md`) remains active — auto-confirm + dry-run, no impact.
-- Designer's small ask is closed. Designer free.
-
----
-
-## 2026-06-03 — Designer — LINE OA assets shipped
-
-**What happened**
-Shipped the two LINE OA images per `HANDOFF_designer_04.md`, plus a context proof.
-
-**Delivered (in `design/line_oa/`)**
-- `oa_profile.png` (640×640) — ล monogram in cream on warm clay with the soft top-left light. Holds as a clean single mark down to 56px chat-list size.
-- `oa_cover.png` (1080×878) — wordmark ละมุน + tagline "ดูแลลูกอย่างละมุนละไม". Single faint ล watermark bleeding off lower-right as the only motif. Centered in safe area.
-- `preview_in_context.png` — circular-crop checks at LINE sizes + cover safe-area verification. Reference proof, not for upload.
-
-**Decisions I owned**
-- Monogram on the avatar (not full wordmark) — the word blurs at 56px chat-list size.
-- Cover motif: single faint watermark + soft blobs. No illustrations, no people, no emoji.
-- Exact-token colors only: clay `#cb7b52`, cream `#fefbf7`. Anuphan Medium 500. One face throughout.
-
-**Notes for CPO before upload**
-- Keep them as PNG — JPG compression introduces banding on the cream-on-clay surface.
-- Don't recenter the cover watermark — it's meant to bleed off lower-right.
-
-**Out of scope (Phase 5 backlog)**
-Rich menu, LINE Login artwork, LIFF assets, broadcast templates, Premium ID claim.
-
-**Handoff → PM (Claude)**
-Files in `design/line_oa/`. Nothing blocked on Dev. PM routes the upload to CPO.
-
----
-
-## 2026-06-02 — PM — Routing small Designer ask: LINE OA profile assets
-
-**What happened**
-- CPO promoted the LINE asset asks from `LINE_BACKLOG.md` ("queued for next Designer baton") to a proper handoff so they don't sit in the backlog.
-- Wrote `HANDOFF_designer_04.md` — small, focused: two PNG files (profile photo `oa_profile.png` 640×640, cover photo `oa_cover.png` 1080×878) for the ละมุน Official Account, delivered to `design/line_oa/`.
-
-**Why this isn't a workstream violation**
-- Dev's baton (`HANDOFF_dev_04.md`) is the active product workstream — auto-confirm + dry-run.
-- This Designer ask is a discrete asset pack, not a phase. Designer can run it in parallel without competing with Dev's product work. Like requesting a logo PNG, not initiating a design phase.
-- If a real conflict surfaces (Designer's brand decision affects something Dev's mid-implementing), PM intervenes.
-
-**Scope deliberately tight**
-- Only the two LINE OA images. Rich menu icons, LIFF assets, broadcast templates, Premium ID claim → all saved for Phase 5 when the LINE product surface is being designed for real.
-
-**Handoff → Designer (Claude Design)**
-- Brief: `HANDOFF_designer_04.md`. References `design/brand.jsx`, `brand.css`, PRD v0.3 §0.
-- Brand voice rule still applies (no babies-as-cartoon, no off-brand emoji, restraint over fullness).
-- When done: write a journal entry with file paths; `Handoff → PM`; PM tells CPO to upload via OA Manager (~5 min of clicks).
-
-CPO: please route `HANDOFF_designer_04.md` to Claude Design.
-
----
-
-## 2026-06-02 — PM — LINE account scaffolding done (Phase 5 prep)
-
-**What happened**
-- While Dev's baton is in flight (`HANDOFF_dev_04.md`), CPO and PM walked through LINE account setup as defensive brand + Phase 5 prep.
-- 4 steps completed end-to-end: LINE Business ID → Official Account `ละมุน` (with Thai greeting + bio) → response settings → Developers provider + Messaging API channel.
-- **One LINE flow correction logged:** Messaging API channels can no longer be created directly from Developers Console (LINE changed it). Correct path is OA Manager → Settings → Messaging API → Enable → channel auto-creates in Developers Console. Worth remembering for any future LINE onboarding.
-
-**Foundation now in place**
-- Official Account `ละมุน` (privately unpublished; auto-generated free `@handle` saved by CPO; Premium ID deferred).
-- Developers provider + Messaging API channel, linked to the OA.
-- Three credentials saved by CPO (treated as secrets): `LINE_CHANNEL_ID`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`. Ready to drop into Railway env vars when Phase 5 starts.
-- Auto-reply currently **on** with LINE's stock default (CPO's call — fine while there are no users). Phase 5 replaces with proper bot logic and switches webhook on.
-
-**Designer asset asks queued**
-- Added to `LINE_BACKLOG.md` → "Designer asset asks": OA profile photo (640×640 PNG of the `ล` mark) + cover photo (1080×878 with wordmark + tagline). Pull-based — Designer picks up on next baton; not a formal handoff.
-
-**Status of overall workstream**
-- Dev baton (`HANDOFF_dev_04.md`) is still queued: auto-confirm-on-invite + 7-scenario live dry-run.
-- PM has now landed all sensible pre-beta and pre-Phase-5 prep work that doesn't require Dev. Next concrete move is on Dev → PM, then beta opens.
-
----
-
-## 2026-06-02 — PM — Phase 5 queued: ละมุน on LINE
-
-**What happened**
-- Support email pivot committed + pushed by CPO. Privacy page + feedback button now route to `nattaponkraisingkorn@gmail.com`; will go live on next Railway redeploy (~2 min).
-- **CPO direction shift:** instead of creating a LINE OpenChat for the beta community (the original task #3), CPO proposed **bringing ละมุน itself into LINE as a primary interface.** This is a meaningful product surface change, not a small enhancement.
-- CPO explicitly queued the work: "Wait after dev complete this phase and we will move to this LINE ticket next."
-
-**Strategic note**
-- Thailand is a LINE-first market (~50M+ MAU). Multi-generational adoption (grandmas, nannies) is one of our biggest activation risks — they already live in LINE and won't install another app. Putting ละมุน inside LINE removes that barrier.
-- This affects identity (LINE Login), invites (LINE share), notifications, and possibly the primary UI surface. Treated as a Phase 5 candidate, not a Phase 4 enhancement.
-
-**Decisions made by PM (flag to override)**
-1. **Phase 4 (web beta) still proceeds as planned.** Don't pause/cancel. The web beta gives us product-loop signal that informs the LINE design. Sunk cost is small relative to learning value.
-2. **The original "create beta LINE OpenChat" task is replaced.** Community/support during web beta will happen via LINE 1:1 chats with the cohort + the in-app feedback button, not a group chat. If CPO wants a group chat later, easy to add.
-3. **LINE work begins after current Dev baton (`HANDOFF_dev_04.md`) closes.** Sequence preserved; no parallel workstreams.
-
-**Files produced this turn**
-- `LINE_BACKLOG.md` — initial framing for the Phase 5 ticket: surface options (LIFF / Mini App / Bot / hybrid), 6 open questions for CPO to mull on, sequencing notes, follow-ups.
-- `PLAN.md` updated: cleaned a duplicate Phase 4 entry, added Phase 5 placeholder, added BETA_RECRUITMENT.md and LINE_BACKLOG.md to file map.
-
-**Open questions for CPO** (no rush — these inform the Phase 5 PRD when we start it)
-- Does the web app survive after LINE launches (fallback) or get sunset?
-- LINE Login only, or LINE-Login-OR-email?
-- Family invites via LINE share or keep email path?
-- Notifications via LINE messages?
-- Should we pre-claim the LINE Official Account name "ละมุน" now (separate from technical integration)?
-
-**No handoff this turn** — workstream stays with PM (waiting on Dev's `HANDOFF_dev_04.md` return). Dev's baton is unchanged.
-
----
-
-## 2026-06-02 — PM — Pre-beta CPO tasks: §12 sign-offs locked, recruitment tracker shipped, LINE group plan, support email pivoted
-
-**What happened**
-- Walked CPO through all 4 parallel-safe pre-beta tasks (sign-offs, recruitment, LINE group, support email).
-
-**Locked decisions**
-1. `BETA_PLAN.md` §12 — all 5 items now ✅ locked: lifetime-free beta cohort, PostHog as analytics, Resend pulled forward to Phase 3.5, cohort target 15–20 (recruit ~25), Q1 monetization = free in v1.
-2. **Support email pivoted to `nattaponkraisingkorn@gmail.com` for the beta window.** `support@lamoon.app` was on every user-facing surface (privacy policy, feedback button, invite email, privacy page contact line) but the lamoon.app domain isn't registered yet — dead address would have bounced. CPO chose to use personal Gmail "for now" rather than register the domain this session.
-3. **`lamoon.app` domain registration** stays on the PM TODO list — to be done before public launch (or sooner if CPO wants). When done, swap-back is a simple find-and-replace across the same 5 files.
-
-**Files updated this turn**
-- `BETA_PLAN.md` §12 — 3 remaining sign-offs locked.
-- `PRIVACY_TH.md` + `web/content/privacy_th.md` — email pivoted (6 references each).
-- `web/components/SettingsScreen.tsx` — feedback button mailto pivoted.
-- `web/app/privacy/page.tsx` — privacy page contact line pivoted.
-- `BETA_COMMS.md` — invite email template + week-6 interview frame pivoted.
-- New: `BETA_RECRUITMENT.md` — 25-row tracker template + coverage check + workflow notes.
-
-**Internal docs** (`JOURNAL`, `PLAN`, `HANDOFF_dev_*`, `CPO_PROVISIONING_CHECKLIST`) still reference `support@lamoon.app` as historically accurate descriptions of the long-term plan. Not changed; revisit at domain registration.
-
-**Still on CPO** (today/this week, parallel-safe):
-- Commit + push the 5-file pivot via Terminal (instructions delivered in chat).
-- Create the private LINE OpenChat per the walkthrough; save the invite link.
-- Start filling `BETA_RECRUITMENT.md` — aim 25 warm intros over the next week or two, watching the coverage table at the top.
-
-**Note on signature style for outbound**
-- `BETA_COMMS.md` and the Supabase email templates currently sign as **"ทีมละมุน"** (generic). CPO can switch to named at any time; not blocking.
-
-**Status of overall workstream**
-- Dev baton (`HANDOFF_dev_04.md`) is still queued: auto-confirm-on-invite + 7-scenario live dry-run. PM is now free to start finalizing beta comms timing and bookmarking the PostHog dashboard once Dev finishes.
-
----
-
-## 2026-06-02 — PM — CPO provisioning complete; routing to Dev for auto-confirm + dry-run
-
-**What happened**
-- Walked CPO through the 6-step `CPO_PROVISIONING_CHECKLIST.md` interactively over chat. All 6 steps done: migration 0004 ran, Resend account + API key set up, Supabase custom SMTP wired to Resend with Thai-language email templates (confirmation, password reset, change email), PostHog EU project + key, all 6 env vars in Railway with redeploy, Privacy §1 entity info filled in.
-- **CPO override mid-flight (worth noting): "Let's do a proper signup / invitation system, not just for beta users."** Original plan was to turn email confirmations OFF as a beta shortcut. Instead we kept confirmations ON and pulled forward the "wire Resend as Supabase's SMTP + Thai email templates" work that was originally queued for pre-public. Net effect: no rework before public launch.
-
-**Decisions logged from this turn**
-1. **Email confirmations stay ON** for both beta and public. (Was: off for beta.)
-2. **Supabase custom SMTP via Resend** is live, sending in Thai for confirmation, password reset, change email. (Was: pre-public task.)
-3. **Latin sender "ละมุน"** in all outbound; signature style across email + LINE = generic **"ทีมละมุน"** — CPO can switch to named later if preferred (re-flagged for sign-off).
-4. **Auto-confirm-on-invite** must be added so invited users don't deal with two emails (the invite + a Supabase confirmation). The invite token proves they own the email; we can skip confirmation safely for that path. Small Dev addition; queued in Handoff #04.
-
-**Files produced this turn**
-- `HANDOFF_dev_04.md` — auto-confirm-on-invite implementation + signup UX + full live beta dry-run protocol (7-scenario, 7-pass-criteria).
-- Updated PLAN + this entry.
-
-**Routing to Dev (next baton): `HANDOFF_dev_04.md`**
-Two work items:
-1. **Auto-confirm-on-invite** — server endpoint that admin-confirms a user when they sign up via a valid invite token. Anti-abuse: email field is pre-filled and locked to the invite address. Plus the "check your inbox" screen for self-serve signups (new Thai keys to flag for Designer review per Phase-3.5 process note).
-2. **Live beta dry-run** — full 7-scenario protocol covering real-email signup + invite + cross-device + offline + privacy + feedback, all against real Resend + PostHog + Supabase. Must pass 7/7 before beta invites go out.
-
-**Carry-overs for CPO (parallel-safe; don't block Dev)**
-- Sign-offs on `BETA_PLAN.md` §12 (3 items left): lifetime-free for beta cohort, cohort target 15–20, Q1 monetization.
-- Recruitment list (~25 households) per `BETA_COMMS.md` §1.
-- Create the beta LINE OpenChat (private; PM + CPO co-admin).
-- Confirm `support@lamoon.app` forwards to CPO inbox.
-
-CPO: please route `HANDOFF_dev_04.md` to Claude Code. Dev runs the dry-run; on clean pass, baton returns to PM and we open beta.
-
----
-
-## 2026-06-02 — PM — Phase 3.5 engineering accepted; CPO checklist + beta comms drafted
-
-**What happened**
-- Reviewed Dev's Phase 3.5 close-out. Five items shipped, 5/7 success criteria verified by construction (Thai copy patch + Sleep concurrency + Privacy page + Feedback button + Invite seeded test). The remaining 2 (live PostHog dashboard, real email over network) are gated on CPO secrets — they'll be confirmed in the live dry-run, not in code review.
-- **Phase 3.5 engineering accepted.** Operationally pending the CPO provisioning checklist below.
-
-**This PM turn (no code work — prep for beta open)**
-Produced two deliverables so that the moment provisioning lands, we open beta with no further drafting needed.
-
-**1. `CPO_PROVISIONING_CHECKLIST.md` — single actionable doc for CPO**
-Six steps, ~45–60 min total, ordered with dependencies:
-1. Run `web/supabase/migrations/0004_invites.sql` in Supabase SQL editor.
-2. Turn email confirmations OFF in Supabase Auth.
-3. Create Resend account; generate `RESEND_API_KEY` (recommend onboarding domain for beta; domain verification deferred to pre-public).
-4. Create PostHog **EU** project; capture `NEXT_PUBLIC_POSTHOG_KEY` + host.
-5. Set four env vars in Railway (`RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`) + trigger redeploy (we know `NEXT_PUBLIC_*` only bakes in on fresh build, per Phase 3 deploy notes).
-6. Fill in `PRIVACY_TH.md` §1 entity placeholders (unlocks the full policy page).
-
-Each step has a "verify done" check and a "if it fails" fallback so CPO doesn't get stuck.
-
-**2. `BETA_COMMS.md` — finalizes BETA_PLAN §6 + §11**
-All in Thai, all passing the brand voice filter (`ละมุน` feeling — warm, plain, not transactional, no internal jargon):
-- Recruitment warm-intro template (CPO uses for the ~25 warm intros).
-- Beta invite email (the one Resend actually sends).
-- LINE OpenChat welcome (when each household joins).
-- Weekly survey (5 questions; the Sean Ellis PMF question first).
-- Week 2 interview guide (first-week friction; invite-flow probe).
-- Week 6 interview guide ("would you miss it?" — the success criterion).
-- Monday weekly digest template.
-- End-of-beta message (two variants: public launch / fix cycle).
-- Beta agreement (short, symmetric "ของเรา / ของคุณ").
-- Operating cadence summary (daily/weekly/per-household).
-
-**Decisions made by PM this turn**
-- **Recruitment list size: 25 to land 15–20 active.** Don't overcrowd.
-- **Resend onboarding domain for beta** — cleanest path to a live invite email today; migrate to `noreply@lamoon.app` once the domain is registered (separate PM TODO).
-- **PostHog EU host** by default — PDPA-friendly, and if EU latency is a complaint we swap to self-host (not US — never US host for TH user data without a real reason).
-- **Privacy §1 unlock = single source of truth** (`PRIVACY_TH.md` itself, not an env var). Simpler for CPO to edit; one place to look. Confirmed Dev's "sync to `content/privacy_th.md` at build time" pattern is fine.
-- **"ของเรา / ของคุณ" framing in the beta agreement** rather than "terms" / "obligations" — symmetric, sets the tone.
-
-**Carry-overs still on PM's list (not blocking provisioning)**
-- Domain `lamoon.app` (or `.co` / `.in.th`) — research availability, recommend, secure. Doesn't block beta; needed before public launch.
-- Legal review of `PRIVACY_TH.md` — needed before public launch, not beta.
-- Hard-delete edge function — build when first user actually requests deletion.
-
-**Handoff → CPO (Nattapon)**
-This baton is unusual — going to CPO directly rather than Designer/Dev. Brief: `CPO_PROVISIONING_CHECKLIST.md`. Six steps, sequenced, ~45–60 min.
-
-In parallel:
-- Sign off on `BETA_PLAN.md` §12 (5 items — recommendations attached).
-- Build the recruitment list per `BETA_COMMS.md` §1 (CPO's network).
-- Confirm: signature style on outbound — generic "ทีมละมุน" or named "จาก [your name]"? (Question in BETA_COMMS.md §11.)
-- Create the beta LINE OpenChat (private; PM + CPO co-admin).
-- Get `support@lamoon.app` forwarding to your inbox.
-
-When you message "provisioning done," the next baton goes to **Dev** (Claude Code) for the live beta dry-run — invite a fresh email → sign up via the link → verify shared baby + PostHog events firing + real invite email arriving. On a clean dry-run, PM opens beta invites per `BETA_COMMS.md`.
-
----
-
-## 2026-06-02 — Dev — Pre-beta enablement complete (Phase 3.5) → Handoff → PM
-
-All five items from `HANDOFF_dev_03.md` are built, on `main`, and verified to the extent possible without CPO secrets. Migration to run: **`0004_invites.sql`** (0001–0003 already live).
-
-**Shipped (commits on `main`)**
-1. **Thai copy patch** — applied all `TH_PATCH` keys; killed 3 internal-jargon leaks (เฟส 3 / ทีม PM / eng-narrative); softened error copy; removed `phase3.soon`.
-2. **Sleep-timer concurrency** (option A) — peer timer within 60s → non-blocking sheet, default "open the running timer" (seeds the sheet with the peer's activity), alt "start new". `concurrency.sleep.*`.
-3. **Caregiver invites by email** (beta blocker) — `caregiver_invites` + RLS + RPCs (create/accept/revoke, owner-check, 10-cap, 14-day expiry); `/api/invite` Resend sender (Thai template) that degrades to a copyable link without a key; `/invite/[token]` accept page (signup/signin → auto-link); Caregivers UI shows pending invites + revoke.
-4. **PostHog analytics** — privacy-first wrapper (UUID-only identify, no autocapture, masked inputs, EU host), no-ops without a key. All **12 BETA_PLAN §5 events** wired, no PII.
-5. **Privacy page + feedback** — `/privacy` parses `content/privacy_th.md` (single source, synced from root `PRIVACY_TH.md`) → summary card + sticky TOC + sections via react-markdown; strips the internal note; **blocks the full policy while §1 entity placeholders are unfilled**. Feedback row in Settings → mailto with user/route context (no content captured).
-
-**Verification vs the 7 success criteria**
-1. ✅ TH_PATCH applied, no `phase3.soon`, **35/35 headless Thai QA** green.
-2. ✅ Sleep concurrency soft-prompt wired (mirrors the verified Eat pattern; a real 2-caregiver collision is exercised live once the cohort exists).
-3. ⏳ Invite→signup-via-link→accept→**shared baby verified** (seeded headless run links the new user and lands them on the owner's baby). The literal "**real email to a fresh address over the network**" needs `RESEND_API_KEY` + email-confirmations-off — **CPO deps**.
-4. ⏳ 12 events wired, no PII (verified by construction; `track()` no-ops without a key). Live dashboard needs `NEXT_PUBLIC_POSTHOG_KEY` — **CPO dep**.
-5. ✅ `/privacy` renders summary+TOC+sections; internal note and §1 placeholders do **not** leak; full sections unlock once §1 is filled.
-6. ✅ Feedback button opens a mail draft to support@lamoon.app.
-7. ⏳ Full beta dry-run on staging — gated on the CPO items below.
-
-**Decisions I own (logged)**
-- Invites route **all** new emails through the token+link flow (existing-user instant-link kept in the repo but unused by the UI) — one model, works for a grandma/nanny without an account.
-- `caregiver_invited` channel logged as `email-new`; `activity_edited` mapped to **sleep-stop** (the only edit surface); `sync_failed` fires only on a failure while believed-online (not on normal offline).
-
-**CPO dependencies (PM to route; none are code)**
-- **Run `web/supabase/migrations/0004_invites.sql`** in the Supabase SQL editor.
-- **Email confirmations OFF** for the beta window (self-serve signup); until then dashboard-pre-confirm works.
-- **Resend**: account + verified sender (or onboarding domain for beta) → set `RESEND_API_KEY` (+ optional `RESEND_FROM`) in Railway; also set **`NEXT_PUBLIC_APP_URL`** = staging URL so invite links resolve.
-- **PostHog**: EU project → `NEXT_PUBLIC_POSTHOG_KEY` (+ `NEXT_PUBLIC_POSTHOG_HOST`) in Railway.
-- **Privacy §1**: legal entity name + address → unlocks the full policy page.
-
-**Deferred (logged, not beta blockers):** account hard-delete edge function; WHO LMS reference data; re-enable email confirmation before *public* launch; EN locale; push; LINE login.
-
-**Handoff → PM (Claude)**
-- Pre-beta engineering is done; flipping the beta live now hinges on the **CPO provisioning checklist above** (run 0004, confirmations-off, Resend + PostHog keys + `APP_URL`, privacy §1). Once those land I'll run the live beta dry-run (criteria #3/#4/#7) and post results.
-- Suggest PM finalize the cohort + comms (`BETA_PLAN` §6/§11) in parallel.
-- CPO: please route to PM.
-
----
-
-## 2026-06-02 — PM — Designer polish accepted; routing to Dev for beta enablement
-
-**What happened**
-- Designer returned a focused pre-beta copy polish (no canonical journal entry from Designer this round — recording the result here so the audit trail stays clean). Deliverables in `design/`: `th-strings-patch.js` (the diff), `section_polish.jsx` (rendered diff + Sleep concurrency mock + privacy layout mock), updated `MiNom Design — Thai Localization.html`, `thai.css`, `thai_app.jsx`.
-- Reviewed the diff + both mocks. Quality is high — and **caught three real bugs that would have shipped to beta**, not just polish:
-  1. `comingSoon.title` had "เฟส 3" (internal phase name) leaking to users.
-  2. `comingSoon.body` told an engineering narrative ("sync proven first, then copy the pattern") to parents.
-  3. `privacy.body` referenced "ทีม PM" (internal role) in user copy.
-- Plus voice improvements on errors (softer cadence with "นะ"; offering the next step instead of dead-ending), Settings clarity (`settings.baby` → "ข้อมูลลูก"), and complete SR sentences for a11y.
-
-**Decisions accepted**
-1. **Sleep-timer concurrency = A.** Designer added `concurrency.sleep.{title,body,view,logAnyway}` mirroring the Eat pattern. Primary action = open the running timer (safest default; no duplicate timers). Confirmed.
-2. **Privacy page layout = approved.** Summary card at top, sticky TOC for the 12 sections, plain-Thai section bodies. Mocked in `section_polish.jsx` → `PrivacyLayoutMock`. Confirmed.
-3. **All `TH_PATCH` keys accepted, `phase3.soon` removed.**
-
-**Reflection (worth logging)**
-- The three "internal jargon leak" bugs got past Phase 3 QA because Dev wrote the strings to avoid English leaks, not against the voice filter. The filter only existed *for* Designer-written copy. Going forward: any Dev-written user-facing string passes through Designer voice review before merge — bake it into the next cycle's definition-of-done. Not pointing fingers; it's a process gap, fix it once.
-
-**Routing to Dev (next baton): `HANDOFF_dev_03.md`**
-Five work items, in order:
-1. **Merge the copy patch** (small) — apply `TH_PATCH`, remove `phase3.soon`, regression QA in Thai.
-2. **Wire Sleep concurrency** (small) — mirror the Eat soft-prompt with the new keys.
-3. **Invite tokens + email for new-user caregivers** ⚠️ **beta blocker** — `caregiver_invites` table, owner invite flow, email send (Resend wired), token-based signup/auto-link, 14-day expiration, owner revoke.
-4. **PostHog analytics** ⚠️ **beta blocker** — all 12 events from `BETA_PLAN.md` §5, EU region, no PII in payloads, masked autocapture.
-5. **Privacy page + in-app feedback** (medium) — wire full `PRIVACY_TH.md` into `/privacy` per Designer's layout; "ส่งฟีดแบ็ค" row in Settings opens a mailto draft.
-
-**Deferred (recorded for the future)**
-- Hard-delete edge function — build when first user actually requests.
-- WHO LMS data — chart captioned as estimates during beta; data work before public.
-- Re-enabling Supabase email confirmations — do before public launch, not before beta.
-
-**Process note for Dev**
-- The "definition of done" for Phase 3.5 includes a Thai-copy review by Designer for any new user-facing string (lesson from the polish bugs above). Any new keys you add to `th.json` during this phase should be flagged in your close-out entry so Designer can vet before they ship.
-
-**CPO-side asks (parallel-safe, won't block Dev from starting)**
-- `BETA_PLAN.md` §12 sign-offs (5 items) — still pending.
-- `PRIVACY_TH.md` §1: legal entity name + address.
-- Supabase: flip email confirmations **OFF** (small dashboard toggle).
-- **Resend account** + domain verification for `noreply@lamoon.app` (or use Resend's onboarding domain temporarily and migrate once `lamoon.app` is registered).
-- **PostHog account** + project key.
-- Start informal beta recruitment from your network.
-
-CPO: please route `HANDOFF_dev_03.md` to Claude Code.
-
----
-
-## 2026-06-02 — PM — Phase 3 accepted; opening Phase 4 (Beta); routing to Designer
-
-**What happened**
-- Reviewed Dev's Phase 3 close-out: 8/8 live verification on real Supabase; 0.6s cross-device realtime (target <5s); RLS isolation proven across two real accounts. Full new-parent loop works in Thai end-to-end on staging.
-- **Phase 3 accepted.** Closes Phase 2's long-standing two-device + RLS carry-over and PRD-v0.3 in Thai is now a real, live thing.
-
-**Calls I made on Dev's 5 follow-ups (flag to override)**
-1. **Self-serve signup for beta** → **Turn email confirmations OFF in Supabase for the beta window.** PRD says enable confirmation before *public* launch; off-for-beta is consistent. Wire a real email sender (Resend recommended) as a separate task before public launch. Beta is invite-only; bot signups are not a real risk at this scale.
-2. **Privacy policy full text** → drafted as `PRIVACY_TH.md`. Comprehensive PDPA-aligned Thai policy, flagged "draft pending legal review before public launch." CPO needs to fill in legal entity name + address (§1) and arrange Thai-lawyer review before going public; beta is OK with this draft.
-3. **Designer routing** → next baton (see `HANDOFF_designer_03.md`). Small, focused: review Dev-added Thai keys + decide Sleep-concurrency copy.
-4. **Phase-3.x backlog triage:**
-   - **New-user caregiver email invites** → **blocks beta.** Many families will add grandma/nanny who don't have accounts yet. Sequenced into the next Dev handoff.
-   - **Account hard-delete edge function** → **not blocking.** 30-day grace UI is enough; build when first user actually requests deletion.
-   - **WHO LMS reference data** → **not blocking beta.** Caption the chart "ค่าประมาณการณ์ — รอข้อมูล WHO ฉบับเต็ม" during beta; do the data work before public.
-5. **Phase 4 open** → wrote `BETA_PLAN.md`: cohort sizing (15–20 households), recruitment channels, pre-beta gates, PostHog instrumentation, feedback loops, the "go public?" criteria.
-
-**Pre-beta gates (sequenced for Dev's next baton)**
-- Merge Designer's Thai-copy patch (after Designer returns).
-- Turn Supabase email confirmations OFF.
-- Implement invite tokens + email for new-user caregiver invites. **(Blocker.)**
-- Wire **PostHog** analytics for the success metrics (PRD §8).
-- Wire full `PRIVACY_TH.md` into `/privacy`.
-- Add in-app feedback button in Settings.
-
-**Open questions for CPO**
-- BETA_PLAN.md §12 has 5 sign-off items: (1) lifetime-free for beta cohort, (2) PostHog as analytics, (3) Resend deferred to pre-public, (4) cohort target 15–20, (5) Q1 monetization still open. PM recommendations attached; will proceed on those unless flagged.
-- Legal: who's the registered entity for ละมุน? Needed in `PRIVACY_TH.md` §1 before any user sees it on the live site.
-
-**Files produced this turn**
-- `PRIVACY_TH.md` — Thai privacy policy draft (PDPA-aligned, ~12 sections + internal team notes).
-- `BETA_PLAN.md` — Phase 4 plan (goals, cohort, gates, metrics, cadence, success criteria).
-- `HANDOFF_designer_03.md` — small focused brief.
-- PLAN.md updated.
-
-**Handoff → Designer (Claude Design)**
-- Brief: `HANDOFF_designer_03.md`. Short pass — Dev-added Thai key polish + Sleep-concurrency decision + optional privacy-page layout note.
-- After Designer returns, PM writes `HANDOFF_dev_03.md` for the pre-beta enablement work above. Then beta opens.
-
-CPO: please route to Claude Design. While that's in flight, **two parallel-safe asks**: (a) decide BETA_PLAN.md §12 sign-offs at your convenience, (b) tell PM the registered entity name + address for the privacy policy.
-
----
-
-## 2026-06-02 — Dev — 2.8 VERIFIED on live Supabase → Phase 3 COMPLETE → Handoff → PM
-
-**The last gate is closed.** Real Supabase backend is provisioned (CPO) and the literal two-device + RLS exit criteria now pass against it. **Phase 3 is done and live-verified.**
-
-**Provisioning (CPO did this; recorded for the team)**
-- Supabase project live, region **Singapore (ap-southeast-1)**; migrations `0001`–`0003` run; `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (new `sb_publishable_` key, works with our supabase-js 2.106) set in Railway. App is on the real backend at https://minom-production.up.railway.app
-
-**Live verification — 8/8 (automated headless against production)**
-- ✅ Real auth (sign-in) on the real backend.
-- ✅ Real storage: baby + Eat persisted in Postgres; a fresh 2nd session sees them.
-- ✅ **REALTIME: an Eat on device A appeared on device A2 in ~0.6s** (criterion: <5s).
-- ✅ **RLS isolation**: account 2 cannot see account 1's baby (lands on setup, sees only its own); account 1 stays isolated from account 2. Data isolation enforced by the RLS policies in 0001.
-
-This closes **Phase 2 exit criterion #4** (the long-standing carry-over) and the real-backend halves of **Phase 3 #4/#5**.
-
-**Deploy gotchas hit + fixed (for the record)**
-- Railway: app subdir → Root Directory `/web`; HIGH-CVE gate → Next 14→15; PORT 8080 → domain target 8080.
-- Supabase: `NEXT_PUBLIC_SUPABASE_URL` must be the **base host** (`https://<ref>.supabase.co`) — a copied `/rest/v1/` endpoint caused "Invalid path"; `NEXT_PUBLIC_*` only bakes in on a **fresh build**.
-- Email confirmations are **ON** in this project; for the 2.8 test we used **pre-confirmed accounts** (dashboard-created, auto-confirm) and signed in. (Supabase rejects `@test.com` as an invalid email domain — used `@gmail.com`.)
-
-**Small follow-ups (non-blocking; PM to schedule — none gate Phase 3)**
-- **Self-serve signup for beta**: either turn email confirmations OFF (toggle relocated in this Supabase version — find together) or wire an email sender. Today's flow needs users pre-confirmed or confirmations off. PRD already says "enable confirmation before *public* launch", so off-for-beta is consistent.
-- **New-user email invites** (Caregivers) → invite-token + email (Phase 3.x); existing-user invites work now.
-- **Account hard-delete** → Supabase edge function (auth admin); UI + 30-day-grace messaging in place.
-- **Privacy policy full legal text** (PM); **WHO LMS reference data** for exact growth curves (data task).
-
-**Handoff → PM (Claude)**
-- **Phase 3 is complete and verified live** — every dev ticket from `HANDOFF_dev_02.md` done in Thai on the real backend; the full new-parent loop works on staging (signup/sign-in → baby → log all three verbs incl. back-dated → growth → caregivers → timeline history → settings → PDPA), with cross-device realtime <5s and RLS isolation proven.
-- **Recommend PM open Phase 4 (Beta & Launch)** per PLAN §3: recruit 10–20 households, instrument the success metrics, decide the email-confirmation-vs-sender call for self-serve signup, and line up the Phase-3.x follow-ups above.
-- Please route the Thai-copy review (Dev-added keys) + the `concurrency.sleep` copy question to Designer, and own the privacy-policy text.
-- CPO: please route to PM. Dev baton is free.
-
----
-
-## 2026-06-02 — Dev — Phase 3 feature-complete (demo-verified); only live Supabase verification remains → Handoff → PM
-
-**Summary:** Every Phase-3 dev ticket that doesn't require the live backend is **built, in Thai, on the proven architecture, and verified**. The one item I can't self-serve — **#2.8 the literal two-device + RLS test on a real Supabase** — is built in code (incl. migrations) but **gated on CPO provisioning**. All on `main`; Railway live (demo mode): https://minom-production.up.railway.app
-
-**Shipped this phase (commits on `main`)**
-- **i18n + rebrand to ละมุน** — Thai throughout, Anuphan via next/font, `Intl('th-TH')`, brand marks + tagline; internal MiNom unchanged.
-- **Three verbs** — Eat, Sleep (live start/stop timer), Diaper (ฉี่/อึ/ทั้งคู่), all with optimistic write + 5s undo + offline outbox (now insert/update/delete ops) + realtime + attribution.
-- **Back-dating** (PRD §4) — shared WhenCard, capped not-in-future, on all logs.
-- **Timeline history** — swipe / chevrons to past days; today live, past read-only.
-- **Growth** — weight/height entry, history (delete), WHO percentile chart (bands are representative placeholders — exact WHO LMS dataset is a flagged data task), 0002 migration.
-- **Settings** — display-name edit, notification opt-in toggle (off by default; no delivery in v1), data export (JSON), delete account (30-day-grace messaging), sign out.
-- **PDPA** — 4-line Thai consent on signup + `/privacy` policy page (PM to supply full legal text).
-- **Caregivers** — roster + owner badge, invite-by-email (cap 10), remove/transfer/leave; 0003 migration with SECURITY DEFINER RPCs.
-- **Accessibility** — live-regions (offline/sync/sleep status), roles (switch/radiogroup/tabs), aria-labels on icon buttons, reduced-motion, ≥48px primary targets, icon+label state cues, labeled inputs.
-
-**Verification**
-- `tsc` + production build green throughout (Next 15.5.18).
-- **35/35 headless-Chrome QA in Thai** covering: signup+consent → setup → all three verbs (incl. sleep start→running→stop→duration + offline cycle) → back-dating (capped) → timeline yesterday↔today → growth add→chart→history → caregivers owner view + invite error → settings export → privacy page → optimistic+undo, offline→รอซิงค์→flush, cross-tab realtime, attribution, theme.
-- Screenshots match the Thai hi-fi + brand (Home/Eat/Sleep/Timeline/Auth/Caregivers/Settings, light + dark).
-- DB migrations ready to run: `web/supabase/migrations/0001_init.sql` (schema + RLS + realtime + auth trigger), `0002_growth.sql`, `0003_caregivers.sql`.
-
-**Decisions I own (logged; PM/Designer flag if you disagree)**
-- i18n = minimal flat-key `t()` (next-intl can't model the flat th.json with collisions); swap when EN lands.
-- Concurrency soft-prompt = **Eat only** (th.json copy is feed-specific). Sleep-timer concurrency needs `concurrency.sleep.*` copy from Designer.
-- Diaper has no concurrency prompt (distinct events, not a clash).
-- Sleep manual entry = back-date the start (covers "forgot to start"); full start+end manual entry deferred unless wanted.
-- Added many Thai keys (growth.*, care.*, settings.*, privacy.*, age.*, a11y.*, auth.error.*) to avoid English leaks — **please have Designer review the Thai copy**; these cover surfaces the Designer's table didn't include.
-
-**What's gated (cannot self-serve — needs CPO)**
-- **#2.8 live two-device + RLS** and the brief's success criteria #4/#5 (real second caregiver, cross-device ≤5s on staging): need a **Supabase project (region ap-southeast-1) + the two `NEXT_PUBLIC_SUPABASE_*` env vars in Railway + run migrations 0001–0003**. ~30–45 min. Then I'll run the live verification and close those criteria.
-- **New-user email invites** (Caregivers) need an invite-token table + email delivery (Phase 3.x); demo links existing accounts.
-- **Account hard-delete** needs a Supabase edge function (auth admin); UI + grace messaging are in place.
-- **Privacy policy full text** (PM) and **WHO LMS reference data** (data task) — flagged.
-
-**Handoff → PM (Claude)**
-- Phase 3 is **feature-complete and demo-verifiable live** — review the rebranded Thai app at the URL; do the full new-parent loop in demo mode.
-- To formally close Phase 3 exit criteria #4/#5, **CPO needs to provision Supabase** (the long-pole, tracked since Phase 2). Once env vars + migrations land, I'll run the two-device/RLS pass and post the result.
-- Please route the **Thai-copy review of Dev-added keys** + the **concurrency.sleep copy** question to Designer, and the **privacy policy full text** to yourself.
-- CPO: please route to PM. Suggest PM begins Phase 4 (beta) prep in parallel; the only blocker to a real-backend beta is Supabase provisioning.
-
----
-
-## 2026-06-02 — Dev — Phase 3 progress: three verbs + back-dating + timeline history (checkpoint; Dev continues)
-
-**Status:** Part 2 (Phase 3) underway. The **core product loop is done in Thai**: log all three verbs (with back-dating) + view history. Still on the Dev baton; remaining Phase 3 surfaces below. All pushed to `main`; Railway auto-redeploys https://minom-production.up.railway.app (demo mode).
-
-**Shipped since the Part 1 checkpoint**
-- **Back-dating (PRD §4)** — shared `WhenCard` with a แก้ไข affordance → native datetime input, **capped not-in-future**. On Eat, Diaper, and Sleep (manual start). 2-tap path preserved when "now" is right.
-- **Diaper vertical** — wet/dirty/both (ฉี่/อึ/ทั้งคู่), instant log reusing the proven Eat insert/offline/optimistic/undo path. Home card live; Timeline summarizes kind.
-- **Sleep vertical (timer)** — start/stop with a live mono elapsed timer, กำลังหลับ/awake states, peer-update reconciliation. Required an architecture extension: the **offline outbox is now ops (insert | update | delete)** so a sleep-stop is offline-safe and flushes in order; added `updateActivity` + realtime `onUpdate` to both repos. Home sleep card live with pulse; Timeline shows sleep duration.
-- **Timeline history** — swipe (or ←/→ chevrons) to past days; today stays live/editable, past days read-only. วันนี้/เมื่อวาน/date via Intl. No date picker.
-
-**Decisions I own (logged)**
-- **Concurrency soft-prompt stays Eat-only** for now: the th.json `concurrency.*` copy is feed-specific ("บันทึกการให้นม"). Diaper events aren't a clash; a Sleep-timer clash would need its own Thai copy. **Designer: if you want sleep-timer concurrency, please add `concurrency.sleep.*` copy** and I'll wire it.
-- **Sleep manual entry** = back-date the start via WhenCard (covers "forgot to start the timer"). A full manual completed-sleep entry (separate start+end pickers) is deferred unless you want it — flag.
-- Removed the Phase-2 "coming soon" stub (all three verbs now live).
-
-**Verification**
-- `tsc` + production build green throughout (Next 15.5.18).
-- **25/25 headless-Chrome QA in Thai**, incrementally extended: 3-verb logging, back-dating input (capped), Sleep start→running→stop→duration + an offline start/stop cycle, Diaper kinds, Timeline yesterday↔today, plus all Phase-2 checks (optimistic+undo, offline→รอซิงค์→flush, cross-tab realtime, attribution). Screenshots match the Thai Eat/Sleep/Home hi-fi (light + dark).
-- Three commits on `main` (2.1a, 2.1b, 2.2).
-
-**Remaining Phase 3 (Dev continues; sequence)**
-3. **Growth** — weight + height entry, WHO percentile curves, history (edit/delete).
-4. **Settings** — export JSON, delete account (PDPA grace), notif opt-in toggles, display name/avatar.
-5. **PDPA** — signup consent (4 lines from `consent.*`) + privacy policy page (PM drafts full text).
-6. **Accessibility pass** — SR labels, aria-live on toasts, reduced-motion audit, 48px/AA both themes across the new screens.
-7. **Caregivers** — invite/roles/transfer; UI buildable on demo, true multi-user verify needs live Supabase.
-8. **Supabase live + two-device + RLS** — gated on CPO provisioning (carry-over).
-
-**Dependency:** Supabase provisioning (CPO) still gates the literal two-device/RLS close-out and full Caregivers verification. Everything else proceeds on demo mode.
-
-Will write `## — Dev — Phase 3 complete` with the full verification log + `Handoff → PM` when the remaining surfaces land.
-
----
-
-## 2026-06-02 — Dev — Part 1 complete: i18n wiring + rebrand to ละมุน (checkpoint; Dev continues to Phase 3)
-
-**Status:** Handoff #02 has two parts. **Part 1 (i18n + rebrand) is done, verified, and pushed.** I still hold the Dev baton and continue to **Part 2 (Phase 3 features)** next — this is a progress checkpoint for PM/CPO visibility, not a baton return.
-
-**What shipped (Part 1)**
-- **Thai everywhere.** Every UI string + screen-reader label now resolves through `t()` against `web/locales/th.json`. `<html lang="th">`. No English leaks (verified). The dev-facing demo/skeleton notes and the manual offline toggle are gated behind a debug flag so the product UX is clean Thai.
-- **Typography.** Anuphan + Spline Sans Mono via **next/font** (subset + preload for the §11.6 first-paint budget; replaces the old render-blocking Latin `@import`). `thai.css` `[lang="th"]` line-heights 1.45 body / 1.35 titles, letter-spacing/caps neutralized. Spline mono kept for Latin numerals only.
-- **Formatting.** All dates/times/numbers via `Intl.*('th-TH')` — 24-hour, Arabic numerals. Baby age, weekday, clock, amounts all localized.
-- **Rebrand (user-facing only).** `LamoonWordmark` + `LamoonIcon` (Anuphan, clay dot) on auth + loading; `brand.css`; `<title>`/meta/OG → **ละมุน** + tagline "ดูแลลูกอย่างละมุนละไม". **Internal MiNom unchanged** (repo, folder, package, Railway service, env).
-
-**Decisions I own (logged, not silent)**
-1. **i18n: minimal flat-key `t()` instead of next-intl.** The Designer's `th.json` uses flat dotted keys with intentional collisions (`auth.toSignUp` is a string AND `auth.toSignUp.cta` exists) — next-intl's nested-namespace model can't represent both. For a single locale, a tiny resolver over the flat dict is the correct "equivalent" the brief allows, and matches the th.json shape exactly. When EN lands, swap for a locale-selecting provider (en.json stub already in place). **PM: flag if you'd rather I force next-intl (would require restructuring th.json keys).**
-2. **Clarification #5 implemented as specced:** manual offline toggle → dev/QA-only behind `?debug=1`; production shows only the automatic read-only offline banner.
-
-**Keys I added to th.json (please have Designer review the Thai — I wrote these to avoid English leaks, not as final copy):**
-`age.days/weeks/months/years`, `settings.signOut`, `settings.baby`, `phase3.soon`, `setup.createError`, `auth.error.exists`, `auth.error.badCredentials`, `a11y.themeToggle`, `a11y.primaryNav`, `a11y.deleteEntry`. No keys from the Designer's set were missing for the existing screens — these cover surfaces the Designer's table didn't include (errors, a11y labels, settings stub, age strings).
-
-**Verification (Part 1)**
-- `tsc` + production build green on Next 15.5.18.
-- **13/13 headless-Chrome QA in Thai**: signup→setup→Home→Eat→Timeline; optimistic + undo; offline → **รอซิงค์** → reconnect → flush; cross-tab realtime arrival; attribution (**คุณ**); `lang=th`; age via Intl.
-- Screenshots checked vs the Thai hi-fi + brand: Anuphan renders cleanly (no tofu) in light + dark; wordmark matches `brand.jsx`.
-- Pushed to `main`; Railway auto-redeploys https://minom-production.up.railway.app (still demo-mode).
-
-**Part 2 — Phase 3 plan + sequence (Dev continues)**
-1. **Back-dating affordance** on Eat (the new shared pattern) → then **Sleep** + **Diaper** quick-logs (copy the Eat vertical: sync/offline/optimistic/undo/concurrency/attribution).
-2. **Timeline** swipe-left to past days.
-3. **Growth** (weight + height, WHO percentile curves, history edit/delete).
-4. **Settings** (export JSON, delete account w/ PDPA grace, notif opt-in toggles, display name/avatar).
-5. **PDPA** signup consent (4 lines from `consent.*`) + privacy policy page (PM drafts full text).
-6. **Accessibility pass** (SR labels, aria-live on toasts, reduced-motion, 48px, AA both themes).
-7. **Caregivers** (invite/roles/transfer) — **needs real Supabase** for true multi-user; build UI on demo, verify on live.
-8. **Supabase live + two-device + RLS** — gated on CPO provisioning (carry-over).
-
-**Dependencies/risks**
-- **Supabase provisioning** (CPO) is still the long-pole — blocks the literal two-device/RLS close-out and full Caregivers verification. I'll build everything else against demo mode and flip to live when env vars land.
-
-**Status → Dev continues to Part 2.** Will write `## — Dev — Phase 3 complete` with the full verification log + `Handoff → PM` when the whole surface is done. CPO/PM: the live URL now shows the rebranded Thai app for review; flag the i18n-library decision (#1) and route the added-key list to Designer if you want the Thai polished.
-
----
-
-## 2026-06-01 — PM — Phase 2.5 accepted; routing to Dev for i18n + Phase 3
-
-**What happened**
-- Reviewed the Designer's Rebrand + Localization deliverable. Read `th.json` (microcopy keyed to existing string IDs, intent-driven Thai, kid-words ฉี่/อึ, ให้นม, ครอบครัว) and `brand.jsx` (wordmark, icon, voice filter with on-brand/off-brand examples). Hi-fi screens checked at 360px light+dark. PDPA 4-line signup consent in place.
-- **Phase 2.5 accepted.** Designer's work is high-craft: brand thesis (the name names the feeling, so it's a design filter), typography (Anuphan with one personality for logo + UI), microcopy from intent not translation, and concrete voice examples that future copy can be tested against.
-
-**Pending decisions — both confirmed**
-1. **Tagline: "ดูแลลูกอย่างละมุนละไม"** → ✅ **Locked.** Echoes the brand word's compound form; the line reinforces the name. Warm, declarative, not advertising-loud. The two alts stay on file in `design/brand.jsx` for splash/store-listing length needs.
-2. **Clarification #4 — back-dating Eat via `แก้ไข`** → ✅ **Approved as a scope addition.** Reasoning: parents log retrospectively all the time ("she ate 20 min ago, just now writing it down"); without back-dating, the timeline drifts from reality. Adds a tiny edit affordance to the quick-log; the 2-tap path is preserved when "now" is correct. Matters most for Diaper (often logged minutes-hours after the fact). Pattern carries to Sleep and Diaper in Phase 3.
-
-**Files promoted**
-- `lamoon_drop/design/*` → `MiNom/design/` (Phase-1 EN reference kept intact; Thai files alongside).
-- `lamoon_drop/web/locales/th.json` → `web/locales/th.json` (Dev drop-in).
-- `lamoon_drop/` to be removed; the Designer's journal entry below is now folded into the canonical `JOURNAL.md`.
-
-**PRD updates**
-- `PRD_v0.3.md` §0 — locked tagline + positioning + brand voice rule.
-- `PRD_v0.3.md` §4 — added back-dating (the new pattern).
-
-**Handoff → Dev (Claude Code)**
-- Brief: `HANDOFF_dev_02.md`. Two work batons bundled:
-  - **Part 1 — i18n wiring + rebrand swap.** Wire next-intl with `web/locales/th.json`; set `<html lang="th">`; load Anuphan (subset + preload); `Intl.*('th-TH')` for dates/numbers; swap user-facing brand to ละมุน via `design/brand.jsx`. Internal MiNom unchanged.
-  - **Part 2 — Phase 3 (Complete MVP).** Copy Eat vertical to Sleep + Diaper (with back-dating); build Growth (WHO weight+height), Caregivers (per §5a), Timeline (swipe-left for past days), Settings, PDPA signup consent (lines in `th.json` already), accessibility pass.
-- Read order: `PRD_v0.3.md` → this `JOURNAL.md` (the Designer entry below) → `HANDOFF_dev_02.md` → design deliverables.
-- Exit criteria spelled out in the brief. North-star QA loop: a CPO can complete the full new-parent loop on staging in Thai.
-
-**Carry-over: Supabase provisioning**
-- Still the long-pole risk for closing Phase 2's literal exit criteria (two-device + RLS). CPO action; Dev can proceed in parallel using demo mode and flip to live the moment env vars land.
-
-CPO: please route `HANDOFF_dev_02.md` to Claude Code. Q1 (monetization) remains the only open PRD question; doesn't block.
-
----
-
-## 2026-06-01 — Designer — Rebrand + Localization rework complete
-
-**What happened**
-- Delivered the **rebrand to ละมุน (Lamoon)**, the Thai-first rework, and answers to Dev's five Phase-2 clarifications — in one pass. Built as a **companion deliverable** so the Phase-1 English system stays intact as the reference; only the name, typography and words change (per the brief's "don't redo what works").
-
-**Part 0 — Brand identity (ละมุน / Lamoon)**
-- **Wordmark:** ละมุน set in **Anuphan Medium (500)** with the warm-clay dot carried over from v0.2 — logo and UI share one type personality. Shown large→small, light + dark.
-- **App icon:** ล monogram (first letter) in cream on warm clay, validated 1024→48px. Placeholder for staging; final at Phase-4 beta.
-- **Tagline (picked):** **"ดูแลลูกอย่างละมุนละไม"** — *care for your baby, exquisitely gently* — echoes the ละมุนละไม compound so the line reinforces the name. Two alts documented.
-- **Brand voice filter:** one rule — *warm, plain Thai that leaves a ละมุน feeling* — with concrete on-brand vs off-brand Thai examples for every future copy decision.
-- **Rebrand propagated** to wordmark, hero, signup, footer, and `brand.*` strings. Per PRD §0, **internal code/folder/repo stay "MiNom"** — only user-facing surfaces changed.
-
-**Part A — Thai-first rework + deliverables (file paths — in `design/`)**
-- `MiNom Design — Thai Localization.html` — the deliverable. Five sections:
-  1. **Typography** — recommended **Anuphan** (Cadson Demak) primary; **IBM Plex Sans Thai** backup; **Noto Sans Thai** fallback. Validated 12→32px; line-height raised to 1.45 body / 1.35 titles for stacked Thai tone marks. Spline Sans Mono retained for Latin numerals only.
-  2. **Hi-fi in Thai** — Home, Eat, Sleep, Diaper in light+dark with native Thai copy, checked at 360px (no clipping; Thai runs shorter than EN). Plus ghost first-run Home + Timeline.
-  3. **Microcopy** — keyed reference table, written from intent.
-  4. **Clarifications** — Dev's five, resolved.
-  5. **PDPA** — 4-line plain-Thai signup consent + Thai positioning line.
-- `locales/th.json` — complete drop-in, keyed to Dev's exact component string IDs.
-- Source: `thai.css`, `th-strings.js`, `screens_th.jsx`, `section_thai_a.jsx`, `section_thai_b.jsx`, `thai_app.jsx`.
-
-**Five clarifications resolved**
-1. **Concurrency copy (instant-log Eat)** — shape confirmed; final Thai. Trigger: a peer Eat within 60s shows the sheet *before* commit (avoid duplicate); 3 outcomes (view theirs / log another / scrim-cancel). Non-blocking.
-2. **"Synced" pill** — confirmed: queued shows a persistent pill; on sync, flash "ซิงค์แล้ว" 2.2s then remove. No always-on badge.
-3. **First-run Home** — **changed**: Phase 3 uses the dashed-ghost treatment (zero activity → all three ghost cards). Dev's hint-in-card was a fine Phase-2 interim.
-4. **Eat time-edit** — **changed**: allow back-dating in v1 via an "แก้ไข" affordance (native time input, default now, capped not-in-future); 2-tap path untouched. *(Flagged to PM as a small scope addition — veto-able.)*
-5. **Online/Offline chip** — **split**: ship an auto, read-only status indicator (only visible when offline/syncing); demote the manual toggle to dev/QA-only behind a debug flag.
-
-**Decisions I own (logged, not silently overridden)**
-- Diaper uses child-words **ฉี่ / อึ** (not clinical ปัสสาวะ/อุจจาระ); Eat is **ให้นม** (not literal กิน). Intent rewrites — please don't "correct" to dictionary translations.
-- "Family" → **ครอบครัว** (carries the earlier label call).
-- Positioning line (Q3): **"แอปบันทึกการดูแลลูก ที่ทำเพื่อครอบครัวไทย."**
-
-**For PM (scope note)**
-- Only clarification #4 (back-dating Eat) extends beyond Dev's Phase-2 deferral. Everything else confirms or refines existing behavior. Confirm #4 before Phase 3 copies the pattern to Sleep/Diaper (where manual entry matters more).
-
-**Handoff → PM (Claude)**
-- Review the rebrand + Thai deliverable + the five resolutions; confirm/veto #4 (back-dating) and the tagline pick ("ดูแลลูกอย่างละมุนละไม").
-- For Dev: `locales/th.json` is drop-in (now includes `brand.*`); set `<html lang="th">`, wire next-intl, render dates/numbers via `Intl.*('th-TH')`. Load Anuphan (subset + preload per PRD §11.6). Swap user-facing wordmark to ละมุน; keep code identifiers as MiNom.
-- Then route to Dev for i18n wiring + Phase 3.
-
----
-
-## 2026-06-01 — PM — App rebrand: MiNom → ละมุน (Lamoon)
-
-**What happened**
-- CPO flagged "MiNom" reads as unintentionally sexual in Thai (นม colloquially = breasts). Asked for a name that pulls new parents emotionally.
-- PM presented a wide field organized by emotional driver (love / memory / pride / connection / calm). CPO selected **ละมุน** — "soft, gentle, tender" — a feeling-word as the brand.
-- Updated `PRD_v0.3.md` (added §0 Brand identity), `HANDOFF_designer_02.md` (added Part 0 — Brand identity deliverables to existing rework brief), `PLAN.md` and this `JOURNAL.md` (headers).
-
-**Why ละมุน is a good fit**
-- The name names the *feeling* we want every interaction to leave behind. It's a built-in design filter: if it isn't ละมุน, redo it.
-- Tonal anchor for all microcopy the Designer is about to write — they have a single word to align against.
-- Compound ละมุนละไม (= "exquisitely gentle") opens natural tagline territory.
-- No NSFW or awkward connotations. No religious/political associations.
-- Thai-distinctive; doesn't read as a translated foreign brand.
-
-**Calls I made (flag to override)**
-1. **Internal vs external naming split.** Users see ละมุน everywhere. Code/repo/folder/Railway URL stay MiNom for now — renaming the codebase costs more than it earns mid-build. Schedule the internal rename for after Phase 3 (or skip if low value).
-2. **Latin spelling: Lamoon** (not "Lamun" / "La-moon" / "La-mun"). Reads phonetically *lah-MOON* in English; the double-o disambiguates from "lah-mun."
-3. **Thai script is primary** in all user-facing surfaces; "Lamoon" Latin is secondary, only used where Thai script can't render or once EN locale ships.
-4. **Bundled the rebrand into the Designer's already-active Handoff #02** as a new Part 0 rather than creating a separate brief. Single workstream preserved; Designer gets one consolidated package.
-
-**New Designer deliverables (added to Handoff #02)**
-- Thai wordmark for ละมุน (light + dark, scales 24px–1024px).
-- Latin lockup "Lamoon" as secondary.
-- App icon placeholder (final by beta).
-- Tagline pick — PM proposed two starters; Designer picks/rewrites.
-- Brand voice paragraph in the component stub.
-
-**Open brand TODOs (PM tracks)**
-- Domain: research `lamoon.app` / `lamoon.co` / `lamoon.in.th` availability; recommend and secure.
-- Social handles (bundled with domain decision).
-- Trademark search (Thailand DIP) — defer until after beta unless red flags appear.
-- Internal repo rename — schedule post-Phase 3 if value emerges.
-
-**Handoff → Designer (Claude Design)**
-- Already holds Handoff #02. The brief now has a new **Part 0 — Brand identity** at the top. Read it, then continue into Part A (Thai rework) and Part B (5 Dev clarifications) as before.
-- Close-out journal entry should ideally include: wordmark files, tagline pick, voice note. Microcopy and 5 clarifications still apply.
-
-CPO: nothing new to route — the Designer baton was already with you. This is an in-flight scope addition to the same handoff.
-
----
-
-## 2026-06-01 — PM — Thai-first reframe (PRD v0.3) + handoff to Designer
-
-**What happened**
-- CPO direction: "We target Thai parents — better to have a native Thai version."
-- Wrote `PRD_v0.3.md` (supersedes v0.2; Thailand-only market, Thai-only MVP, native Thai voice — not translation).
-- Wrote `HANDOFF_designer_02.md` bundling the Thai rework with the 5 Dev clarifications from Dev's Phase 2 entry below.
-- Updated `PLAN.md`: Phase 1 closed, Phase 2 marked code-complete + demo-live, added Phase 2.5 "Localization rework," refreshed open-Q tracker and risks.
-
-**Decisions made by PM (flagging for CPO override)**
-1. **Thai-only MVP, no EN switcher.** Reading of "native Thai version": ship a Thai-built product, add EN later as second locale. Architecture must be i18n-ready from day one. Tighter voice, simpler launch.
-2. **No machine-translation of existing English copy.** Designer writes Thai from intent. Translating English microcopy will feel foreign and undercut "native."
-3. **Typography decision is Designer's** (recommended candidates: IBM Plex Sans Thai, Anuphan, Noto Sans Thai). Mono face (Spline Sans Mono) stays — only Latin numerals.
-4. **Gregorian calendar, Arabic numerals, 24-hour time, `th-TH` `Intl.*` for all formatting.** Buddhist Era display flagged for designer to consider on growth chart axes; not default.
-5. **PDPA compliance is a Phase 3 deliverable, not Phase 4.** Consent, deletion, export, plain-Thai privacy notice all in MVP surface.
-6. **Bundled the Dev clarifications into the same designer handoff** rather than routing two batons. Single workstream rule preserved.
-
-**Open questions resolved**
-- Q2 (market + units) → **Closed.** Thailand; metric.
-- Q3 (brand positioning) → **Closed.** "Simple baby tracker for Thai families." Designer to finalize the Thai positioning line.
-- Q4 (data residency) → **Closed.** Singapore (`ap-southeast-1`), per Dev's Phase 2 rec. (PM's earlier "GDPR region-tagging from day one" call dropped as YAGNI per Dev's flag.)
-- Q5 (auth) → **Closed.** Supabase Auth, email + password. Email confirmation to be enabled before public launch.
-- Q1 (monetization) → **Still open.** Doesn't block. PM rec: free during validation.
-
-**Phase 2 status (separate baton on PM's plate)**
-- Code-complete, demo-mode live on Railway. The literal two-device + RLS verification needs CPO to provision a Supabase project (~30 min once credentials exist). PM will hand this to CPO as a side baton; doesn't block the design rework.
-
-**Files produced this turn**
-- `PRD_v0.3.md` — current PRD
-- `HANDOFF_designer_02.md` — Thai rework + 5 clarifications
-- `PLAN.md` updated
-
-**Handoff → Designer (Claude Design)**
-- Read `PRD_v0.3.md` first (supersedes v0.2 — same product, Thailand-only market). Then `HANDOFF_designer_02.md`.
-- Two-part brief: (A) Thai typography + Thai microcopy + layout pass on 4 hi-fi screens + signup/consent copy; (B) answer the 5 clarifications you owe Dev.
-- North-star UX test unchanged: "Sleep-deprived parent, one thumb, dark room, two seconds" — now also "feels Thai-built, not translated."
-- When done: `## YYYY-MM-DD — Designer — Localization rework complete` with `Handoff → PM`.
-
-CPO: please route this to Claude Design. The Supabase provisioning is a separate task you can pick up any time before Phase 3 — happy to draft the steps if useful.
-
----
-
-## 2026-06-01 — Dev — Phase 2 deployed to Railway (staging live)
-
-**What happened**
-The Phase 2 skeleton is now **live on a public URL** the team can hit:
-
-> **https://minom-production.up.railway.app** — running in **demo mode** (no backend yet): create an account (stored in your own browser), add a baby, log an Eat. Open a **second tab** to see real-time sync; use the **Online/Offline** chip in the header to try the offline queue.
-
-CPO drove the Railway dashboard (I can't touch the Railway account); I fixed the code-side blockers and guided the config. Verified live: HTTP 200, app renders.
-
-**Three deploy blockers hit + fixed (notes for whoever deploys next)**
-1. **Repo not visible in Railway** → Railway's GitHub App didn't have access to the new `MiNom` repo. Fixed via *Configure GitHub App* → grant access.
-2. **Build failed (no app at root)** → the app lives in `web/`, so Railway's **Root Directory** must be **`/web`**. Without it the builder scans the repo root (just docs) and exits.
-3. **Build blocked on security CVEs** → Railway refuses HIGH-severity dependency advisories. `next@14.2.15` carried several (DoS, SSRF, proxy bypass) only patched at `≥15.5.x`. **Bumped Next 14.2.15 → 15.5.18** (kept React 18; App Router SPA needed no code changes; typecheck + build + serve all green). 0 high/critical remain.
-4. **502 after build** → app bound to Railway's injected `PORT=8080` (via custom start `next start -p $PORT`) but the public domain was routed to `3000`. Fixed by pointing the domain at **8080**.
-
-**Railway config of record (for Phase 3 / redeploys)**
-- Root Directory: `/web` · Custom Start Command: `next start -p $PORT` · Public domain → port **8080** · Region: Southeast Asia (matches my Q4 rec).
-
-**What this does / doesn't change for the exit criteria**
-- ✅ There is now a **live staging URL** (was the main gap). The full UX + all section-05 behaviors are clickable in demo mode, cross-tab sync included.
-- ⏳ Still pending: the literal **two real devices over the network within 5s** + **RLS data-isolation across two real accounts**. Demo mode is per-browser (localStorage), so it can't prove cross-device or auth isolation. That needs the **real Supabase** wiring — create project, run `web/supabase/migrations/0001_init.sql`, set the two `NEXT_PUBLIC_SUPABASE_*` vars in Railway. Same code path; ~30 min.
-
-**Handoff → PM (Claude)**
-- Phase 2 is now **deployed + demo-verifiable live**; share the URL with anyone who wants to click the product.
-- The one remaining step to fully close the Phase 2 exit criteria is **provisioning Supabase** (CPO decision/credentials) so I can flip it from demo to real and run the two-device + RLS verification. Until then: *live, but demo-backed.*
-- **For Designer (please route):** the 5 design-clarification items in my "Phase 2 complete" entry below still stand (concurrency copy for instant-log Eat, Synced-pill persistence, first-run Home treatment, Eat time-edit affordance, and the Online/Offline QA chip that's currently mine, not in the design) — worth resolving before Phase 3 copies Eat to Sleep/Diaper.
-- README updated: deploy section now documents Railway (Root Dir `/web`, start command, port 8080) instead of Vercel.
-- CPO: please route this to PM, and the design items to Designer.
-
----
-
-## 2026-06-01 — Dev — Phase 2 complete: Eat vertical walking skeleton
+**Deliverable:** `ละมุน WHO Chart.html` (+ `who_lms.js`, `screens_who_chart.jsx`, `screens_who_chart_demo.jsx`, `section_who_chart.jsx`, `who_chart_app.jsx`, `who_chart.css`, `th-strings-who-chart.js`, `th-strings-who-chart-patch.js`). 8 sections, light + dark, 360px, interactive (metric tab-swap recomputes curves + axes + points; verified). Five chart states covered.
 
 **What shipped**
-The smallest end-to-end slice that proves the architecture, on the **Eat** verb only — built from the Phase 1 design (tokens lifted verbatim; Home + Eat hi-fi matched in light + dark). Code is on `main`.
+- **Real percentile curves** — 3/15/50/85/97 computed from WHO LMS via `X(z)=M·(1+L·S·z)^(1/L)` (L=0 → `M·e^(S·z)`); z = −1.881/−1.036/0/+1.036/+1.881. 50th heavier, 3rd/97th thin+dashed, 15–85 "expected range" soft tint. Math verified against published WHO values (boy median 3.35→9.65 kg at 0→12mo; a 3mo 6.8kg boy → 71st pct).
+- **Labeled axes** — X = age (weeks if window ≤6mo, months otherwise — smart switch); Y = kg/cm per tab, range from the percentile envelope at the baby's age (not a fixed scale), auto-expands to fit any out-of-range point.
+- **Today's-age marker** — dashed vertical + `อายุ {n} สัปดาห์/เดือน` flag. Uses age, not date (BE-lock N/A).
+- **Data series** — points in `--grow-strong` (#13), connected chronologically, latest ringed. Tap → #13 detail sheet. Tap → percentile readout (P{n}) in tooltip.
+- **WHO citation** — `ข้อมูลอ้างอิงจาก WHO Child Growth Standards`, `--fg-muted` (real text, not `--fg-faint`), tappable to the WHO source.
+- **Metric tabs** — น้ำหนัก ↔ ส่วนสูง swaps LMS table + y-axis + points; verified live (title น้ำหนัก กก. → ส่วนสูง ซม., labels recompute).
 
-- **Repo:** https://github.com/nattaponkr/MiNom — app in [`web/`](web/), run/deploy/QA in [`web/README.md`](web/README.md).
-- **Screens (exactly the brief, no more):** Sign in/up → Baby setup (name + birthdate only) → Home (all three cards; only Eat live, Sleep/Diaper route to a "coming soon" stub) → Quick-Log Eat (defaults to "now", one-tap save, optional inline Details) → Timeline (today, with who-logged-it attribution).
-- **Section-05 behaviors, all implemented:** optimistic write + 5s undo · skeleton cold-load · offline banner + per-row Queued→Synced pills · realtime arrival w/ quiet toast (never steals focus) · concurrency soft-prompt (dismissible sheet) · inline validation (on blur, disabled CTA, icon+text errors) · delete confirm.
-- **Gates:** AA tokens kept; tap targets ≥48px (icon buttons bumped); `prefers-reduced-motion` kills motion; zoom not blocked; quick-log is optimistic (no network on the happy path).
+**Sex-required graceful degrade (the PM-flagged dependency).** WHO LMS is sex-specific; sex is optional at baby setup (PRD §5, NOT changed). When sex is unset: show points + axes + today-marker but **no curves** (never faked/combined), plus a low-weight tinted prompt `ระบุเพศของลูก · เพื่อแสดงเส้นเปอร์เซ็นไทล์… · ตั้งค่าตอนนี้` → baby settings. When sex is later set, curves render; existing points stay (no migration). Applies to both tabs.
 
-**Stack chosen + why**
-**Next.js 14 (App Router) + TypeScript + Supabase** (PM rec, taken). One deploy target, mobile-web first, and Supabase bundles the four things this phase must prove — Auth, Postgres, Realtime, and **Row-Level Security** (RLS is what enforces caregiver data isolation). No CSS framework: the design's own token/component CSS is used directly so the build can't drift from the hi-fi.
+**States (all 5):** sex set + 0 measurements (curves only, no apology); + 1 (single ringed dot); + multiple (trend line); sex unset (degraded); both metric tabs. Plus the 13 edge cases in §06 (newborn, out-of-y-range auto-expand, sex-set-later, boy↔girl swap, >60mo out-of-range, premature/corrected-age deferred, realtime/edit/delete-all, switch-tab-while-prompt).
 
-**Architecture note (my call):** the data layer is one interface with two implementations — real **Supabase** (the architecture proof, incl. RLS + the realtime publication) and a zero-backend **demo** store (localStorage + BroadcastChannel) that activates when no env vars are set. Same UI/sync code both ways. This lets the app run and demo with **zero setup**, and let me QA the behaviors locally without Docker/cloud. Auth is client-side (supabase-js session in localStorage) rather than SSR cookies — simpler for an SPA and identical across modes; SSR cookie hardening noted for later if we add server-protected routes.
+**LMS data note.** `who_lms.js` ships an **approximate 0–24mo** public-domain LMS subset so the spec's curve shapes are authentic. **Dev bundles the official 0–60mo tables** (weight-for-age + length/height-for-age, boys + girls) as static JSON (~1MB, offline-first) before public launch — this is the substantial engineering layer, called out in the brief.
 
-**Q4 (data residency) — recommendation:** single region **`ap-southeast-1` (Singapore)** — lowest latency for a Thai-first audience; baby data is health-adjacent so keep it in one region, encrypted at rest (Supabase default) + RLS. Do **not** build multi-region / GDPR region-tagging yet (no EU/US cohort) — revisit when one appears. (Defers the PM's "region tag from day one" rec as YAGNI; flagging so PM/CPO can overrule.)
+**AA gate (both themes, true sRGB).** Axis/curve labels, citation, age caption, tab labels → `--fg-muted` 5.52/6.84 or `--fg` 14.6/13.4; today-marker flag `--surface` on `--fg` 14.6/13.4; sex-prompt CTA white-on-`--grow-strong` 5.52/7.3; data series `--grow-strong` 5.68/7.31. Percentile curves + band are **non-text** `--grow` tints (≥3:1, reference context, not data marks). Citation is real text → `--fg-muted`, never `--fg-faint`. No new `--fg-faint` text.
 
-**Q5 (auth provider) — recommendation:** **Supabase Auth, email + password.** It's bundled with the DB we're already on, integrates with RLS via `auth.uid()`, no extra vendor/cost, and gives us password-reset + OAuth for free later. For production: **enable email confirmation** (off in the skeleton for convenience) and add the password-reset screen in Phase 3 (currently stubbed).
+**Patch for Dev:** `th-strings-who-chart-patch.js` — TH_WHO_CHART (axes, today-marker, percentile label, citation, sex-required prompt, out-of-range). No removals; #13 `growth.chartLabel` is superseded by real axes + citation (Dev may retire). Behavior + LMS bundle + chart render in spec §08 + `who_lms.js`.
 
-**QA — verified vs pending (honest split)**
-- ✅ **Verified now** (automated headless-Chrome run against demo mode, **15/15 passing**, plus `tsc` + prod build green, plus light/dark screenshots checked against the hi-fi): signup→setup→Home→Eat→Timeline; optimistic + 5s undo; offline → **Queued** → reconnect → **flush/Synced** (survives reload while queued); **cross-tab realtime arrival** (B's entry lands in A within ~1s); second-tab session restore; attribution; theme toggle; visual match in both themes.
-- ⏳ **Pending cloud provisioning** (I can't self-serve — needs a Supabase project + Vercel, i.e. CPO accounts/secrets; I don't touch `.env`): the literal exit-criteria of **two real devices over the network within 5s** and **RLS data-isolation across two real accounts**, and the email auth flows. These run the *same* UI/sync code the demo exercises; the Supabase impl + RLS policies + realtime publication are written and in the migration, but **not yet exercised against a live DB**. Step-by-step to light this up (create project → run `0001_init.sql` → set 2 env vars → deploy, Root Directory `web`) is in `web/README.md`. ~30–45 min of provisioning.
+**Flags for PM**
+1. **PRD §5 extension** — add the chart semantics + the sex-required graceful-degrade pattern (sex stays optional; chart degrades, never blocks).
+2. **Premature / corrected-age** — v1 uses actual age; note as a §5 follow-up.
+3. **>60mo out-of-range** — microcopy specced; designed treatment deferred (beta is 0–12mo).
+4. **LMS bundle is Dev's domain** — prototype table is approximate 0–24mo; official 0–60mo tables must be bundled before public launch.
 
-**Design under-specified (for Designer before Phase 3 copies this to Sleep/Diaper)**
-1. Concurrency prompt: the design demo is timer-framed (Sleep). Eat is an instant log, so I adapted the copy ("X logged a feed Ns ago — view theirs / log another"). Please confirm the instant-log variant.
-2. "Synced" pill: I flash it ~2.2s after a queued row syncs, then hide. Confirm desired persistence.
-3. First-run Home: I used the normal Eat card with a "No feeds yet — tap to log" hint rather than the dashed ghost `EmptyHome`. Confirm which you want.
-4. Eat "When": design shows an **Edit** affordance; I defaulted to "now" and deferred time-editing to Phase 3. Confirm.
-5. The Online/Offline chip in the Home header is **mine** (a QA/demo affordance, not in the design) — formalize or remove for production.
+**Handoff → PM (Claude).** Accept + extend PRD §5 with the chart semantics + sex-required graceful-degrade; route the substantial Dev fold (~3 days: bundle WHO LMS, LMS→percentile math, SVG chart render, sex-prompt nav, AA pass). Smoke check + Diaper pick remain parked per the brief — bundle the #12 smoke check with this Dev fold (same realtime path). After Dev close, CPO eyeballs + picks next (or beta opens).
 
-**Housekeeping**
-- Reconciled `JOURNAL.md` into one canonical file (my onboarding/blocked entries + the Designer/PM entries had diverged across threads).
-- The CPO's `handoff_drop/` inbox is **git-ignored, not committed** — it held a *duplicate* `JOURNAL.md` that would have created a second source of truth. The unique brief (`HANDOFF_dev_01.md`) was promoted to repo root with the other handoffs. Safe to delete `handoff_drop/` whenever.
+---
 
-**Handoff → PM (Claude)**
-- Review against the exit criteria. Everything front-end/sync is verified in demo mode + screenshots; the only gap to "Done" is lighting up cloud Supabase for the literal two-device/RLS test.
-- **Decision needed from CPO (via PM):** provision Supabase + Vercel (or authorize me with the keys) so I can finish the live two-device + RLS verification and hand you a staging URL. Until then Phase 2 is **code-complete + locally verified**, not **live-verified**.
-- Please also route the 5 design-clarification items above to the Designer so Phase 3 (Sleep/Diaper copy-paste) starts unblocked.
-- CPO: please route this to PM.
+## 2026-06-07 — Dev — Mid-session start-time editing + #09 detail-sheet gap closed (#14)
+
+Per `HANDOFF_dev_14.md`. On `main` (`5158f5a`), pushed to `nattaponkr/MiNom`. No schema (started_at
+already editable; eat switch-markers + the recalc all live in `details_json` jsonb).
+
+**Files:** `web/components/{TimeEditSheet(new),SleepSheet,EatSheet,WhenCard,Main}.tsx`,
+`web/lib/sync/useActivityLog.ts`, `web/lib/types.ts`, `web/locales/th.json`, `web/styles/components.css`.
+
+**What shipped (6 parts)**
+- **Affordance (P2):** the #11/#12 hide-while-running call is reversed — text-link **แก้ไข** (verb
+  `-strong`) returns on the เวลา card during **Running + Paused** (Sleep) / **Running** (Eat-นมแม่),
+  opening the shared `TimeEditSheet`.
+- **Picker (P3):** reuses the native datetime idiom (not a custom wheel) + minute steppers, with a
+  **live duration preview** `(end − picked) − Σ pauses`, a **max-allowable hint** when a prior
+  pause/switch caps the reach, and inline rejects (never modal). Save visible-but-disabled until valid.
+- **Three-step validation (P4), in §05 order:** Risk C future (clamp at now) → Risk A after first
+  pause/switch (**reject, never auto-prune**) → Risk B active-overlap (another active same-verb session
+  → reject). Reject precedence is C→A→B.
+- **Optimistic + 5s undo + realtime (P5):** `editStartedAt` is **verb-aware** — Sleep derives duration
+  from `started_at` (just patch it); Eat absorbs the start-shift into the **first segment** so total
+  stays `end − started` (live single-seg → move `segStart`; after a switch → first side's `perSideMs`).
+  PostHog `activity_started_at_edited {verb, state_when_edited, from/to_time_iso, delta_seconds}`.
+  Undo restores the prior `{started_at, details_json}` across every surface via realtime's existing
+  reconcile path.
+- **Eat switch markers:** `switchEat` now records `{at, from}` per switch — the basis for Risk A
+  (before-first-switch) and the first-side recalc. jsonb, no schema.
+- **Part 6 (#09 gap):** completed Sleep / Eat-นมแม่ `started_at` is now editable in the detail-sheet
+  edit form via a new `WhenCard maxISO` cap = `min(ended_at, firstEvent)`; duration recomputes on save
+  (Sleep via `sleepActiveMs`; Eat via the same first-side `perSideMs` absorb). Risk A + C apply; Risk B
+  doesn't (a completed entry isn't active). Negative-duration impossible (capped at `ended_at`).
+
+**Verification (demo, both themes, 390px)**
+- **Sleep mid-session 9/9** — affordance visible; picker opens; **Risk C** +10 stepper disabled at now;
+  recalc grows on −10m; **started_at moved ~10m**; **5s undo restored**; **Risk A** hint
+  `ก่อนหยุดครั้งแรก`.
+- **Eat mid-session 9/9** — affordance; recalc; move ~10m; **segStart tracks started_at** (single-seg
+  extend); **switch marker recorded**; **Risk A** hint `ก่อนสลับข้างครั้งแรก`.
+- **Risk B 3/3** — injected a concurrent active sleep → overlap error `ผู้ดูแลคนอื่น…` + **save disabled**.
+- **Part 6 3/3** — completed sleep via Timeline → edit start −30m → recorded **0→30 นาที** → persists 30m.
+- **AA both themes vs Designer:** affordance **6.14/7.24**, field/preview `--fg` **13.18/11.84 ·
+  13.89/15.25**, sub `--fg-muted` **5.25/7.8**, **reject `--danger-text` 5.77/6.29 (exact)** — all ≥4.5.
+  `tsc` clean, `next build` green.
+
+**Locked items honored:** rejects are hard blocks (no auto-prune); `logged_by` = starter (untouched);
+last-write-wins (no conflict UI); reused the idle picker idiom; affordance = text-link verb-strong.
+
+**Handoff → PM:** PRD §0.1 owes (1) the one-line reversal note retiring the #11/#12 hide-while-running
+rule, and (2) a mid-session-edit semantics subsection (the three reject rules + the completed-entry
+extension via #09). Two FYI calls in `HANDOFF_dev_to_pm_14.md` (eat-duration model; completed-edit uses
+the WhenCard cap, not the full inline-error picker). Then CPO picks the next polish target.
+
+---
+
+## 2026-06-07 — Dev — Growth (โต) polish + 4th verb-color token + theme-scope/BE-date systemic fixes (#13)
+
+Per `HANDOFF_dev_13.md`. On `main` (`5ed1dff`), pushed to `nattaponkr/MiNom`. No schema change.
+
+**Files:** `web/components/{GrowthScreen,GrowthDetailSheet(new),PercentileChart,Main}.tsx`,
+`web/lib/sync/{repo,supabaseRepo,demoRepo}.ts`, `web/locales/th.json`,
+`web/styles/{tokens,components}.css`.
+
+**What shipped (5 parts)**
+- **Detail sheet (P2):** new `GrowthDetailSheet` — a sibling of `ActivityDetailSheet` reusing the
+  same `.ad-*` vocabulary (measurements aren't `Activity` rows, so a shared component would have
+  forced a bad type union). Opens from **a history-row tap AND a chart-dot tap** (≥48px transparent
+  hit slop added to `PercentileChart`). **แก้ไข** → inline pre-filled edit form (new
+  `repo.updateMeasurement`, threaded through supabase + demo). **ลบรายการนี้** → confirm
+  (`growth.detail.del*`) + **optimistic delete with 5s undo** (self-contained: optimistic remove →
+  server delete → re-add on undo, since measurements aren't in the activity outbox). Always-visible
+  **row trash removed** (parallel to Timeline #09).
+- **Row hierarchy (P3):** `.gr-row` — bold mono value + sans unit over muted BE date. **No Δ chip**
+  (PM dropped). Per-metric `ประวัติ` empty nudge (`.gr-empty`, tappable → add) when one metric has
+  data and the other doesn't; true first-launch keeps the existing full-screen empty.
+- **`--grow-strong` (P4):** 4th verb `-strong` token (light `0.53 0.14 18`; dark tracks soft).
+  Chart trend line + dots repointed off soft `--grow` (failed **3.02** non-text) → `--grow-strong`.
+  WHO caption repointed `--fg-faint` (**3.12**, failed text min) → `--fg-muted`. tokens.css principle
+  comment extended to name `--grow-strong` as the 4th peer (the design-system `brand.css` stub is the
+  Designer's untracked file — flagged for that workstream).
+- **BE-date (P5a):** `GrowthScreen` history-row `formatDate()` → `formatDateBE()`. **Grep for other
+  `formatDate()` misses surfaced exactly ZERO** — the only other reference is the `formatDate`
+  definition in `format.ts`; every full-date display elsewhere already uses `formatDateBE` /
+  `dateTimeBE`. The 2026-06-05 BE lock now holds product-wide.
+- **Theme-scope (P5b):** verified the live SPA sets `data-theme` only on `document.documentElement`
+  (root) via the layout theme-init + ThemeToggle — **no nested theme scopes in the user flow**, so
+  `web/styles/tokens.css` needs no change (the brief predicted this). The nested-scope bug is
+  preview-frame-only; the canonical fix belongs to the Designer's spec-doc `tokens.css` (which
+  doesn't exist in this repo — the design HTML files are self-contained). **Did not edit the
+  Designer's untracked spec docs** — flagged to PM.
+
+**Verification (demo, both themes, 390px)**
+- **Flow: 15/15.** first-launch empty → add ×2 → chart + history render → **BE date `7 มิ.ย. 2569`**
+  (not 2026) → row tap → detail (ค่าที่วัด / วันที่วัด / บันทึกโดย คุณ) → **แก้ไข** prefilled →
+  save updates chart+history → **chart-dot tap → detail** → **ลบรายการนี้ → confirm → undo toast →
+  undo restores** → switch metric → **per-metric empty nudge** (`เพิ่มส่วนสูงครั้งแรก…`).
+- **AA both themes (canvas-resolved vs Designer targets):** chart dot `--grow-strong` **5.67 / 7.29**
+  (t 5.68/7.31; ≥3 non-text and ≥4.5) · WHO caption `--fg-muted` **5.25 / 7.8** (was 3.12 — now
+  clears the 4.5 text min). `tsc` clean, `next build` green. Day summary unaffected (Growth not in it).
+
+**Handoff → PM:** Two flags for you — (1) the design-system `brand.css`/`tokens.css` theme-scope root
+fix is Designer-workstream (no shared token file in this repo; live product verified clean); (2)
+`growth.detail.loggedBy` resolves the caregiver name via `listCaregivers` (id→name map), falling back
+to `care.roleCaregiver` ("ผู้ดูแล") when a name isn't found — measurements carry no denormalized
+logger name. Then CPO picks the next polish target.
+
+---
+
+## 2026-06-07 — Dev — Sleep pause/resume/complete shipped (#12)
+
+First data-model change in the polish series, per `HANDOFF_dev_12.md`. On `main`
+(`bfd79ad`), pushed to `nattaponkr/MiNom`. Migration ID **0006_sleep_paused**.
+
+**Files:** `web/lib/types.ts`, `web/lib/sync/{repo,demoRepo,useActivityLog}.ts`,
+`web/lib/activity.ts`, `web/lib/icons.tsx` (+IcPause), `web/components/{SleepSheet,
+HomeScreen,Timeline,Main}.tsx`, `web/locales/th.json`, `web/styles/components.css`,
+`web/supabase/migrations/0006_sleep_paused.sql`.
+
+**What shipped (5 parts)**
+- **Schema (P1):** `paused_at TIMESTAMPTZ NULL` added to **`public.activity`**. ⚠️ The brief
+  said `ALTER TABLE activities` — the live table is singular `activity`; corrected in the
+  migration. `details_json.pause_log[]` is in-JSON (no column). Additive + nullable → the
+  Part-1c back-compat holds (existing rows default NULL = correct for running OR completed).
+  **Not yet applied to live Supabase** — see Handoff below (no CLI/creds locally; one-liner ready).
+- **State machine (P3):** `pauseSleep` (paused_at=now), `resumeSleep` (push
+  `{paused_at,resumed_at}` to pause_log, clear paused_at), `stopSleep` = **complete-from-paused
+  with `ended_at = paused_at`** (load-bearing — records *active* sleep, excludes the pause tail).
+  Active duration = `(end − started_at) − Σ pauses` → `sleepActiveMs` in `lib/activity.ts`, now
+  used by day-summary + timeline hierarchy so totals exclude resumed false-alarm wakes.
+- **Sheet (P3):** idle / running (single **หยุด**, pause glyph — freezes, doesn't end) / paused
+  (frozen elapsed + `เวลานอนสะสม · หยุดนับไว้ชั่วคราว` caption + **หลับต่อ** + **บันทึกการนอน**,
+  equal-weight). แก้ไข idle-only. Notes draft Main-held, survives close + pause/resume.
+- **Home + Timeline (P4):** active card / elevated row (today only), running shows **หยุด**, paused
+  shows **หลับต่อ + บันทึก** — same `pause/resume/stop` handlers as the sheet (no separate path).
+  Running = sleep-tinted-alive (pulsing dot); paused = calm-neutral-held (hollow static ring).
+  Day-summary sleep hero ticks live / freezes paused / settles on complete.
+- **i18n (P2):** `TH_SLEEP_POLISH` merged (12 keys). `sleep.stop` kept its string; handler rewired
+  to pause. **Resume wording `หลับต่อ`** (locked). Normalized to the live dotted convention.
+
+**Verification (demo mode, DemoRepo, 390px)**
+- **Full-loop dry-run: 20/20 pass.** start → tick → close-persist → pause-from-Home → frozen
+  (00:04 == 00:04) → reopen paused sheet → **resume continues, not reset** (00:04 → 00:05) →
+  **multi-pause loop: `pause_log` accrued 2 entries** → complete-from-paused →
+  **`ended_at === paused_at`** confirmed → Timeline completed row + no active row + undo toast.
+- **Realtime: 4/4 pass.** Cross-tab (BroadcastChannel, same code path as Supabase `onUpdate` —
+  now carrying `paused_at`): peer B reflects pause within ~1.5s, resume flips back; starter
+  attribution (`logged_by_user_id`) preserved across pause/resume/complete. (Demo can't model two
+  *distinct* caregivers — single localStorage identity — so this is cross-device, same-caregiver;
+  prod two-caregiver uses the identical reconcile path.)
+- **AA both themes (canvas-resolved, vs Designer targets):** หยุด white/strong **5.95 / 8.02**
+  (t 5.99/7.97) · หลับต่อ strong/tint **5.04 / 5.85** (t 5.22/5.45) · หยุดชั่วคราว muted **4.98 /
+  6.05** (t 4.99/6.02) · frozen elapsed --fg **13.18 / 11.84** (t 13.21/11.84) — **all ≥ AA 4.5**.
+- **`--sleep-strong` confirmed** across all four states (text + white-on-fill); soft `--sleep`
+  stays decorative (tints, held-ring). `tsc` clean, `next build` green.
+
+**Asymmetry honored:** Eat stays a discrete tap-stop-saves event (PRD §0.1) — no pause model. Not unified.
+
+**Handoff → PM/CPO:** **Live Supabase migration not yet applied** (no supabase CLI / DB creds
+locally, and I don't read `.env`). It's additive + idempotent — safe to run anytime, before or
+after deploy. Run in the Supabase SQL editor:
+`alter table public.activity add column if not exists paused_at timestamptz null;`
+Once applied, the three-state machine is live for real sessions (in-flight naps gain the new state
+on their next หยุด tap — UX shift, not a regression). Then CPO picks the next polish target.
+
+---
+
+## 2026-06-06 — Dev — กิน sheet polish + session persistence + token discipline (#11/#11b)
+
+Big architectural fold per `HANDOFF_dev_11.md` — bundled in one systemic pass. On `main`
+(`6bdaaa4` + fix `d3c3afb`), live on Railway. Files: `web/locales/th.json`,
+`web/styles/{tokens,components}.css`, `web/lib/{types,activity}.ts`,
+`web/lib/sync/useActivityLog.ts`, `web/components/{EatSheet,WhenCard,SleepSheet,Sheets,Main,
+HomeScreen,Timeline}.tsx`.
+
+**What shipped**
+- **Session persistence (P2):** นมแม่·จับเวลา is now a parent-held PERSISTED session (open-ended
+  bm-timer row, `mode=bm capture=timer ended_at=null`), mirroring Sleep. `useActivityLog` gains
+  `runningEat` + `startEat/switchEat/stopEat`; per-side accumulators + `segStart` live in
+  `details_json` (no DB schema change). State machine: **tap a side → start**; **tap active side
+  / CTA → stop+save** (optimistic + 5s undo); **tap other side → switch**; **close ≠ stop** (timer
+  ticks from `started_at` across navigation). Bottom CTA reads **ปิด** idle / **หยุดและบันทึก**
+  running. แก้ไข hidden while running; กรอกปริมาณ locked with hint; **notes draft** (Main-held)
+  survives close; middle pill dropped. `logged_by` = starter.
+- **Home active card (P3):** กิน · ● กำลังให้นม·side + live mono + หยุด/สลับข้าง quick actions.
+- **Timeline active row (P4):** elevated row (today only; running session excluded from the
+  completed list) + day-summary eat duration ticks live (tabular, no re-layout).
+- **Token discipline (P5/5b):** `--eat-strong`/`--sleep-strong`/`--primary-strong` (light darker,
+  dark tracks soft). Repointed text + white-on-fill: `btn-primary`, eat/sleep CTAs + status text,
+  nav active tab — **retires the #08 ad-hoc nav value** for `--primary-strong`. Soft left for
+  icons/tints/dots/borders. Verb-hue guardrail added to `tokens.css` (3rd systemic finding after
+  #08 `--fg-faint` / #09 `--danger`).
+
+**Verified** (light + dark, 360px, demo for full session control) — `tsc` clean, `next build` green:
+- Tap-side starts; **PERSISTENCE: timer ticks from `started_at` across close + home↔timeline nav**
+  (00:01→00:34 on the card; 00:02→00:05 on the row) — the critical proof. Switch flips side; stop
+  ends the session + undo snackbar. Capture chip locked; แก้ไข hidden; notes draft survived
+  close/reopen. Home active card + Timeline active row render with actions; day summary counts the
+  live session. Screenshots `/tmp/minom_shots/E_home_active.png`, `E_tl_active.png`.
+- **AA (measured) = Designer targets:** white-on-`--eat-strong` **5.40** light / 9.43 dark; active
+  text 5.07 / 6.19 — all ≥ AA 4.5.
+
+**Confirmed:** แก้ไข hidden while running ✓ · notes persist across close ✓ · capture chip locked ✓ ·
+`--eat-strong`/`--sleep-strong`/`--primary-strong` adopted ✓ · #08 scoped nav fix retired ✓.
+
+Note: the sheet-reopen-still-ticking proof was demo-blocked only by the Next.js dev-tools overlay
+covering the home tab in the headless run; persistence is definitively shown by the live timer
+surviving navigation on both the Home card and Timeline row (the sheet derives from the same
+`runningEat` row). **Handoff → PM:** ready for the PRD §0.1 active-feeding-session semantics
+(at-most-one-per-baby; `logged_by` = starter; parallels Sleep). Pick the next polish screen.
+
+---
+
+## 2026-06-05 — Dev — Day summary shipped + attribution dropped (#10)
+
+Three-part fold per `HANDOFF_dev_10.md`, on `main` (`b98f72b`), live on Railway.
+Files: `web/locales/th.json`, `web/lib/activity.ts`, `web/styles/components.css`,
+`web/components/Timeline.tsx`.
+
+**Done**
+- P1 i18n: `timeline.summary.*` (eat/sleep/diaper/count/dur/durMin/volume/split), no removes.
+- P2 day summary (`DaySummary` + `daySummaryStats`): a quiet `--surface-2` band under the
+  day label, above the rows; recomputes on day-swipe; hidden on an empty day (verbs with no
+  data omitted). Hero numbers, count-led: กิน = count + sub, นอน = total duration, ถ่าย =
+  count + ฉี่/อึ split. **Eat sub per CPO refinement** — volume (formula + pumped-BM amounts)
+  AND duration (BM-timer sessions); when both exist it **stacks** as two sub-lines (avoids
+  crowding the 360px 3-col grid). Tabular mono numerals, decorative verb dots.
+- P3 attribution drop: the row caregiver chip **and its reserved spacer** removed product-wide
+  (`.tlr-noattr`); time sits alone. Who-logged-it now lives solely in the detail sheet
+  (`timeline.detail.loggedBy`). Caregivers-screen chips untouched (meaningful there).
+
+**Verified** (light + dark, 360px) — `tsc` clean, `next build` green, 13/13:
+- Summary band shows กิน/นอน/ถ่าย; กิน hero `2 ครั้ง` with combined sub `["90 มล.","0 นาที"]`
+  (the 0 นาที is the 2-second test timer — the volume+duration combine path works); ถ่าย sub
+  `ฉี่ 2 · อึ 2`; rows carry no attribution chip/spacer; empty past day hides the summary.
+- **AA (measured) = Designer targets:** hero `.dsum-n` 13.18/11.84 (target 13.21/11.84); sub &
+  label `--fg-muted` 4.98/6.05 (target 4.99/6.02) — all ≥ AA 4.5 on `--surface-2`.
+
+Single-dimension eat-sub cases (volume-only `{ml} มล.`, duration-only `{dur}`, solids-only =
+no sub) and bottle-only/timer-only days are `daySummaryStats` branches (logic-verified); the
+combined case (hardest) is dry-run-verified. The combined sub may still want a Designer eyeball
+at 360px with real (multi-minute) durations — I pre-stacked it so it won't crowd.
+
+No new Thai keys beyond the designer patch. **Handoff → PM:** Day summary shipped + verified at
+the documented ratios; row attribution fully dropped (chip + spacer). Pick the next polish screen.
+
+---
+
+## 2026-06-05 — Dev — Timeline polish folded + danger-text app-wide (#09)
+
+Four-part fold per `HANDOFF_dev_09.md`, on `main` (`a7e8c7e`), live on Railway.
+Files: `web/locales/th.json`, `web/lib/format.ts`, `web/lib/activity.ts` (new),
+`web/lib/sync/useActivityLog.ts`, `web/components/{Timeline,ActivityDetailSheet(new),
+SleepSheet,Main,CaregiversScreen,GrowthScreen}.tsx`, `web/styles/{tokens,components,
+globals,states}.css`.
+
+**Done**
+- P1 i18n: empty-state tightened (`ยังไม่มีบันทึก` / new body); `timeline.detail.*` +
+  `swipeDelete` added; stale `timeline.empty.day` dropped.
+- P2 behavior: row hierarchy (muted context + bold detail, `lib/activity.ts`); attribution
+  suppressed when caregiver == previous row (reserved spacer keeps alignment); BE dates
+  (`formatDateBE`/`dateTimeBE` via `th-TH-u-ca-buddhist`); day-nav chevron disabled state
+  (right on today; left always enabled per PM lean).
+- P3 detail sheet (`ActivityDetailSheet`): tap row → read-only entry + `แก้ไข` (reopens the
+  per-verb sheet pre-filled — incl. a new completed-sleep edit mode) + `ลบรายการนี้` confirm;
+  swipe-left quick delete; `ลบรายการแล้ว` toast. Always-visible row trash removed. Past-day
+  deletes now persist (`log.remove` treats not-in-today as a server entry).
+- P4 danger-text: `--danger-text` token (light darker clay / dark unchanged); repointed all
+  danger TEXT bindings app-wide (btn-danger, form-error, input-help.err, cg-when.warn,
+  inv-revoke, toast.err, Growth/Caregivers inline). `--danger` stays FILL-only. Guardrail
+  comment added beside #08's in tokens.css.
+
+**Verified** (light + dark, 360px) — `tsc` clean, `next build` green:
+- Demo functional 9/9: row hierarchy, attribution anchor+suppress, tap→detail (แก้ไข+ลบ),
+  BE date in detail, detail-delete→toast, swipe reveal, empty title.
+- AA + BE 9/9 (measured): tlr-detail 14.56/13.36, tlr-ctx & tlr-time 5.5/6.83, danger-text
+  `.ad-del` 6.04/5.51 — all ≥ AA 4.5; past-day section label `3 มิ.ย. 2569` (BE).
+- Prod multi-caregiver (both Leon accounts): top rows `[พ่อ, คุณ, (suppressed)]` — different-
+  caregiver rows show attribution, same-caregiver run suppressed. ✅✅
+
+**Flag (CPO):** my test diapers on Leon were cleaned up, but two entries remain on today's
+timeline — `นมผง · 90 มล.` (12:27) and `นอน · 2 นาที` (12:29). They predate my recent runs
+(~15:47+) so I left them as likely-real data; if they're leftover from an earlier dry-run,
+say the word and I'll delete them.
+
+No new Thai keys beyond the designer patch. **Handoff → PM:** Timeline polish folded +
+verified at the documented ratios. Pick the next polish screen.
+
+---
+
+## 2026-06-07 — PM — Growth chart real-WHO-LMS brief drafted (9th polish; substantive scope shift)
+
+**What happened**
+- CPO eyeballed live Growth chart with two measurements and rightly called out: the chart looks more decorative than useful. Four asks (axes, citation, age display, birthday — which we already collect).
+- PM surfaced the underlying issue: adding WHO citation + readable axes to placeholder bands is internally inconsistent. Posed three-tier scope choice via AskUserQuestion.
+- **CPO picked Tier 2** — bring forward the WHO LMS reference data work from the pre-public-launch queue. Real percentile curves; honest chart.
+
+**Scope locked**
+- Real WHO LMS data (boys + girls, weight-for-age + length/height-for-age).
+- 5 percentile curves: 3/15/50/85/97 (WHO standard).
+- X-axis: age in weeks (young) or months (older), smart switch.
+- Y-axis: kg or cm based on selected metric tab.
+- Today's-age marker as vertical line on x-axis.
+- WHO Child Growth Standards citation (tappable to source).
+- Sex-required graceful degrade (sex stays optional in PRD §5; show inline prompt when unset; no curves until set, no fake combined curves).
+
+**PM calls in the brief**
+- **Don't change PRD §5 lock** (sex stays optional at baby setup). Use graceful-degrade prompt instead.
+- **Bundle WHO LMS data as static JSON** (~1MB compressed estimate). Always works offline. Dev's call on exact format.
+- **No corrected-age for premature babies in v1.** Use actual age. Flag for future.
+- **No predictions/projections, no PDF export, no BMI, no weight-for-length, no head circumference.** Out of scope.
+
+**13 edge cases spec'd in brief** — including the non-obvious ones: sex set after measurements exist (re-render with curves, data points stay), measurement outside y-range (auto-expand, never hide), realtime multi-caregiver add (existing path), and the >60-month corner case (defer designed treatment).
+
+**Effort estimate**
+- Designer: ~2 days (substantial spec — 5+ states, percentile curve visual treatment, citation, prompt, AA, microcopy).
+- Dev: ~3 days once Designer ships (LMS data bundle + LMS-to-percentile math + chart rendering + sex-prompt navigation + AA pass).
+
+**Two parallel items now on hold**
+- Diaper pick — wait until after chart lands.
+- #12 smoke check — bundle with Dev fold (Dev will be exercising the multi-caregiver realtime path during chart work anyway).
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- This brief closes one of the major queued pre-public-launch items (WHO LMS data) early — net win even though it slows the polish cadence.
+
+**Routing → Designer (`HANDOFF_designer_15.md`)** — multi-day target deliverable.
+
+**Files**
+- `HANDOFF_designer_15.md` — written.
+- `JOURNAL.md` — this entry.
+- `PLAN.md` — phase status + file map.
+
+**Handoff → Designer (Claude Design)** via brief + CPO screenshot.
+
+CPO: please route + attach the live chart screenshot.
+
+---
+
+## 2026-06-07 — PM — Dev #14 accepted; PRD §0.1 updated; recommending Diaper next + accepting smoke-check offer
+
+**What happened**
+- Dev shipped #14 clean — all 6 parts built; Sleep 9/9 + Eat 9/9 mid-session + Risk B 3/3 + Part 6 3/3 + AA both themes matching Designer targets exactly (reject text 5.77/6.29). Code on `main` (`5158f5a`). No blocker, no schema.
+
+**PM confirmed both implementation calls**
+
+1. **Eat accumulator-based duration with absorb-into-first-segment.** Right model. Sleep derives duration from `started_at`; Eat tracks per-side accumulators that tile the interval. Edit must grow the first segment to keep total + L/R split honest. New `switches: [{at, from}]` log in `details_json` (no schema; JSON addition) is clean and load-bearing for Risk A's "before first switch" check.
+2. **WhenCard cap for completed-entry edit (Part 6) instead of duplicating the full TimeEditSheet.** Right weight. Mid-session needs inline-error picker (users actively pushing constraints); post-hoc correction just needs invalid-time prevention — cap does it without ceremony. Functional equivalence; lighter UX cost matches the surface.
+
+**PRD §0.1 updated** — added "Mid-session start-time editing — semantics (added 2026-06-07)" subsection. Covers:
+- Reversal note retiring #11/#12 hide-while-running (don't re-hide).
+- Edit available in all 4 states; uniform "tap แก้ไข, pick time, duration recomputes" mental model.
+- Three reject rules (Risk C → A → B → accept) with rationale.
+- Completed-entry behavior via WhenCard cap (Risk B moot; A + C enforced).
+- Eat accumulator-based duration model with absorb-into-first-segment semantics.
+- `switches[]` shape in details_json.
+- Last-write-wins; `logged_by_user_id` = starter unchanged; 5s undo; PostHog event payload.
+- Code references for future devs.
+
+**PM recommendation: Diaper as the next polish target.**
+The only verb sheet not yet polished and the only verb with no timer — making it the cleanest "complete the verb-sheet polish" before Family / Settings. CPO has final say but I'd flag this as the natural next pick.
+
+**Accepting Dev's #12 smoke-check offer.** ~60 seconds, cleans up after, no downside. Confirms two-distinct-caregiver realtime that demo single-identity can't exercise. Worth doing as defensive verification before more polish rounds compound on the timer behavior. Dev runs on the two Leon accounts whenever you signal.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- After Diaper: Family/Caregivers + Settings + any net-new feature requests.
+
+**Files updated**
+- `PRD_EAT_v2.md` §0.1 — new subsection added.
+- `JOURNAL.md` (this entry).
+- `PLAN.md` — phase status + file map.
+
+**Handoff → CPO** for (a) Diaper-or-other-pick confirmation, (b) smoke-check go-ahead.
+
+---
+
+## 2026-06-07 — Dev — Mid-session start-time editing + #09 detail-sheet gap closed (#14)
+
+**Status:** Shipped + verified. On `main` (`5158f5a`), pushed. No blocker, no schema.
+
+**What shipped (6 parts)**
+1. TH_TIME_EDIT (16 keys) — affordance + picker + 3 rejects + undo.
+2. Un-hide แก้ไข (Running + Paused) — text-link verb-strong on the เวลา card.
+3. Picker (reuse idle idiom) — native datetime + steppers + live preview + max hint.
+4. Three-step validation — C (future) → A (after pause/switch, no prune) → B (active overlap).
+5. Optimistic + 5s undo + realtime + PostHog — verb-aware recalc; `activity_started_at_edited`.
+6. #09 detail-sheet gap closure — started_at editable + duration recompute; Risk A+C (not B) via WhenCard cap.
+
+**Two implementation calls flagged**
+1. Eat duration is accumulator-based; absorb-into-first-segment to keep total + L/R split honest. New `switches: [{at, from}]` jsonb log in details_json — basis for Risk A "before first switch". No schema.
+2. Completed-entry edit (Part 6) uses the existing #09 WhenCard with `maxISO = min(ended_at, firstEvent)` cap. Risk A + C enforced by cap; Risk B doesn't apply. Functionally equivalent to the reject rules; lighter UX.
+
+**Verification (demo, both themes, 390px)**
+- Sleep mid-session 9/9; Eat mid-session 9/9; Risk B 3/3 (concurrent active sleep injected → overlap error + save disabled); Part 6 3/3.
+- AA both themes — แก้ไข affordance 6.14/7.24; reject `--danger-text` 5.77/6.29 exact match; field + duration preview `--fg` 13.18/11.84 + 13.89/15.25; picker sub-line `--fg-muted` 5.25/7.8. All ≥ AA 4.5. `tsc` clean, `next build` green.
+- Realtime: same `runningEat`/`runningSleep` reconcile path #11/#12 already proved. Demo is single-identity; two-distinct-caregiver verification rolled into the offered #12 prod smoke-check.
+
+**Handoff → PM (Claude).** PM owes: PRD §0.1 reversal note + mid-session-edit semantics subsection; confirm two implementation calls; pick next polish target. Plus the #12 prod two-caregiver smoke-check is still on offer.
+
+---
+
+## 2026-06-07 — PM — Time-edit polish accepted; #09 gap folded into Dev #14
+
+**What happened**
+- Designer's #14 drop landed clean. All edge cases handled with the three reject rules from PM's brief. Live prototype verifies edit → recalc → undo + all three rejects across Sleep + Eat-นมแม่.
+- Files promoted: HANDOFF archived; JOURNAL_designer_14.md merged below + removed; all design source in `design/`.
+
+**Three Designer flags — PM resolution**
+
+1. **#09 detail-sheet gap (confirmed real)** — Designer flagged that the activity detail sheet's edit form for completed entries doesn't currently support editing `started_at` for Sleep / Eat-นมแม่. **PM folded into Dev #14 as Part 6.** Dev's already in the same data-model territory; one commit is cleaner than a separate fold. Same three reject rules apply to completed entries except Risk B (active overlap) doesn't fire since the entry isn't active; new reject for `newStartedAt > ended_at`.
+2. **PRD §0.1 reversal note** — PM owes after Dev close-out. Queued.
+3. **Affordance shape: text-link `แก้ไข` in verb-`-strong`** — accepted as-is. Matches idle behavior; low visual weight; discoverable.
+
+**One Designer-caught defect logged** — undefined `-strong` / `--danger-text` tokens in their working environment; fixed by self-defining in `time_edit.css`. AA claims hold. Worth noting that the system-token discipline from #08/#09/#11/#11b/#13 hasn't fully centralized in the Designer's spec docs yet. Not worth a follow-up unless it bites again.
+
+**Routing → Dev (`HANDOFF_dev_14.md`)** — six parts:
+1. Patch merge (12 keys, no removes).
+2. Un-hide `แก้ไข` on the `เวลา` card during Running + Paused for Sleep + Eat-นมแม่.
+3. Wire the picker (reuse idle back-dating picker; new constraint set).
+4. Three-step validation: Risk C → Risk A → Risk B → accept.
+5. Optimistic save + 5s undo + realtime propagation + PostHog `activity_started_at_edited` event.
+6. Extend #09 detail-sheet edit form to cover `started_at` for completed Sleep / Eat-นมแม่ entries (Designer flag #1).
+
+**PM owes after Dev close**
+- PRD §0.1 one-line note retiring the #11/#12 hide-while-running rule.
+- PRD §0.1 mid-session-edit semantics subsection (parallel structure to active-feeding-session + Sleep three-state).
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- After this round, remaining candidates: **Diaper** (the only verb with no timer — likely the next pick), Family/Caregivers, Settings.
+
+**Handoff → Dev (Claude Code)** via brief.
+
+CPO: please route.
+
+---
+
+## 2026-06-07 — Designer — Mid-session start-time editing shipped (#14)
+
+**Scope:** Reinstate `แก้ไข` on the `เวลา` card during Running + Paused for Sleep + Eat-นมแม่ timer modes. Reverses the #11/#12 hide-while-running call. CPO was right — parents start the timer late.
+
+**Deliverable:** `ละมุน Time Edit.html` — 7 sections, light + dark, live prototype.
+
+**The reversal**
+Hidden in #11/#12 on a theoretical argument; reinstated for the real lag (settle baby → reach for phone). Reuses the idle back-dating picker (PRD §4); affordance is a text-link `แก้ไข` in the verb-`-strong` color.
+
+**The three rejects (CPO's ask) — hard blocks, inline, never auto-prune**
+- Risk A · after first pause/switch — `started_at` can't pass the first `pause_log[].paused_at` (Sleep) / first side-switch ts (Eat). Inline error + a max-allowable hint showing `min(firstEvent, now)`. Don't prune.
+- Risk B · active overlap — `[T, now]` overlapping another active session (same baby+verb) blocks; overlap with completed entries is allowed.
+- Risk C · future — clamp at `now`.
+- D last-write-wins (no conflict UI); E Paused same logic; G notes untouched.
+
+Save visible-but-disabled until valid; reject inline, never modal. Live duration preview in the picker.
+
+**Recalc + undo**
+Optimistic write → propagates to sheet timer, Home card, Timeline row, Eat day-summary live duration, other caregivers (~1.5s). 5s toast `เปลี่ยนเวลาเริ่มแล้ว · เลิกทำ` restores previous value everywhere.
+
+**Rejection-logic diagram (§04):** `T > now?` → `T > first pause/switch?` → `[T,now] overlaps active?` → accept. Built for Dev's validation wiring.
+
+**AA gate passed both themes.** Full table §06. One verification defect caught and fixed locally (undefined `-strong` / `--danger-text` in spec doc env; time_edit.css now self-defines them).
+
+**Flags for PM**
+1. #09 gap (your optional sanity check) — confirmed likely a gap. The #09 detail-sheet edit form (completed entries) was specced with value + date. For completed Sleep / Eat-นมแม่ entries it should also edit `started_at` (→ duration), for parity. Recommend a small follow-up.
+2. Reversal note — retires the #11/#12 hide-while-running rule; one-line PRD §0.1 note.
+3. Affordance shape — text-link `แก้ไข` in verb-strong (matches idle card).
+
+**Handoff → PM (Claude).** Accept + route the Dev fold; confirm the #09 start-time-edit gap as a follow-up; one-line PRD §0.1 note retiring hide-while-running.
+
+---
+
+## 2026-06-07 — PM — Mid-session start-time editing brief drafted (8th polish; spans Sleep + Eat-นมแม่)
+
+**What happened**
+- CPO surfaced a real product gap: users record activities AFTER the fact (delay of minutes to hours), but the current Sleep + Eat-นมแม่ sheets HIDE `แก้ไข` while running. That decision (from #11/#12) was based on a theoretical "mid-session editing is weird" argument that turned out to be wrong for the real-world use case.
+- **Reverting the hide decision carefully.** Bring `แก้ไข` back on the `เวลา` card during Running and Paused states. Duration recalculates live. Persistence + realtime sync work as before. The design weight is in edge cases.
+
+**One brief covers two surfaces** — Sleep timer (Phase 3 + #12) and Eat นมแม่ timer mode (Eat v2 + #11) share the same mechanics with one small asymmetry (side switches on Eat).
+
+**Edge cases spec'd in the brief** (CPO explicitly asked for careful thinking on these)
+
+| Risk | PM call |
+|---|---|
+| A · Forward adjustment past existing pause_log entry (Sleep) or side-switch (Eat) — would invalidate state | **Reject the save** with inline error; never auto-prune (silent data loss) |
+| B · Editing into overlap with another caregiver's active session for same baby + verb | **Reject the save** — protects the PRD §0.1 "at most one active session per baby" invariant |
+| C · Forward beyond `now` | **Clamp at now** in the picker (no negative duration) |
+| D · Multi-caregiver simultaneous edit | Last-write-wins per existing pattern; no special UI |
+| E · Editing during Paused state | Same logic as Running; duration formula handles it cleanly |
+| F · Editing after Complete | Out of scope (already supported via #09 detail sheet) |
+| G · Notes draft | Unaffected; don't clear on edit |
+
+**Reject-on-Risk-A is the most non-obvious call.** The alternative — auto-pruning pause_log or side-switch entries that would no longer fit — silently loses data. PM lean: explicit reject + inline error tells the user what's wrong without breaking their model.
+
+**Routing → Designer (`HANDOFF_designer_14.md`)** — multi-day target deliverable: spec for both surfaces, state diagram of the reject logic, AA audit, microcopy patch, real-phone screenshots of all three reject states.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- After Dev close-out, PM owes a small PRD §0.1 subsection codifying the editing-while-running semantics + three reject rules. Parallel to active-feeding-session and Sleep three-state subsections.
+
+**Polish series remaining candidates after this round:** Diaper (the only verb with no timer), Family/Caregivers, Settings.
+
+**Handoff → Designer (Claude Design)** via brief.
+
+CPO: please route.
+
+---
+
+## 2026-06-07 — PM — #13b closed; #12 migration confirmed live; standing by for next-screen pick
+
+**What happened**
+- Designer closed `HANDOFF_designer_13b_theme_scope.md` — spec-doc theme-scope fix applied across #07–#13 HTML files. Page-level dark-mode toggle no longer bleeds into embedded `data-theme="light"` previews.
+- CPO confirmed the #12 Supabase migration (`paused_at` column) is applied on prod. Sleep pause/resume fully live server-side.
+
+**State of the world**
+- 7 polish rounds shipped + 2 small follow-ups (#11b sibling tokens, #13b spec-doc theme-scope) all done.
+- All carry-overs from #12/#13 closed.
+- 4 verb-color `-strong` tokens in the design system.
+- 3 system-level guardrails documented in `brand.css`.
+- 2 PRD §0.1 semantic principles documented (active-feeding-session; Sleep three-state + Eat/Sleep asymmetry).
+- BE-date lock verified product-wide (grep clean).
+
+**Next baton: CPO — eyeball live + pick next polish target.**
+Same discipline as prior cycles. Remaining candidates: Diaper sheet, Family/Caregivers, Settings.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- Pre-public-launch queue: WHO LMS data, hard-delete edge function, legal review of PRIVACY_TH.md, lamoon.app domain registration, Resend domain verification.
+- Phase 5 LINE design queued behind beta validation.
+
+---
+
+## 2026-06-07 — PM — Dev #13 accepted; confirmed 2 decisions; tiny Designer follow-up for spec-doc theme-scope
+
+**What happened**
+- Dev shipped #13 clean — 15/15 flow verified, AA hits Designer targets, `--grow-strong` and `--fg-muted` repointing all clear. Code on `main` (`5ed1dff`). No blockers; no schema change.
+- **BE-lock grep result is the structural win of the round:** GrowthScreen row was the ONLY `formatDate()` miss; grep across the product confirmed no others. The 2026-06-05 lock is holding everywhere except where it just got fixed.
+
+**Two decisions Dev surfaced; PM confirmed both**
+
+1. **Theme-scope spec-doc fix → Designer.** ✅ My #13 brief was wrong about the architecture — pointed at `design/tokens.css` as canonical but that file doesn't exist in the repo. Dev correctly identified the bug as preview-frame-only (Designer-owned spec-doc HTML, not product code) and verified the live SPA has no nested theme scopes. **Brief miss on PM's part; Dev caught it.** Wrote `HANDOFF_designer_13b_theme_scope.md` — tiny ~15-min ask for Designer to backport the canonical fix to #11/#12 spec docs.
+2. **`loggedBy` resolution via `repo.listCaregivers`, not denormalization.** ✅ Dev's read is right — the id→name map with `care.roleCaregiver` fallback is clean; the cost (extra lookup) is negligible at beta scale. No schema change. If we ever do bulk export/analytics we revisit.
+
+**Notable Dev implementation choices logged (FYI)**
+- `GrowthDetailSheet` is a sibling component, not the same as `ActivityDetailSheet` (measurements aren't `Activity` rows; reusing the `.ad-*` CSS vocabulary instead of forcing them into the type). Same look, Growth data.
+- New `repo.updateMeasurement` method (threaded supabase + demo) — no edit path existed for measurements before.
+- Delete is optimistic + 5s undo self-contained in GrowthScreen (measurements aren't in the activity outbox).
+- Chart dots: ≥48px transparent hit slop over 4.5px visual mark, grow-strong focus ring for keyboard.
+
+**Dev's reminder logged**
+- #12's Supabase migration (`alter table public.activity add column ... paused_at`) is still pending CPO action. Sleep pause/resume isn't fully live server-side until the migration runs. Unrelated to #13 but worth resurfacing in case it got lost in the flow.
+
+**Files**
+- `HANDOFF_designer_13b_theme_scope.md` — small Designer follow-up.
+
+**Two parallel batons**
+- **Designer:** apply spec-doc theme-scope fix to #11/#12/#13 HTML files (~15–20 min, scoped to Designer's workstream, no Dev involvement).
+- **CPO:** run the one-line Supabase migration from #12 (if not already done — was queued in `HANDOFF_dev_to_pm_12.md`). 60-second smoke check after.
+
+**State of the polish series**
+- 7 polish rounds shipped + 2 small follow-ups (#11b sibling tokens, #13b spec-doc theme-scope).
+- 4 verb-color `-strong` tokens in the design system.
+- 3 system-level guardrails + 2 PRD §0.1 semantic principles documented.
+
+**Next CPO action after the two parallel items:** eyeball live + pick next polish target. Remaining candidates: Diaper sheet, Family/Caregivers, Settings.
+
+CPO: please route the Designer follow-up + verify #12 migration status.
+
+---
+
+## 2026-06-07 — Dev — Growth (โต) polish shipped (#13)
+
+**Status:** Shipped + verified. On `main` (`5ed1dff`), pushed to `nattaponkr/MiNom`. No blocker, no schema change.
+
+**What shipped (5 parts)**
+1. TH_GROWTH_POLISH (12 keys) — growth.detail.* + growth.historyEmpty.*; no removes.
+2. Growth detail sheet (reuse #09) — row-tap AND chart-dot-tap → detail; แก้ไข + ลบ+confirm+undo.
+3. Row hierarchy (no Δ chip) — bold mono value + muted BE date; per-metric empty nudge.
+4. `--grow-strong` token — chart line+dots + WHO caption repointed; AA-clears.
+5a. BE-date propagation — GrowthScreen fixed; grep found no other misses.
+5b. Theme-scope root fix — verified, no live change (see flag below).
+
+**Two decisions Dev made**
+1. Theme-scope: `design/tokens.css` doesn't exist; spec docs use inline `<style>`. Live SPA has no nested theme scopes (clean). Bug is preview-frame-only — fix belongs to Designer's spec-doc workstream, not Dev's product code. Deliberately did not edit Designer's untracked HTML/CSS.
+2. `growth.detail.loggedBy` name resolution: measurements have no denormalized logger name; resolved via `repo.listCaregivers` id→name map, falling back to `care.roleCaregiver`, self → "คุณ". Avoids schema change. Read: not worth denormalizing at beta scale.
+
+**Verification (demo mode, both themes, 390px)**
+- Flow 15/15: first-launch empty → add ×2 → chart + history → BE date 7 มิ.ย. 2569 → row tap → detail (value/date/บันทึกโดย คุณ) → แก้ไข prefilled → save updates → chart-dot tap → detail → ลบรายการนี้ → confirm → undo toast → undo restores → switch metric → per-metric empty nudge.
+- AA both themes: chart trend `--grow-strong` 5.67/7.29 (target 5.68/7.31; was `--grow` 3.02 ✗); WHO caption `--fg-muted` 5.25/7.8 (target 5.52/6.84; was `--fg-faint` 3.12 ✗). All clear. `tsc` clean, `next build` green.
+- BE-lock product-wide: GrowthScreen was the only `formatDate()` miss; grep found no others.
+
+**Notable implementation choices**
+- GrowthDetailSheet is a sibling of ActivityDetailSheet, not the same component.
+- New `repo.updateMeasurement` method.
+- Delete is optimistic + 5s undo, self-contained in GrowthScreen.
+- Chart dots: ≥48px hit slop over 4.5px visual mark.
+
+**Note:** #12's Supabase migration still pending CPO. Sleep pause/resume isn't fully live server-side until it runs.
+
+**Handoff → PM (Claude).** Confirm two decisions, route spec-doc fix to Designer, pick next polish target.
+
+---
+
+## 2026-06-07 — PM — Growth polish accepted; 4 decisions settled; routing Dev (4th verb-color + 2 systemic fixes)
+
+**What happened**
+- Designer's #13 drop landed clean. All five Growth polish items addressed + two pre-existing systemic issues surfaced + four PM decisions routed.
+- Files promoted: HANDOFF archived; JOURNAL_designer_13.md merged below + removed; all design source in `design/`.
+
+**Four decisions PM settled**
+
+1. **`--grow-strong` over `--primary-strong` (Designer's override accepted).** Designer's reasoning is right: clay would merge Growth into the brand identity AND collide with `--eat`'s orange-clay hue. Each verb deserves its own `-strong` token. Consistent with the system (we now have `-strong` for all four verbs). Adding to `tokens.css` alongside the existing three.
+
+2. **Theme-scope bug: root fix.** Designer caught a pre-existing CSS scoping issue (#11/#12/#13) where a page-level dark-mode toggle bled into embedded `data-theme="light"` previews. Designer fixed locally in #13; PM routed Dev to apply at the root in `design/tokens.css`. Retroactively fixes #11/#12 spec docs without re-deploying. The live product likely isn't affected (no nested theme scopes in prod), but Dev verifies.
+
+3. **BE-date miss: fold into Dev #13 + grep.** `GrowthScreen.tsx` calls `formatDate()` (Gregorian) where it should call `formatDateBE()`. Lock is from 2026-06-05; clearly didn't propagate everywhere. Dev fixes + greps for other instances. Worth knowing if there are more.
+
+4. **Δ chip: dropped.** Chart already shows trajectory; per-row Δ depends on irregular measurement intervals and risks misleading. Brand voice prefers less. Easy to add back if beta users ask.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+
+**State after this fold**
+- 7 polish rounds shipped (Home → Home contrast → Timeline → Day summary → กิน sheet/sibling tokens → นอน pause/resume/complete → โต/4th verb token/systemic fixes).
+- Four verb-color `-strong` tokens in the design system (`--eat-strong / --sleep-strong / --primary-strong / --grow-strong`).
+- Three system-level guardrails in `brand.css` (#08 / #09 / #11+#11b / #13 extends).
+- Two PRD §0.1 semantic principles (active-feeding-session 2026-06-06; Sleep three-state + Eat/Sleep asymmetry 2026-06-06).
+
+**Files**
+- `HANDOFF_dev_13.md` — written; 5-part fold including the two systemic fixes.
+
+**Handoff → Dev (Claude Code)** via `HANDOFF_dev_13.md`.
+
+CPO: please route.
+
+---
+
+## 2026-06-07 — Designer — Growth (โต) polish shipped (Handoff #13 return)
+
+**Scope:** Handoff #13 — โต polish + two systemic fixes Designer caught during the audit. Reuses the #09 detail-sheet pattern; no schema.
+
+**Deliverable:** `ละมุน Growth Polish.html` — 6 sections, light + dark, live interactive prototype verified.
+
+**The five**
+1. Edit affordance (CPO headline) — ประวัติ row → reused #09 detail sheet; แก้ไข primary (inline pre-filled form) + ลบรายการนี้ quiet behind the #09 confirm; always-visible row trash removed. Both น้ำหนัก + ส่วนสูง.
+2. Row hierarchy — bold tabular value + sans unit over muted BE date.
+3. Per-metric empty — keeps ประวัติ header + tappable dashed card → add flow.
+4. Tappable dot — same detail sheet as the row; ≥48×48 hit target; focus + value preview.
+5. AA — two real fixes: data point was `--grow` at 3.02:1 → new `--grow-strong` (5.68/7.31); WHO caption `--fg-faint` 3.12 → `--fg-muted` 5.52.
+
+**Decisions routed to PM**
+1. `--grow-strong` vs `--primary-strong` — chose `--grow-strong` (growth keeps its own verb identity; clay would merge it into the brand + collide with eat's hue).
+2. Theme-scope bug (pre-existing #11/#12/#13) — fixed locally; recommend root fix in `tokens.css`.
+3. BE-date miss — GrowthScreen uses `formatDate()` (Gregorian) not `formatDateBE()`.
+4. Δ chip — keep "+0.4 กก." or drop as noise?
+
+**Patches:** `th-strings-growth-polish-patch.js` (growth.detail.* + historyEmpty.*) + `tokens-grow-strong.css`. No schema.
+
+**Handoff → PM (Claude).** Settle the four decisions, route the ~1h Dev fold (reuse #09 sheet, repoint row trash, row hierarchy, tappable dot, `--grow-strong` + caption AA, BE-date fix), adopt `--grow-strong` into tokens.css.
+
+---
+
+## 2026-06-07 — PM — Growth (โต) polish brief drafted (7th in series)
+
+**What happened**
+- CPO eyeballed live โต and surfaced one ask: ประวัติ entries need an edit affordance (only delete today).
+- PM added four more for structural consistency with the existing polish series. Five items total.
+
+**The five**
+1. (CPO) Edit affordance for ประวัติ — parallel to Timeline #09. Tap row → detail sheet with แก้ไข + ลบ-with-confirm. Always-visible trash gone.
+2. Row hierarchy mirrors Home + Timeline — bold value + muted date (BE format already locked).
+3. Empty state for ประวัติ when zero entries.
+4. Chart data point becomes tappable → same detail sheet. Two paths, one destination.
+5. AA pass — with one specific check: confirm the data point color isn't bound to `--danger` (it's red in the screenshot; semantically wrong for a chart data point). Lean: repoint to `--primary-strong`.
+
+**Explicitly NOT in scope** (flagged so Designer doesn't expand)
+- Chart axis numeric labels (real gap, but tied to WHO LMS reference data work queued for pre-public-launch).
+- Head circumference (cut in v0.2).
+- Unit toggle (metric locked).
+
+**Routing → Designer (`HANDOFF_designer_13.md`)** — half-day to one-day target. Reuses the Timeline #09 detail sheet component.
+
+**Carry-overs unchanged**
+- #12 Sleep state machine fully live after CPO ran migration + smoke check (logged below).
+- Beta still OPEN; first invites still paused on polish series completing.
+
+**Handoff → Designer (Claude Design)** via brief + CPO screenshot.
+
+CPO: please route + attach the screenshot.
+
+---
+
+## 2026-06-07 — PM — Dev #12 return accepted; routing CPO migration + smoke check
+
+**What happened**
+- Dev shipped #12 clean: 20/20 functional, 4/4 realtime, AA matches Designer targets, multi-pause loop proven (`pause_log` accrues correctly), `ended_at = paused_at` semantics asserted in code. Code on `main` (`bfd79ad`).
+- Dev caught and silently fixed a brief error: HANDOFF_dev_12.md's migration SQL said `ALTER TABLE activities` (plural) but the live table is `public.activity` (singular). Dev's shipped migration `0006_sleep_paused.sql` uses the correct name.
+- **Spec self-check:** PRD §0.1's active-feeding-session subsection already correctly used singular `activity` (line 48). Dev's flag was about the brief, not the PRD. Brief is archived; no spec rewrite needed. Learning logged for next data-model brief.
+
+**PM accepted as delivered.** Two CPO actions outstanding before #12 is fully live:
+1. **Run the one-line migration in Supabase SQL editor:** `alter table public.activity add column if not exists paused_at timestamptz null;` — additive, nullable, idempotent. No data-loss path.
+2. **60-second two-caregiver smoke check** on prod (Dev's recommendation since demo mode is single-identity). Walkthrough provided to CPO in chat.
+
+**PM decision on Dev's open question — no backfill.**
+Dev asked: should we backfill the (rare) sleep rows that may have been split into two entries *before* pause existed? Their read: no, not worth at beta scale, no clean heuristic. **PM agrees:** no real users in the cohort yet (beta paused on polish series), no clear merge rule, forward-only. Logged as a decision.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+
+**State after Action 1+2 above:**
+- #12 fully live (state machine + Home/Timeline quick actions + first data-model change).
+- Six polish rounds shipped: Home → Home contrast + global-nav + system guardrail → Timeline → Timeline day summary → กิน sheet + sibling tokens → นอน pause/resume/complete.
+- Three systemic design-system principles documented in `brand.css` (#08/#09/#11/#11b).
+- Two PRD §0.1 semantic principles documented (active-feeding-session 2026-06-06; Sleep three-state + Eat/Sleep asymmetry 2026-06-06).
+
+**Next baton after CPO confirms smoke check:** CPO — eyeball live + pick next polish target. Remaining candidates: Diaper sheet, Growth, Family/Caregivers, Settings.
+
+---
+
+## 2026-06-07 — Dev — Sleep pause/resume/complete shipped (#12)
+
+**Status:** Shipped + verified. On `main` (`bfd79ad`), pushed to `nattaponkr/MiNom`. **Blocker for "live":** one action needed from CPO — apply migration to live Supabase.
+
+**What shipped (5 parts)**
+1. Migration `paused_at` + `pause_log[]` — `0006_sleep_paused.sql`; table-name corrected to `public.activity`; pause_log in `details_json`.
+2. `TH_SLEEP_POLISH` (12 keys) — `sleep.stop` string kept, handler rewired to pause; `หลับต่อ` locked.
+3. Three-state machine (sheet + `useActivityLog`) — `pauseSleep` / `resumeSleep` / `stopSleep`; `ended_at = paused_at` (load-bearing).
+4. Home card + Timeline row (running + paused) — same handlers as sheet; day-summary ticks/freezes/settles.
+5. `--sleep-strong` verification — all four states; AA measured both themes.
+
+**Load-bearing semantics confirmed in code + test:** active sleep = `(end − started_at) − Σ pauses`. Threaded through day-summary and Timeline totals.
+
+**Asymmetry honored:** Eat remains a discrete tap-stop-saves event. No pause model added to Eat. Not unified.
+
+**Two items needing PM attention**
+1. Schema name correction (already handled in migration; PRD/spec fix flagged for next data-model brief).
+2. Live Supabase migration NOT yet applied — Dev has no CLI/creds/.env. Additive + nullable + idempotent — safe anytime.
+
+**Verification (demo mode, DemoRepo, 390px)**
+- Full loop 20/20: start → tick → close-persist → pause-from-Home → frozen → reopen paused sheet → resume continues (not reset) → multi-pause loop (`pause_log` 2 entries) → complete-from-paused (`ended_at === paused_at` asserted) → Timeline completed row + no active row + undo toast.
+- Realtime 4/4: cross-tab `paused_at` propagation via BroadcastChannel; peer reflects within ~1.5s; starter `logged_by_user_id` preserved across pause/resume/complete. *Caveat:* demo is single-identity, so this proves cross-device same-caregiver. Two-distinct-caregiver realtime needs prod smoke-check post-migration.
+- AA both themes: all measured ratios match Designer targets (within fractional decimal). `tsc` clean, `next build` green.
+
+**Open question for PM:** backfill consideration for pre-pause split entries? Dev read: no — not worth at beta scale, no clean heuristic.
+
+**Handoff → PM (Claude).** Route CPO migration + smoke check; pick next polish target.
+
+---
+
+## 2026-06-06 — PM — #12 accepted; PRD §0.1 locked Sleep semantics + Eat/Sleep asymmetry; routing Dev
+
+**What happened**
+- Designer's #12 drop landed clean — six items + the new state machine + AA gate + interactive prototype verified manually (automated verifier hit a 502 infra blip; not a real finding).
+- Files promoted: HANDOFF archived, JOURNAL_designer_12 merged below + removed, all design source in `design/`.
+
+**PM accepted as delivered.** Three decisions resolved:
+
+**1. Eat/Sleep asymmetry locked in PRD §0.1.** Added two new subsections:
+- "Sleep three-state semantics" — Running / Paused / Complete with data shapes; `ended_at = paused_at` on complete-from-paused (records active duration, not wall-clock); active duration formula.
+- "Eat vs Sleep asymmetry — the principle" — Eat = discrete event (stop-saves + 5s undo); Sleep = continuous state with brief interruptions (pause = false-alarm wake handling). Explicit "do not unify" instruction with the record-integrity rationale (one nap = one Timeline entry).
+- Both parallel the active-feeding-session subsection from 2026-06-06.
+
+**2. Resume wording: `หลับต่อ` confirmed** (Designer's call over PM's brief proposal `กลับไปจับเวลา`). Designer was right — `หลับต่อ` matches the parent's mental model; `กลับไปจับเวลา` sounds like a machine.
+
+**3. Schema sign-off:** `paused_at TIMESTAMP NULL` + `details_json.pause_log[]`. First real data-model change in the polish series. Back-compat plan explicit in the Dev brief:
+- Migration: `ALTER TABLE activities ADD COLUMN paused_at TIMESTAMPTZ NULL;` — no backfill needed.
+- Existing completed rows: unaffected.
+- In-flight sleep sessions at deploy: next `หยุด` tap enters new paused state (UX shift, no data corruption).
+- No data loss path identified.
+
+**Routing → Dev (`HANDOFF_dev_12.md`)** — five parts, ~3–4h:
+1. Migration (paused_at column).
+2. Patch merge (~12 keys; `sleep.stop` keeps string, handler rewires end→pause).
+3. State machine in `SleepSheet.tsx` + `useActivityLog.ts` (new `pauseSleep`/`resumeSleep`; `stopSleep` now means complete-from-paused).
+4. Home + Timeline active components for running AND paused states.
+5. Verify `--sleep-strong` correctly applied in new states (Designer says already repointed).
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+
+**Handoff → Dev (Claude Code)** via `HANDOFF_dev_12.md`.
+
+CPO: please route.
+
+---
+
+## 2026-06-06 — Designer — Sleep pause/resume/complete shipped (Handoff #12 return)
+
+**Scope:** Handoff #12 — Sleep gets quick-action parity with Eat #11, plus the substantive new piece: a pause/resume/complete state machine. `หยุด` now *freezes* the nap (pause glyph, not stop square) instead of ending it — from paused you `หลับต่อ` or `บันทึกการนอน`. Keeps one nap as one Timeline entry through false-alarm wakes.
+
+**Deliverable:** `ละมุน Sleep Polish.html` — 7 sections, light + dark, with a live interactive prototype (start → close to Home → pause → resume/complete, session persists throughout).
+
+**The six**
+1. Home active card — running Sleep card gains a หยุด chip (parity with Eat #11).
+2. Timeline active row — elevated row above today's entries, same action. Today-only.
+3. Pause/resume/complete state machine — the new model.
+4. Microcopy — `หยุดชั่วคราว` paused status; resume `หลับต่อ`; complete `บันทึกการนอน` / `บันทึก`.
+5. Paused visual — running = sleep-tinted + pulsing dot; paused = calm neutral + hollow held ring + frozen elapsed. Two equal-weight chips.
+6. Persistence + edit-hidden + notes — same disciplines as Eat #11; mirrors the live SleepSheet parent-held running prop.
+
+**State machine (§05)**
+```
+Idle ─เริ่ม─▶ Running ⇄ (หยุด / หลับต่อ) Paused ─บันทึกการนอน─▶ Complete
+```
+- Running: `paused_at NULL, ended_at NULL` — live tick.
+- Paused: `paused_at NOT NULL` — frozen elapsed, `pause_log[]` accrues.
+- Complete: `ended_at = paused_at` (PM lean — records active sleep, excludes pause tail).
+- Active duration = (now − started_at) − Σ pauses. Sheet open/close never advances the machine.
+
+**AA gate (both themes, true sRGB).** New paused text: `หยุดชั่วคราว` `--fg-muted`/surface-2 4.99 / 6.02; frozen elapsed `--fg` 13.21 / 11.84; `หลับต่อ` `--sleep-strong`/sleep-tint 5.22 / 5.45; running `หยุด` white-on-`--sleep-strong` 5.99 / 7.97. All clear AA. `--sleep-strong` (#11b) already repointed.
+
+**For Dev**
+- Patch: `th-strings-sleep-polish-patch.js` — TH_SLEEP_POLISH. Existing `sleep.stop` keeps its string; rewire handler end→pause.
+- Schema: `paused_at TIMESTAMP NULL` + `details_json.pause_log[]`; `started_at` immutable.
+- Client-side: tap semantics, persistence, paused visual, hide-edit, notes-draft, Home/Timeline surfaces.
+
+**Flags for PM**
+1. Lock the Eat/Sleep asymmetry in PRD §0.1 with the record-integrity rationale.
+2. Resume wording — chose `หลับต่อ` over literal `กลับไปจับเวลา` (warmer, brand-voiced).
+3. Schema sign-off — `paused_at` + `pause_log`.
+
+**Handoff → PM (Claude).** Accept + lock the asymmetry in PRD §0.1; route the Dev fold.
+
+---
+
+## 2026-06-06 — PM — Sleep polish brief drafted (6th in series); pause/resume/complete is the substantive new pattern
+
+**What happened**
+- CPO eyeballed live Home and surfaced two things: (a) Sleep is missing quick-action parity with Eat #11 (no `หยุด` on Home/Timeline), and (b) a new pause/resume/complete state machine specific to Sleep.
+- Routing as `HANDOFF_designer_12.md`. CPO will attach the screenshot.
+
+**The six**
+1. Sleep Home active card quick action (parity with #11 Eat) — single `หยุด` chip (no switch; Sleep has no sides).
+2. Sleep Timeline active row + same quick action (parity).
+3. **Pause/Resume/Complete state machine (new)** — three states with explicit data semantics. Schema lean: add `paused_at` TIMESTAMP NULL to sleep row; pause-log in `details_json`; on complete-from-paused, `ended_at = paused_at` for accurate "when nap ended" recording.
+4. Microcopy: `หยุด` (initiates pause), `หยุดชั่วคราว` (state label), `กลับไปจับเวลา` or `หลับต่อ` (resume), `บันทึกการนอน` (complete). Designer finalizes.
+5. Paused state visual treatment across sheet / Home / Timeline.
+6. Persistence + edit affordance + notes — same disciplines as Eat #11 (no re-litigation).
+
+**Locked in the brief: Eat does NOT get the pause model.**
+Worth flagging the rationale clearly because it's an intentional asymmetry between two timer verbs:
+- **Eat = discrete event.** "She ate 90 mL." Stop = done. 5s undo handles accidents.
+- **Sleep = continuous state with potential brief interruptions.** False-alarm wakes are real; without pause, every false alarm would split one nap into two Timeline entries — wrong as a record of the day.
+
+The asymmetry is real product semantics, not arbitrary inconsistency. PM will codify this in PRD §0.1 as a principle when this brief lands.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- Token discipline (`--sleep-strong` etc.) from #11b applies — Designer references it; Dev verifies in new states.
+
+**Files**
+- `HANDOFF_designer_12.md` — written; 6 items + state machine + AA gate baked in.
+
+**Handoff → Designer (Claude Design)** via brief + CPO screenshot.
+
+CPO: please route + attach the live screenshot.
+
+---
+
+## 2026-06-06 — PM — #11/#11b accepted; PRD §0.1 updated with active-feeding-session semantics; standing by for next-screen pick
+
+**What happened**
+- Dev folded #11 + #11b in one systemic commit (`6bdaaa4` + fix `d3c3afb`). All five parts shipped:
+  - Patch merged; idle/running surfaces distinct; tap-side-to-toggle wired.
+  - Session persistence as a parent-held running prop on `Main`, mirroring Sleep. State machine landed exactly per spec — close ≠ stop; timer ticks from `started_at` across navigation.
+  - Home active card + Timeline active row + day-summary live-tick all working.
+  - Token discipline applied: `--eat-strong` / `--sleep-strong` / `--primary-strong` repointed across text + white-on-fill; soft variants retained for decorative; **#08 scoped nav fix retired** (as Designer specified in 11b).
+- AA measurements match Designer's targets: white-on-`--eat-strong` 5.40 light / 9.43 dark; active text 5.07 / 6.19. All ≥ 4.5.
+- One small caveat noted by Dev: the literal "sheet close → reopen → still ticking" was demo-blocked by Next.js dev-tools overlay in headless run. Persistence is definitively proven by the live timer surviving navigation on the Home card and Timeline row (the sheet derives from the same `runningEat` row). PM accepts the proof.
+
+**PM accepted as delivered.**
+
+**PRD §0.1 updated** — added "Active feeding session — semantics (added 2026-06-06)" subsection codifying:
+- Definition (open-ended `bm`+`timer` row; sheet UI is a view, not the source of truth).
+- State derives from `started_at` (no separate running flag).
+- At most one active session per baby; concurrency soft-prompt handles two-caregiver races.
+- Attribution: `logged_by_user_id` = the starter, regardless of who stops.
+- Per-side log lives in `details_json` (no DB schema change).
+- Notes draft persists across sheet close; saves on stop.
+- Capture chip lock semantics.
+- Home + Timeline quick-action surfaces.
+- Realtime sync mirrors Sleep.
+- Code reference pointers for future LLMs/devs.
+
+**State of the polish series**
+- Five screens polished: Home → Home contrast + global-nav + system guardrail → Timeline → Timeline day summary → กิน sheet + persistence + sibling tokens.
+- Three systemic discoveries codified in the design-system principle (`brand.css`): #08 `--fg-faint` non-text only; #09 `--danger` darker text in light; #11/#11b soft verb hues decorative-only.
+- AA gate process correction from #08 now has a documented principle behind it, not just patches.
+
+**Next baton: CPO — eyeball live + pick next polish target.**
+Same discipline: open `minom-production.up.railway.app` on a real phone in both themes, find what bugs you next, tell me. Remaining candidates: Sleep sheet, Diaper sheet, Growth, Family/Caregivers, Settings.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites still paused on polish series completing.
+- All other carry-overs queued (Resend domain, `lamoon.app` registration, Phase 5 LINE, WHO LMS data, hard-delete, legal review).
+
+---
+
+## 2026-06-06 — PM — 11b landed; Dev brief touched up; sending updated prompt to Dev
+
+**What happened**
+- Designer's 11b drop is in: `design/tokens-strong.css` (three `-strong` tokens with measured ratios + binding guide) + `design/brand.css` updated with the cumulative system principle stub (#08 / #09 / #11 / #11b).
+- Files promoted; Designer journal entry merged below; `JOURNAL_designer_11b.md` removed.
+
+**Designer 11b deliverables (PM accepted)**
+- `--eat-strong`: oklch(0.53 0.135 50) light — already shipped in #11.
+- `--sleep-strong`: oklch(0.50 0.11 277) light — text/white 6.16; white-on-fill 5.99.
+- `--primary-strong`: oklch(0.53 0.135 48) light — text/white 5.57; white-on-fill 5.41. **Supersedes the #08 scoped active-nav fix** (Designer confirmed).
+- Dark mode: `-strong` tracks soft (dark soft already clears 7+), so binding `-strong` unconditionally resolves correctly per theme.
+- Design-system principle stub now in `brand.css`: soft hues decorative-only; `-strong` for text + white-on-fill in light.
+
+**Brief touch-ups (small)**
+- `HANDOFF_dev_11.md` — added "11b LANDED" status line at the top; rewrote Part 5b with actual values + the explicit "supersedes #08 scoped nav fix" lock; rewrote Part 5d from "wait or fold-later" to "bundle now."
+- Brief structure unchanged. Audit trail intact.
+
+**Dev brief is ready to route.** Updated copy-paste prompt provided to CPO this turn (the only change from the prior prompt is the wait-for-11b → 11b-is-here paragraph).
+
+**Carry-overs unchanged**
+- PRD §0.1 active-feeding-session semantics update is mine after Dev close-out.
+- Beta still OPEN; first invites paused on polish series completing.
+
+**Handoff → Dev (Claude Code)** via `HANDOFF_dev_11.md`.
+
+---
+
+## 2026-06-06 — Designer — Sibling -strong tokens + system stub
+
+**Scope:** Handoff #11b — the small token follow-up offered in the #11 return. Completes the systemic AA fix opened by `--eat-strong` (#11) across Sleep and the primary clay, and codifies the pattern as a design-system principle. ~30 min, no schema, no Eat rework.
+
+**Deliverables (3)**
+1. `--sleep-strong` (light): `oklch(0.50 0.11 277)` — text/white 6.16, white-on-fill 5.99, on sleep-tint 5.22. (soft `--sleep` was 3.15 / 3.06 — fail.)
+2. `--primary-strong` (light): `oklch(0.53 0.135 48)` — text/white 5.57, white-on-fill 5.41, on primary-tint 4.64. (soft `--primary` was 3.24 / 3.15 — fail.) Mirrors `--eat-strong`, as the warm-clay family should. **Supersedes the #08 scoped active-nav fix** — `--primary-strong` (0.53) is darker than that ad-hoc value, so it consolidates it.
+3. System principle stub — comment block added to `brand.css` (top), alongside the #08 `--fg-faint` guardrail and #09 `--danger` note. States the rule: soft hues are decorative-only; `-strong` for text + white-on-fill in light; the #11 running-state text discipline generalizes it.
+
+**Measured both themes.** Dark soft values already clear AA as text (7.1–8.2) and dark-ink-on-fill (7.8+), so `-strong` == soft in dark — components bind `-strong` unconditionally and get the right result per theme.
+
+**Binding guide** (light = what changes), in `tokens-strong.css`:
+- `--primary-strong`: primary CTA fills w/ white text (หยุดและบันทึก, เริ่ม, Save), `--primary` used as text, active nav tab (consolidates #08). Wordmark clay fill uses `-strong`; white-on-clay (`.on-clay`) unchanged.
+- `--sleep-strong`: sleep CTA / กำลังนอน status text, white-on-sleep fills, sleep text labels. Running text → `--fg`/`--fg-muted`, hue on dots/fills only.
+- Leave soft (do not repoint): icon chips, `--*-tint` surfaces, dots, borders, soft clay app-icon surface, wordmark dot glow.
+
+**Handoff → PM (Claude).** Signal Dev that 11b has landed — fold everything in the one waits-and-bundle commit: eat polish + `--eat-strong` + `--sleep-strong` + `--primary-strong` + the comment block. No further Designer action; CPO then picks the next screen.
+
+---
+
+## 2026-06-05 — PM — Eat polish accepted; routing Dev + small Designer follow-up for sibling tokens
+
+**What happened**
+- Designer's #11 drop landed clean. All six items from the brief plus the systemic AA finding addressed.
+- Files promoted: `HANDOFF_designer_to_pm_eat_polish.md` → archive; `JOURNAL_designer_11.md` merged below + removed; all design source in `design/`.
+
+**PM accepted as delivered.** The persistence model mirrors Sleep correctly; the patch is tight (10 keys, no removes); the AA finding is rigorous; the live prototype proves the persistence loop.
+
+**Two PM decisions**
+
+**1. Adopt `--eat-strong` app-wide + greenlight Designer to spec siblings.**
+The AA finding is genuinely systemic — `--eat` soft hue fails as text/fill in light theme; Designer notes the same shortfall applies to `--sleep` and `--primary`. **This is the third systemic discovery of the same shape**:
+- #08: `--fg-faint` is non-text only; text uses `--fg-muted`+
+- #09: `--danger` as text uses darker variant in light
+- #11: Soft verb hues fail as text/fill in light; need `-strong` variants
+
+That's a pattern worth documenting as a principle, not just patching. Wrote `HANDOFF_designer_11b_tokens.md` asking Designer to:
+- Spec `--sleep-strong` + `--primary-strong` concretely (they offered: "I can spec the sibling tokens concretely on your go").
+- Add a comment block to the design-system stub capturing the principle alongside #08's `--fg-faint` guardrail.
+
+Dev will bundle `--eat-strong` + Designer's siblings in one commit when 11b lands. PM lean per Dev brief: wait + bundle for one clean systemic commit.
+
+**2. PRD §0.1 update for active-feeding-session semantics — mine, after Dev folds.**
+Same shape as the existing Sleep active-session pattern. Will write on Dev close-out, not now.
+
+**Routing**
+- **Designer (small) — `HANDOFF_designer_11b_tokens.md`**: spec `--sleep-strong` + `--primary-strong` + add the system-stub principle comment. ~30 min.
+- **Dev — `HANDOFF_dev_11.md`**: 5 parts — patch merge + session persistence + Home active card + Timeline active row + token adoption. Dev waits-and-bundles or ships eat-polish-only and folds siblings later, their call.
+
+**Note on the #08 nav-active fix interaction**
+- The #08 nav-active fix scoped a darker clay for the nav tab in light mode. Once `--primary-strong` lands, that scoped fix can probably be retired in favor of the standard token. Flagged for Dev in #11 to confirm/consolidate.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites paused on polish series completing.
+
+**Files produced this turn**
+- `HANDOFF_designer_11b_tokens.md` — small Designer follow-up.
+- `HANDOFF_dev_11.md` — main Dev fold.
+
+**Handoff → Designer (small, 11b) + Dev (main, 11)**.
+
+CPO: please route both — Designer's small follow-up first (or in parallel; Dev brief tells them to wait-and-bundle).
+
+---
+
+## 2026-06-05 — Designer — กิน sheet polish shipped (Handoff #11 return)
+
+**Scope:** Handoff #11 — Eat v2 polish (นมแม่·จับเวลา timer): tap-to-start/stop, dropped middle pill, session persistence + Home/Timeline quick actions, idle≠running surfaces, hide แก้ไข while running, notes persist. Plus a systemic AA finding fixed. AA gate §0 honored.
+
+**Deliverable:** `ละมุน Eat Polish.html` (+ `screens_eat_polish.jsx`, `screens_eat_polish_demo.jsx`, `section_eat_polish.jsx`, `eat_polish_app.jsx`, `eat_polish.css`, `th-strings-eat-polish-patch.js`). 7 sections, light + dark, with a **live interactive prototype** that proves persistence across sheet close.
+
+**The six**
+1. Tap-to-start / tap-to-stop — side button is start; tap active to stop+save; tap other to switch. Bottom หยุดและบันทึก stays as formal path (PM lean).
+2. Dropped the middle pill — big mono = session total; per-side cumulative in the side buttons.
+3. Session persistence + quick actions — active feed = eat row where `mode=bm & capture=timer & ended_at=null`, derived from `started_at`. Mirrors SleepSheet's parent-held running prop. Home card goes live; Timeline gets an elevated active row (today only). Same two actions on both.
+4. Idle ≠ running — distinct surfaces: idle invites the side tap (CTA ปิด); running fills the active side, lights the status, dims mode chips (CTA หยุดและบันทึก).
+5. Hide แก้ไข while running — start-time edit idle-only; post-save edits via the #09 detail sheet.
+6. Notes persistence + AA — note draft persists on the session, saves on stop, clears on cancel.
+
+**Locked items honored**
+- Capture toggle stays visible while running; inactive chip disabled with hint "หยุดเพื่อสลับโหมด" (PM lean).
+- One active session per baby; concurrency soft-prompt unchanged. Session ticks live in the #10 day summary (tabular numerals, no re-layout).
+
+**State machine** (Deliverable §5): Idle →(tap side)→ Running →(tap active / หยุด)→ Saved, with the switch self-loop and the **close-sheet ≠ stop · session persists** edge.
+
+**AA gate — the finding (both themes, true sRGB).** Systemic, not a near-miss. Light-theme soft `--eat` (0.70) fails as text/fill: running status 2.73, active side label 2.32, white-on-eat stop chip 2.66. Dark passes.
+- Fix: `--eat-strong: oklch(0.53 0.135 50)` (light) — text/white 5.56, text/eat-tint 4.71, white-on-fill 5.40; dark keeps its lighter value. Plus the #10 discipline — running-state text binds `--fg`/`--fg-muted`; eat hue lives only on non-text (dots/fills/borders).
+
+**Flags for PM**
+- Adopt `--eat-strong` app-wide. Sleep & primary clay share the same light-theme shortfall. Recommend `--eat-strong` / `--sleep-strong` / `--primary-strong` in tokens.css. Same shape as #09's danger-text flag.
+- PRD §0.1 — after Dev folds, document active-feeding-session semantics (at-most-one-per-baby; `logged_by` = starter even if another caregiver stops).
+
+**For Dev**
+- Patch: `th-strings-eat-polish-patch.js` — TH_EAT_POLISH (idle/stop/switch hints, capture-lock hint, idle CTA, Home/Timeline active strings). No removals.
+- Client-side (spec §07, no schema): session object + tap semantics, drop-pill, hide-แก้ไข, capture-lock, notes-draft, Home/Timeline active surfaces, attribution-to-starter. Reuse the SleepSheet parent-held pattern in Main.tsx.
+
+**Handoff → PM (Claude).** Accept + route the Dev fold (session object mirroring Sleep + tap semantics + Home/Timeline active components); adopt `--eat-strong` app-wide; update PRD §0.1. Then CPO picks the next screen in the polish series.
+
+---
+
+## 2026-06-05 — PM — กิน sheet polish brief drafted (5th in screen-by-screen series)
+
+**What happened**
+- CPO eyeballed the live กิน sheet in นมแม่ timer mode (light + dark) and surfaced three substantive issues. PM added three more from the same screenshots.
+- Routing as `HANDOFF_designer_11.md`. CPO will attach the two screenshots.
+
+**The six**
+
+1. **Tap-side-to-toggle (CPO)** — tap a side to start; tap active side again to stop. Switch sides already works (#09 removed the separate switch button). PM kept the bottom `หยุดและบันทึก` as belt+suspenders.
+2. **Drop the middle small timer pill (CPO)** — redundant; per-side cumulative already lives in the buttons. Keep big total + per-side in buttons.
+3. **Session persistence + Home/Timeline quick actions (CPO)** — the biggest item. Turns active feeding into a first-class persistent object (same pattern as Sleep timer from Phase 3). Home Eat card + Timeline get live state + quick `หยุด` and `สลับข้าง` affordances.
+4. **Idle vs running states clearly different (PM)** — supports the new tap-to-start discoverability.
+5. **Hide `แก้ไข` time edit during running (PM)** — odd mid-session; detail sheet from #09 handles post-save edits properly.
+6. **Notes persistence + AA pass (PM)** — note survives close+reopen; AA gate per §0 standard.
+
+**Two things I called out as locked**
+- The capture toggle (จับเวลา / กรอกปริมาณ) stays. PM lean for the edge case: disable the other capture chip while a timer is running, with a tiny "หยุดเพื่อสลับโหมด" hint on tap.
+- 2-tap log path preserved — now tap-side-to-start is the 1st tap, save-by-stopping is the 2nd. Net faster than before.
+
+**One PRD update PM owes after Designer/Dev ship**
+- PRD §0.1 needs the active-feeding-session semantics added (parallel to the existing Sleep active-session pattern from Phase 3). I'll do that on Dev close-out, not now.
+
+**Routing → Designer (`HANDOFF_designer_11.md`)** — multi-day target deliverable: idle/running state spec + Home + Timeline quick-action treatments + state machine + AA audit + microcopy patch.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites paused on polish series completing.
+- Sleep + Diaper sheets, Growth, Family, Settings still in the queue for later polish rounds.
+
+**Handoff → Designer (Claude Design)** via brief + CPO screenshots.
+
+CPO: please route + attach the two screenshots.
+
+---
+
+## 2026-06-05 — PM — Day summary + attribution drop accepted; standing by for next-screen pick
+
+**What happened**
+- Dev confirmed #10 shipped and verified at the documented ratios. Row attribution fully dropped product-wide. Day summary built per CPO's locked Hero density + refinement (eat sub-line carries volume + duration when both exist).
+- Polish series sequence so far: Home → Home contrast + global-nav + system guardrail → Timeline → Timeline day summary.
+
+**State at this checkpoint**
+- Timeline screen is now fully polished including the day summary.
+- The activity detail sheet (#9 deliverable) is the canonical home for who-logged-it.
+- The AA gate process correction from #08 has held across two consecutive polish rounds (#09 Timeline + #10 day summary).
+- Three screens remain candidates for the polish series: Eat sheet, Sleep sheet, Diaper sheet, Growth, Family/Caregivers, Settings. Activity detail sheet probably fine as just shipped.
+
+**Next baton: CPO — eyeball live + pick next polish target.**
+Per the discipline established earlier: CPO eyeballs the live result on a real phone (both themes), then tells PM which screen bugs them next. Don't pre-route; let the visual judgment drive sequencing.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites paused on polish series completing.
+- Resend domain + `lamoon.app` registration + Phase 5 LINE design + WHO LMS data + hard-delete + legal review all queued.
+
+---
+
+## 2026-06-05 — PM — Day summary accepted; Hero density + CPO refinement; routing Dev #10
+
+**What happened**
+- Designer's re-drop landed cleanly: `HANDOFF_designer_to_pm_summary.md` + `JOURNAL_designer_10.md` + `design/ละมุน Day Summary.html` + `design/th-strings-timeline-patch-2.js` + JSX/CSS sources.
+- Surfaced the one open decision (content density: Hero / Counts / Amounts) to CPO via AskUserQuestion with Designer's recommendation marked.
+
+**CPO's call — Hero density with a refinement**
+- Locked: **Hero** (Designer + PM recommendation).
+- Refinement: *"add กิน นมแม่ that also as a timing mode — use the duration for that one. Therefore the กิน would look like 5 ครั้ง, 450 มล, 2 ชม. 41 นาที (Feel free to tweak as you see fit to make it easy to understand)."*
+- Implication: the eat sub-line now carries TWO dimensions when both exist — volume (from นมผง + นมแม่-amount) AND duration (from นมแม่-timer). Designer's original Hero spec had volume only; CPO's refinement closes a real gap for mixed-mode and exclusively-breastfeeding families.
+
+**Aggregation logic locked in Dev brief**
+- `count` = total eat entries.
+- `volume` = sum of `amountMl` where `mode ∈ {formula}` OR `(mode == bm AND capture == amount)`.
+- `duration` = sum of timer-session durations where `mode == bm AND capture == timer`.
+- Sub-line composition:
+  - Both > 0 → `{volume} มล. · {duration}` (inline; stack as two sub-lines if 360px crowds).
+  - Volume only → `{volume} มล.`
+  - Duration only → `{duration}`
+  - Both 0 (e.g., solids-only day) → no sub-line.
+
+**Why this works with the locked principle**
+- CPO's earlier "BM is BM regardless of delivery" principle from 2026-06-03 is exactly what makes this clean. The capture toggle on นมแม่ is now load-bearing for the summary — timer entries contribute to duration, amount entries contribute to volume. The summary respects the principle rather than collapsing one capture mode away.
+
+**File placement**
+- Designer's handoff archived as `HANDOFF_designer_to_pm_summary_archive.md`.
+- Designer's journal entry merged below (Designer's own JOURNAL.md overwrite was avoided per #08-pattern; `JOURNAL_designer_10.md` removed after merge).
+- All design files in `design/`.
+
+**Routing → Dev (`HANDOFF_dev_10.md`)**
+~1–2h, three pieces:
+1. Merge `design/th-strings-timeline-patch-2.js` (6 keys, no removes).
+2. Build summary component below day label, above row list. Per-verb aggregation logic in §2b of the Dev brief. AA pass against Designer's measured ratios.
+3. Confirm row attribution chip + spacer removal product-wide (consistency with the #09 trim).
+
+If Dev is still mid-flight on #09, bundle into the same commit. Otherwise small standalone pass.
+
+**Flags I'm watching**
+- Designer's width-critical observation: "4 ชม. 32 นาที" alone is already tight at 360px. Combined sub-line may crowd — Dev brief calls out the stacked-fallback layout if it does. Designer may need to iterate after seeing the live build.
+
+**Carry-overs unchanged**
+- Beta still OPEN; first invites paused on polish series completing.
+- Dev #09 still folding; this bundles in if timing aligns.
+- All other carry-overs queued.
+
+**Handoff → Dev (Claude Code)** via `HANDOFF_dev_10.md`.
+
+CPO: please route.
+
+---
+
+## 2026-06-05 — Designer — Day summary shipped (Timeline addendum)
+
+**Scope:** Handoff #10 — Part A (attribution-drop consistency) + Part B (day-summary design). Timeline polish addendum. One new element; no schema; client-side logic only. Carries the standing AA gate (§0).
+
+**Deliverable:** `ละมุน Day Summary.html` (+ `screens_timeline_summary.jsx`, `section_timeline_summary.jsx`, `summary_app.jsx`, `summary.css`, `th-strings-timeline-patch-2.js`). 6 sections, light + dark, 360px: the decision, in-place full state, partial + empty states, attribution drop, AA audit, spec.
+
+**Part B — day summary**
+- Hero numbers, count-led: hero = count for กิน & ถ่าย, duration for นอน. Second dimension (volume / ฉี่·อึ split) is a muted sub-line. Chosen over counts-only (ambiguous) and counts+amounts (crowds 360px).
+- Same hierarchy as Home + Timeline row — muted label over bold detail, tabular mono numerals, sans labels. One pattern across the product.
+- Placement: below the header, under the load-bearing day label, above the row list. Recomputes on day-swipe.
+- Partial: verbs with no data omitted (no 0-state). Empty: summary hidden — #9.7 empty state stands alone.
+- Brand voice held: no celebration copy, no comparison, no charts.
+
+**Part A — attribution drop (consistency)**
+The #09 speak-on-change caregiver chip is removed from rows entirely, including its reserved spacer — rows tighten. "Who" now lives only in the detail sheet's `บันทึกโดย {name} · {time}` line. Matches the client-side trim from mid-#09; spec synced.
+
+**AA gate — measured both themes, true sRGB.** Summary sits on `--surface-2`:
+- Hero numeral (`--fg`): 13.21 / 11.84 ✓✓
+- Label / unit / sub (`--fg-muted`): 4.99 / 6.02 ✓
+- Verb dot decorative → exempt from text minimum.
+
+**Flags for PM**
+- Layout watch: นอน duration "4 ชม. 32 นาที" is width-critical at 360px. Re-check if duration format ever lengthens.
+- No new app-wide flags.
+
+**Open decision for CPO**: Content density — Hero / Counts / Amounts. Hero recommended; shipped a Tweak for side-by-side comparison.
+
+**Patch for Dev:** `th-strings-timeline-patch-2.js`. Aggregation + count-led hero + omit/hide rules + attribution removal are client-side, no schema. Bundles with Dev #09 if timing aligns.
+
+**Handoff → PM (Claude).** Merge the patch; build the summary; remove the row attribution chip + spacer product-wide. Surface the density decision to CPO. Then CPO picks the next screen in the polish series.
+
+---
+
+## 2026-06-05 — PM — Designer #10 return missing files; re-drop requested
+
+**What happened**
+- Designer sent the #10 return note describing a complete deliverable (density-Tweak comparison + Open decision for CPO + microcopy patch + journal entry). **None of the named files reached the shared workspace.** Checked root, `design/`, recent-touched within the hour — only PM edits visible.
+- Same drop-path glitch seen on prior returns. Not a content issue; a delivery issue.
+
+**Action**
+- Wrote `HANDOFF_designer_10_redrop.md` listing exactly which files are missing, target placement convention, and a stopgap (paste the three highest-leverage artifacts into chat if the file-sync issue persists).
+- Held the baton on PM side. **Not routing Dev** against a spec I can't see — same discipline as #08 (verified Designer's diff before routing).
+
+**Files updated**
+- `HANDOFF_designer_10_redrop.md` — small re-drop request.
+
+**No change to Dev #09** — still folding with the updated Item 2b. Independent of #10.
+
+**Handoff → Designer (Claude Design)** via `HANDOFF_designer_10_redrop.md`.
+
+CPO: please route the re-drop request.
+
+---
+
+## 2026-06-05 — PM — Timeline addendum: drop row attribution + design day summary
+
+**What happened**
+- CPO saw the live Timeline polish (Dev mid-fold on #09) and surfaced two changes:
+  1. Drop attribution from rows entirely. Reasoning: "User can see who created when click to see detail anyway." The detail sheet is the canonical home for who-logged-it; the list is for *what happened today*, not *who*.
+  2. Add a day-summary element to the Timeline page.
+
+**PM accepted both**
+- **Attribution drop** — cleaner ladder (list = what, detail = full info). Removes ~70% of list noise. Updated Dev #09 mid-flight to trim the suppression-on-change rule from Item 5; render no attribution chip on rows. The detail-sheet `loggedBy` line stays.
+- **Day summary** — real new element worth designing carefully. Brand goal: earn its weight. Avoid calorie-counter vibes. Routed as Designer #10 with three open questions (what to show / where / empty states) and PM leans documented.
+
+**Files updated**
+- `HANDOFF_dev_09.md` Item 2b — replaced suppression rule with "drop attribution entirely." Dev catches the update next time they read the file.
+- `HANDOFF_designer_10.md` — written; covers Part A (attribution consistency note for Designer's spec doc) + Part B (the real design work on the summary).
+
+**On the day summary — PM leans (Designer can override within framing)**
+- **What to show:** hero numbers — `450 มล. · 4 ชม. 32 นาที · 6 ครั้ง` with muted context labels. Mirrors the Home card + Timeline row hierarchy (muted context + bold detail). One typographic pattern across the product.
+- **Where:** top of page, below the header, above the row list. Most natural "here's what today looks like" position.
+- **Empty/partial:** hide entirely when day is empty (existing empty state still applies); show only verbs with data otherwise. No "0 ครั้ง · 0 มล." — that's sad.
+
+**AA gate** applies under the §0 standard from #08/#09 — both themes, documented ratios, real-scale screenshots.
+
+**Routing**
+- **Designer** active baton via `HANDOFF_designer_10.md`.
+- **Dev** still folding #09 (with the updated Item 2b). Probably won't bundle with Designer #10 unless timing aligns; otherwise small Dev #10 follow-up.
+
+**Carry-overs unchanged.**
+
+CPO: please route the Designer brief.
+
+---
+
+## 2026-06-05 — PM — Timeline polish accepted; routing Dev (#09) + app-wide danger-text
+
+**What happened**
+- Designer returned the Timeline polish — all seven items addressed, activity-detail sheet specced, AA gate passed both themes, two near-misses caught and fixed (`ลบ` 4.43→5.77 with darker danger-text; chevron disabled glyph 2.97→3.77).
+- Designer dropped at root again; files promoted to proper locations: `th-strings-timeline-patch.js` + `th-strings-timeline.js` → `design/`; Designer's handoff archived as `HANDOFF_designer_to_pm_timeline_archive.md`.
+
+**PM accepted as delivered.** Two structural wins:
+- Timeline rows now speak the same visual language as Home cards (muted context + bold detail). Product feels like one product.
+- Destruction left the default vocabulary — delete moves into the detail sheet (with confirm) and a swipe-left power-user gesture. The always-visible red trash on every row is gone.
+
+**Designer's two flags for PM**
+1. **Apply darker danger-text app-wide** — `--danger` as TEXT was 4.43 in light (hair under 4.5). Scoped a darker variant for Timeline; folded into Dev brief #09 as Part 4 (same shape as #08's global-nav fix). Danger *fills* unaffected; only TEXT-on-surface bindings change.
+2. **Lock BE dates in PRD §11.1** — **already done last turn** per CPO's 2026-06-05 confirmation. No PM action needed; Dev just renders BE for all full-date displays via `Intl.DateTimeFormat('th-TH-u-ca-buddhist', ...)`.
+
+**AA gate held up on its first real outing.** Designer measured ratios, documented in a table, caught two near-misses, fixed them in-flight. Process correction from #08 is working as designed.
+
+**Routing → Dev (`HANDOFF_dev_09.md`)** — four pieces, ~1–2h:
+1. Merge `design/th-strings-timeline-patch.js` (~15 keys + 3 removes).
+2. Behavior rules client-side: row hierarchy, attribution-on-change-only, BE date format, chevron disabled state.
+3. Build activity-detail sheet (new small component) — read-only entry + `แก้ไข` primary + `ลบรายการนี้` with confirm.
+4. Apply darker danger-text app-wide; add the danger text-vs-fill comment block in central token CSS next to #08's `--fg-faint` guardrail.
+
+**Carry-overs unchanged.**
+
+**Handoff → Dev (Claude Code)** via `HANDOFF_dev_09.md`.
+
+CPO: please route.
+
+---
+
+## 2026-06-05 — Designer — Timeline polish shipped
+
+**Scope:** Handoff #09 — second screen in the polish series. Seven tightenings + a new activity-detail sheet. First brief under the standing AA gate (§0). Microcopy + treatment + tap-to-edit; no schema.
+
+**Deliverable:** `ละมุน Timeline Polish.html` (+ `screens_timeline.jsx`, `screens_timeline_detail.jsx`, `section_timeline.jsx`, `section_timeline_spec.jsx`, `timeline.css`, `th-strings-timeline.js`). 6 sections, light + dark, 360px: before/after, the seven, activity detail sheet, empty state, AA audit, spec.
+
+**The seven**
+1. Header subtitle วันนี้ dropped — section label is the single load-bearing source of "which day."
+2. Tap-to-edit → activity detail sheet (the new affordance).
+3. Row hierarchy now mirrors Home: muted context (verb) over bold detail (mode-encoded). Fallback: no detail → bold = verb, context omitted.
+4. Always-visible red trash removed; delete lives in the detail sheet (confirmed) + a swipe-left reveal. Destruction left the default vocabulary.
+5. Attribution suppressed when logger == previous row (first row anchors); the different-caregiver row now carries the signal. Space reserved so rows stay aligned.
+6. Disabled day-nav chevron reads as disabled (faint glyph) and clears 3:1 — the live ghost was ~0.08 (invisible).
+7. Empty state: 7a title → ยังไม่มีบันทึก (was hardcoded "วันนี้" on a past day); 7b BE date (2 มิ.ย. 2569) confirmed default for full dates; 7c generic list icon dropped; 7d body tightened.
+
+**Activity detail sheet (#2/#4):** read-only entry (time, type/amount, note, logged-by as calm meta) with แก้ไข primary + ลบรายการนี้ quiet; delete confirms.
+
+**AA gate — measured both themes, true sRGB.** All text --fg-muted+ (≥4.98 light / ≥6.05 dark). The gate caught two light near-misses, both fixed:
+- Delete action ลบ (--danger): 4.43 → darker danger-text in light → **5.77** (dark 6.29).
+- Disabled chevron glyph: 2.97 → darker faint in light → **3.77** (dark 4.17, non-text 3:1 min).
+Guardrail (#08) held: the only faint-glyph consumer is the disabled chevron (non-text).
+
+**Notes for PM**
+- `--danger` as TEXT is 4.43 in light (hair under 4.5) — scoped a darker danger-text here; **flag: same applies to any danger-text app-wide** (same shape as the #08 global-nav flag). Fills (white-on-danger) are unaffected.
+- BE date format (§7b) — recommend PRD §11.1 lock BE as default for all full-date displays.
+
+**Patch for Dev:** `th-strings-timeline-patch.js` — TH_PATCH (empty-state + detail-sheet + swipe keys) + TH_REMOVE (subtitle, old empty title, joined row template). Behavior rules documented in §06; no schema, ~1–2h fold.
+
+**Handoff → PM (Claude).** Merge the patch; build the row hierarchy + attribution-suppression + tap-to-edit detail sheet; apply the darker danger-text app-wide. Then next screen in the series.
+
+---
+
+## 2026-06-05 — Designer — Home contrast fix + AA audit shipped
+
+**Scope:** Handoff #08 — diagnose/fix the dark-mode "ฉี่" contrast failure + full WCAG 2.1 AA audit of Home, both themes. Method: measured true sRGB of every text element against its actually-rendered surface and computed contrast ratios (the `design:accessibility-review` skill isn't in my toolset, so I ran the audit math directly — same substance).
+
+**Part A — diagnosis: Case 1 (wrong token), not Case 2 (token value).**
+Token contrast on the card surface (light / dark):
+- `--fg` (primary): **14.56 / 13.36** ✓✓ — dark values are healthy.
+- `--fg-muted`: 5.5 / 6.83 ✓✓
+- `--fg-faint`: 3.12 / 3.66 ✗✗ — fails text in BOTH themes.
+
+Because `--fg` passes in dark, the dark token *values* are fine. The "ฉี่" hero was bound to the **faint** token (3.66 dark / 3.12 light) — it only "looked fine" in light because dark text on a light field reads forgivingly. **Fix = bind the mode-encoded hero detail to `--fg` on all verb cards.** No token-table change.
+
+**Part B — full audit caught 3 more fails (all fixed):**
+| Element | Before (L/D) | After (L/D) |
+|---|---|---|
+| Hero detail (ฉี่) | 3.12 / 3.66 ✗✗ | **14.56 / 13.36** ✓✓ (→ --fg) |
+| Timestamp …ที่แล้ว | 3.12 / 3.66 ✗✗ | 5.5 / 6.83 ✓✓ (→ --fg-muted) |
+| Repeat bar ทำซ้ำ… | 2.48 / 7.1 ✗✓ | 4.98 / 6.05 ✓✓ (--eat→--fg-muted) |
+| Nav inactive [global] | 2.97 / 4.17 ✗✗ | 5.43 / 7.16 ✓✓ (→ --fg-muted) |
+| Nav active [global] | 3.08 / 8.13 ✗✓ | 6.24 / 7.46 ✓✓ (dark clay L / primary D) |
+
+Passing, unchanged: empty stat (5.5/6.83), verb label (5.5/6.83), baby name (13.9/15.3), family hint (13.5/12.1), chevron non-text glyph (3.12/3.66, clears the 3:1 min).
+
+**System guardrail added:** `--fg-faint` is **non-text/glyph only** (clears 3:1, not 4.5:1). Any text must use `--fg-muted` or stronger. On Home the chevron is its only legitimate consumer.
+
+**Deliverable:** `ละมุน Home Polish.html` now has a **§05 · AA audit** (diagnosis callout + before→after table, all green). Files: `home.css` (token-mapping fixes), `section_home.jsx` (audit section), `home-contrast-diff.js` (Dev diff — NOT a microcopy patch; no new th.json keys).
+
+**Notes for PM**
+- The bottom **nav is global** — nav fixes are scoped to Home in the demo for the audit; apply app-wide as its own small change.
+- No token *values* moved — only token *mappings* (which token is bound to which text). Microscopic Dev fold.
+- Process correction (Part C) acknowledged: AA verification + documented ratios + both-theme proof will be a top-line gate on every subsequent polish brief.
+
+**Handoff → PM (Claude).** Merge the token-mapping diff (Home), schedule the global-nav fix, fold the `--fg-faint` guardrail into the design-system stub. Then next screen in the series with the AA gate from the start.
+
+---
+
+## 2026-06-05 — Designer — Home polish shipped
+
+**Scope:** Handoff #07 — first in the screen-by-screen polish series. Home only. Microcopy + visual treatment; no schema, no new Dev logic. Worked from CPO's live light/dark screenshots.
+
+**Deliverable:** `ละมุน Home Polish.html` (+ `screens_home.jsx`, `screens_home_live.jsx`, `section_home.jsx`, `home.css`, `th-strings-home.js`). 4 sections, light + dark, 360px: before/after, the five tightenings annotated, the empty/partial/full **height matrix**, and the spec.
+
+**The five (all PM observations addressed)**
+1. **Repeat-last hidden when empty** + **named** when shown (`ทำซ้ำ {summary}`, e.g. ทำซ้ำ นมแม่ · 90 มล.). Verified: removing it from the empty Eat card is what makes heights even.
+2. **Empty stat collapsed** to `แตะเพื่อเริ่ม` alone (was `ยังไม่มีบันทึก · แตะเพื่อเริ่ม`). Same key across all three verbs.
+3. **Family hint** — dropped the `เคล็ดลับ:` prefix, made the **whole card tap through to Family** (users icon + chevron), and made it **conditional** (render only when caregiverCount < 1). Added a quiet dismiss option in spec.
+4. **Card heights even** — measured matrix: empty = [91,91,91]; partial = [133,91,91] (only the content+repeat Eat card grows); full = [133,91,91]. Before/live measured [146,102,91] (the bug). 
+5. **Header age line softened** — weekday lighter weight, fainter middle dot, nowrap + breathing room (also fixed a real wrap bug where "3 สัปดาห์" broke to two lines).
+
+**Self-spotted (net addition)**
+- **Chevron de-weighted** — removed the filled circle (redundant since the whole card taps); borderless faint chevron keeps the affordance without competing with the verb icon. Tweak toggle (soft/circle) included to compare.
+
+**Patch for Dev:** `th-strings-home-patch.js` — `TH_PATCH` (5 keys: 3× empty, repeatNamed, familyHint) + `TH_REMOVE` (4: eatEmptyStat, eatEmptyUnit, tip, repeatLast). Visibility rules (repeat-last gate, family-hint gate, chevron style) documented in §04 — all client-side, no schema.
+
+**Notes for PM**
+- Theme toggle left in the header (your lean + mine — dark/light at 3am earns prime real estate).
+- Two reach items you parked: chevron → I de-weighted it (recommend shipping soft); theme toggle → left as-is.
+- Still open from #05 (non-blocking): the นมแม่ capture-toggle keep/collapse call.
+
+**Handoff → PM (Claude).** Merge the patch, apply the visibility rules + chevron treatment. Ready for the ~1h Dev fold. Pick the next screen in the series when ready.
+
+---
+
+## 2026-06-04 — Designer — Invite-link UX shipped
+
+**Scope:** Handoff #06 — fix the "lost invite link" UX bug + voice-review two Dev-surfaced strings.
+
+**The bug fixed (design):** the invite link was shown once and unrecoverable on exit, so the only recovery was revoke & re-invite. Now **pending invites are persistent, first-class rows** on the Caregivers screen, each opening a detail sheet that is the canonical home for that invite.
+
+**Deliverable:** `ละมุน Invite-link UX.html` (+ `screens_invite.jsx`, `section_invite.jsx`, `invite.css`, `icons_invite.jsx`). Four sections, light + dark, 360px:
+1. **The fix** — Caregivers screen with active / pending / expired rows (sent + expiry, ≤3-day warning treatment) + an empty state that nudges the multi-caregiver wedge.
+2. **Invite detail sheet** — primary **แชร์คำเชิญ** (`navigator.share` → LINE/Messages/Email/Copy), a visible+copyable link (reveal-in-sheet, not on the parent screen — it's an unauth token), a **QR** behind an expander for in-person handoffs, quiet sent-meta, and a low-emphasis **revoke**.
+3. **Fallbacks & transitions** — desktop / no-Web-Share fallback (copy-first, URL visible), revoke confirm, and the expired→**ส่งคำเชิญใหม่** path (fresh 14-day token; never auto-pruned).
+4. **Spec & voice** — new keys + the Part B review.
+
+**Decisions I owned**
+- Included the **QR behind an expander** (PM lean) — in-person handoffs (grandma at the house) are real.
+- **Link posture:** reveal-on-tap inside the sheet, never a default-visible bold URL on the parent screen (over-the-shoulder leak risk for an unauth token).
+- Expired rows **persist** with a resend affordance rather than disappearing.
+
+**Part B — voice review**
+- `care.inviteHelper` → **rewritten**: was an auto-email promise; now sets the real expectation ("we'll make a link for you to send — via LINE, Messages, or email; valid 14 days"), matching the link-is-delivery reality until Resend domain is verified.
+- `home.sleep.justWoke` "เพิ่งตื่น" → **confirmed as-is** (natural, warm, child's-eye).
+
+**Patch for Dev:** `th-strings-invite-patch.js` (`window.TH_PATCH`, ~40 keys; `TH_REMOVE` empty — the old one-time-link surface is a code flow Dev retires, no stale th.json keys). Reference object: `th-strings-invite.js`.
+
+**Files**
+- `ละมุน Invite-link UX.html`, `screens_invite.jsx`, `section_invite.jsx`, `invite.css`, `icons_invite.jsx`
+- `th-strings-invite-patch.js` (Dev merge), `th-strings-invite.js` (reference)
+
+**Note for Dev:** Web Share API detection is yours to wire — spec'd both states (supported = share-first; unsupported/desktop = copy-first with URL visible). QR shown is a styled placeholder; generate a real QR from the invite URL at build.
+
+**Handoff → PM (Claude).** Route to Dev to fold into the beta-open cycle (merge patch, build persistent pending-invite UX + detail sheet). Open, non-blocking: the นมแม่ capture-toggle question from #05 is still pending your call.
+
+---
+
+## 2026-06-04 — Designer — Eat v2 propagation complete
+
+**Scope:** Handoff #05b — make the static spec (not the prototype HTML) the source of truth Dev builds from. No new design decisions.
+
+**Findings / what shipped**
+- The **static deliverable was already in sync** with the prototype (propagated in the #05 round): `MiNom Design - Eat v2.html` + `section_eat2.jsx` + `screens_eat2.jsx` already show the baby-centric model — กิน category, นมแม่/นมผง/อาหารแข็ง modes, the นมแม่ จับเวลา/กรอกปริมาณ capture toggle, no "switch side" button, the redesigned Home card hierarchy, and the repeat-last + แก้ไข/เลิกทำ toast. Verified renders clean (light+dark).
+- **New drop-in patch for Dev: `th-strings-eat2-patch.js`** (`window.TH_PATCH` + `window.TH_REMOVE`, same convention as the earlier polish patches). 58 patch keys + 20 removals. Covers:
+  - Verb rename: `home.eatName` ให้นม→**กิน**, `home.sleepName` การนอน→**นอน**, `home.diaperName` ผ้าอ้อม→**ถ่าย**, plus `eat.title/sleep.title/diaper.title`.
+  - Templated verb strings updated: `feedback.caregiverAdded`, `del.body`.
+  - Full Eat v2 model: `eat.mode.*`, `eat.amount.*`, `eat.bm.*`, `eat.breast.*`, `eat.formula.save`, `eat.solids.*`, notes (incl. solids placeholder).
+  - Home/Timeline mode-encoded stat-lines, `home.eat.repeatLast`, named feedback (`feedback.savedNamed/repeatedNamed/edit`).
+  - Mode-aware Eat concurrency namespaced to `concurrency.eat.*` (amount vs timer).
+  - REMOVES the old flat single-form keys (`eat.source*`, `eat.what*`, `eat.amountLabel`, `eat.save`, old `timeline.eat*`, `feedback.eatLogged`, flat `concurrency.*`).
+- **Consistency fix:** renamed `TH2.concurrency.bodyBottle/bodyBreast` → `bodyAmount/bodyTimer` (the word "bottle" was the how-naming we removed) and updated the consumer in `section_eat2.jsx`.
+
+**Files**
+- Patch: `th-strings-eat2-patch.js`
+- Reference object (source of truth for new keys): `th-strings-eat2.js`
+- Static deliverable: `MiNom Design - Eat v2.html` (+ `section_eat2.jsx`, `screens_eat2.jsx`, `eat2.css`, `icons_eat2.jsx`)
+- Interactive prototype (for feel/QA reference): `ละมุน Eat v2 — Prototype.html`
+
+**Notes for PM**
+- **grow verb left unchanged** (`home.growName` "การเติบโต"). The กิน/นอน/ถ่าย set is now 3 short + 1 long on Home. Recommend renaming grow → **โต** for parallelism, but it's out of this handoff's scope and Growth isn't in the build path yet — your call whether to fold it into a later pass.
+- Open question still standing from #05: keep the นมแม่ จับเวลา/กรอกปริมาณ capture toggle, or collapse นมแม่ to timer-only. Built to collapse in minutes if you decide against pumped-bottle support.
+
+**Handoff → PM (Claude).** Patch + synced static spec are ready. Route to Dev: merge `th-strings-eat2-patch.js` into `web/locales/th.json` (apply `TH_REMOVE`), then build Eat v2 against the static deliverable.
 
 ---
 
@@ -921,58 +1554,14 @@ The smallest end-to-end slice that proves the architecture, on the **Eat** verb 
 6. **Color system** — four verb hues share one lightness/chroma, hue-only variation; color is always paired with icon + label (AA, color-not-sole-indicator).
 
 **PRD notes for PM (no silent overrides)**
-- **"Family" vs "Caregivers" label** — used "Family" in the bottom nav for warmth; screen still does everything §5a/#7 specifies. Flagging as a copy proposal, not a model change.
-- **Soft concurrency prompt** (§5a) — designed as a non-blocking, dismissible sheet rather than its own screen.
-- No contradictions to PRD v0.2 otherwise. Q2 (units) handled via a unit-toggle in Settings + metric-default inputs; Q3 positioning carried through the visual tone.
+- **"Family" vs "Caregivers" label** — used "Family" in the bottom nav for warmth; screen still does everything §5a/#7 specifies (invite/remove/transfer, owner badge, pending, cap of 10). Flagging as a copy proposal, not a model change — happy to revert to "Caregivers" if preferred.
+- **Soft concurrency prompt** (§5a) — designed as a non-blocking, dismissible sheet rather than its own screen; will detail it in the Sleep/Eat build specs. No PRD change implied.
+- No contradictions to PRD v0.2 otherwise. Q2 (units) handled via a unit-toggle in Settings + metric-default inputs; Q3 positioning ("the simplest baby tracker") carried through the visual tone.
 
-**Handoff → PM (Claude)** — review hi-fi + component stub; confirm the two flags; route to Dev for the Walking Skeleton.
-
-> _Note (Dev, on reconcile): the two entries above were completed in the Designer/PM threads and dropped into the shared `JOURNAL.md` after my "blocked" entry below — their arrival is exactly what unblocked Phase 2._
-
----
-
-## 2026-05-31 — Dev — Phase 2 baton received, but blocked: design files missing → query to Designer
-
-**What happened**
-- CPO handed me the Phase 2 (Walking Skeleton) baton: build the **Eat vertical only**, end-to-end, proving auth + storage + real-time sync + offline on one verb. Specific screens, gates, and Done criteria all noted.
-- The brief instructs me to **lift tokens verbatim from `styles.css`** and **match the hi-fi in `MiNom Design — Phase 1.html`**, implementing the **section 05** behaviors. I went to read those files to start — **they don't exist** in `MiNom/` (searched the whole Desktop + Downloads). `HANDOFF_dev_01.md` (the "full detail" brief) is also missing.
-- There is also **no `Designer — Phase 1 complete` entry** in this journal. So the design baton was never formally closed into the shared folder; the deliverables appear to still live in the Designer's thread.
-
-**Decision (per my way-of-work): flag, don't invent.**
-- Half the Phase 2 Done criteria are visual ("visuals match the hi-fi") and the interaction spec lives in section 05. Building with fabricated tokens/components would diverge from what the Designer shipped and force a Phase 2 redo. So I'm not writing code against an invented design.
-- CPO directive: work as one team — send the Designer a question rather than guessing. Done: wrote `HANDOFF_dev_to_designer_01.md` (a precise, routable request).
-
-**What I'm asking the Designer for** (full detail in the query file)
-1. Drop the design source into `MiNom/design/`: the Phase 1 HTML, `styles.css`/inline tokens, and referenced assets. Raw source — no re-export needed.
-2. Confirm the file contains: light+dark color tokens, type/spacing/radius scales, Home + Eat hi-fi (both themes), and the seven section-05 behaviors.
-3. Three quick clarifications (nav label "Family", attribution avatar-vs-initials, skeleton row shape) — non-blocking.
-
-**Also needed (secondary, from PM):** `HANDOFF_dev_01.md`. I have the core of it from the CPO's message, so this isn't the hard blocker — the design files are.
-
-**Status:** Phase 2 is **open but blocked on the design drop.** As soon as the files land and the checklist is confirmed, I start building immediately — stack will be Next.js + Supabase per PM rec (I'll record final Q4/Q5 data-residency + auth-provider recommendations in the journal when I begin the build).
-
-**Files produced**
-- `HANDOFF_dev_to_designer_01.md`
-
-**Handoff → Designer (Claude Design).** Please route `HANDOFF_dev_to_designer_01.md` to the Designer's thread. I'll pick the baton back up the moment the design files are in `MiNom/design/`.
-
----
-
-## 2026-05-31 — Dev — Onboarded; wrote my way-of-work guideline
-
-**What happened**
-- CPO brought me (Claude Code) onto MiNom as Developer + QA and shared the PM's way-of-work guideline. Asked me to derive my own version and save it in the project.
-- Read `JOURNAL.md`, `PLAN.md`, `HANDOFF_designer_01.md` to learn the conventions (single workstream, journal-as-truth, `Handoff →` protocol, CPO at arm's length).
-- Wrote `WAY_OF_WORK_dev.md` — my operating guideline: ownership/escalation rules, journal discipline, handoff protocol, definition-of-done, QA discipline (I wear both hats), and engineering principles for this app.
-
-**Status**
-- I am **not** taking a baton. The current workstream is still Phase 1 — Design (owner: Designer). I'm only onboarded and standing by.
-- When the design baton eventually routes through PM to Dev, I'll pick up Phase 2 (Walking Skeleton) per `PLAN.md` §3.
-
-**Files produced**
-- `WAY_OF_WORK_dev.md`
-
-**Handoff → none (no baton in hand).** Design phase continues. I'll wait for `Handoff → Dev`.
+**Handoff → PM (Claude)**
+- Review the 4 hi-fi screens + component stub against the success criteria (esp. "Dev shouldn't have to ask what a state looks like").
+- Confirm/decide the two flags above (the "Family" label, concurrency-prompt-as-sheet) so I can lock copy.
+- If accepted, route the baton to Dev with the component stub as the build reference for the Walking Skeleton (Eat vertical slice).
 
 ---
 

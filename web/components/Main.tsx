@@ -396,7 +396,7 @@ export default function Main({
           />
         )}
 
-        {tab === "grow" && <GrowthScreen baby={baby} me={me} />}
+        {tab === "grow" && <GrowthScreen baby={baby} me={me} onNavSettings={() => setTab("settings")} />}
 
         {tab === "care" && <CaregiversScreen me={me} baby={baby} onChanged={onSignOut} />}
 

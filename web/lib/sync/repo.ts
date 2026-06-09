@@ -3,7 +3,7 @@
 //   - demoRepo:     localStorage + BroadcastChannel (zero-backend UX demo).
 // The factory picks one based on whether Supabase env vars are present, so the
 // entire UI/sync layer above this line is identical in both modes.
-import type { Activity, ActivityRow, Baby, Caregiver, EatDetails, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, BabySex, Caregiver, EatDetails, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import { SUPABASE_CONFIGURED } from "@/lib/supabase/client";
 
 export type ActivityInsert = {
@@ -48,7 +48,8 @@ export interface Repo {
 
   // babies
   listBabies(): Promise<Baby[]>;
-  createBaby(name: string, birthdate: string): Promise<Baby>;
+  createBaby(name: string, birthdate: string, sex?: BabySex | null): Promise<Baby>;
+  updateBaby(id: string, patch: { name?: string; sex?: BabySex | null }): Promise<Baby>; // #15: set sex → unlocks WHO curves
 
   // activity
   listToday(babyId: string): Promise<Activity[]>;
@@ -83,6 +84,10 @@ export interface Repo {
 
   // realtime
   subscribe(babyId: string, handlers: RealtimeHandlers): () => void;
+  // #15: measurements live in their own table (not `activity`), so the growth
+  // chart re-plots off a dedicated subscription. `onChange` fires on any
+  // insert/update/delete; the caller reloads the list.
+  subscribeMeasurements(babyId: string, onChange: () => void): () => void;
 }
 
 let _repo: Repo | null = null;

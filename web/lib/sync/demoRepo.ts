@@ -5,12 +5,12 @@
 // architecture proof; this exists so `npm run dev` works with no setup.
 import { colorFromSeed } from "@/components/ui";
 import { t } from "@/i18n";
-import type { Activity, ActivityRow, Baby, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
+import type { Activity, ActivityRow, Baby, BabySex, Caregiver, GrowthKind, Invite, Measurement, Profile, SessionUser, VerbType } from "@/lib/types";
 import type { ActivityInsert, ActivityPatch, AuthResult, InvitePreview, RealtimeHandlers, Repo } from "./repo";
 
 type DemoUser = { id: string; email: string; password: string; display_name: string; avatar_color: string };
 type Link = { baby_id: string; user_id: string; role: string };
-type BcMsg = { kind: "insert"; row: ActivityRow } | { kind: "update"; row: ActivityRow } | { kind: "delete"; id: string };
+type BcMsg = { kind: "insert"; row: ActivityRow } | { kind: "update"; row: ActivityRow } | { kind: "delete"; id: string } | { kind: "meas"; baby_id: string };
 
 const K = {
   users: "minom_demo_users",
@@ -178,13 +178,23 @@ export class DemoRepo implements Repo {
     return read<Baby[]>(K.babies, []).filter((b) => mine.has(b.id));
   }
 
-  async createBaby(name: string, birthdate: string): Promise<Baby> {
+  async createBaby(name: string, birthdate: string, sex?: BabySex | null): Promise<Baby> {
     const id = this.myId();
     if (!id) throw new Error("Not authenticated");
-    const baby: Baby = { id: crypto.randomUUID(), name: name.trim(), birthdate, owner_id: id };
+    const baby: Baby = { id: crypto.randomUUID(), name: name.trim(), birthdate, sex: sex ?? null, owner_id: id };
     write(K.babies, [...read<Baby[]>(K.babies, []), baby]);
     write(K.links, [...this.links(), { baby_id: baby.id, user_id: id, role: "owner" }]);
     return baby;
+  }
+
+  async updateBaby(id: string, patch: { name?: string; sex?: BabySex | null }): Promise<Baby> {
+    const all = read<Baby[]>(K.babies, []);
+    const idx = all.findIndex((b) => b.id === id);
+    if (idx < 0) throw new Error("not found");
+    const row: Baby = { ...all[idx], ...patch };
+    all[idx] = row;
+    write(K.babies, all);
+    return row;
   }
 
   async listToday(babyId: string): Promise<Activity[]> {
@@ -268,6 +278,7 @@ export class DemoRepo implements Repo {
     if (!id) throw new Error("Not authenticated");
     const row: Measurement = { ...m, logged_by_user_id: id, created_at: new Date().toISOString() };
     write(K.measurements, [row, ...read<Measurement[]>(K.measurements, [])]);
+    this.broadcast({ kind: "meas", baby_id: m.baby_id });
     return row;
   }
   async updateMeasurement(id: string, patch: { value?: number; measured_at?: string }): Promise<Measurement> {
@@ -277,10 +288,14 @@ export class DemoRepo implements Repo {
     const row: Measurement = { ...all[idx], ...patch };
     all[idx] = row;
     write(K.measurements, all);
+    this.broadcast({ kind: "meas", baby_id: row.baby_id });
     return row;
   }
   async deleteMeasurement(id: string): Promise<void> {
-    write(K.measurements, read<Measurement[]>(K.measurements, []).filter((m) => m.id !== id));
+    const all = read<Measurement[]>(K.measurements, []);
+    const row = all.find((m) => m.id === id);
+    write(K.measurements, all.filter((m) => m.id !== id));
+    if (row) this.broadcast({ kind: "meas", baby_id: row.baby_id });
   }
 
   // ---- caregivers ----
@@ -423,6 +438,16 @@ export class DemoRepo implements Repo {
       } else if (msg.kind === "delete") {
         handlers.onDelete(msg.id);
       }
+    };
+    return () => ch.close();
+  }
+
+  subscribeMeasurements(babyId: string, onChange: () => void): () => void {
+    if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return () => {};
+    const ch = new BroadcastChannel("minom_demo");
+    ch.onmessage = (e) => {
+      const msg = e.data as BcMsg;
+      if (msg.kind === "meas" && msg.baby_id === babyId) onChange();
     };
     return () => ch.close();
   }

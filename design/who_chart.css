@@ -1,0 +1,95 @@
+/* ============================================================
+   ละมุน — Growth chart · real WHO LMS percentile curves (Handoff #15)
+   Upgrades the #13 decorative chart: real 3/15/50/85/97 curves, labeled
+   axes + units, today's-age marker, data points, WHO citation, and the
+   sex-required graceful-degrade prompt.
+   AA: all chart text → --fg/--fg-muted; data series → --grow-strong;
+   curves use --grow tints (non-text); citation/prompt text ≥4.5 both themes.
+   ============================================================ */
+
+/* --grow-strong lands via tokens (#13). Restated so this renders standalone. */
+:root { --grow-strong: oklch(0.53 0.14 18); }
+[data-theme="dark"] { --grow-strong: oklch(0.77 0.10 22); }
+
+/* ---- metric tabs (น้ำหนัก ↔ ส่วนสูง) ---- */
+.wc-tabs { display: flex; gap: 8px; background: var(--surface-2); padding: 4px; border-radius: var(--r-lg); margin-bottom: 16px; }
+.wc-tab { flex: 1; min-height: 40px; border: none; background: none; border-radius: var(--r-md); font-family: inherit;
+  font-weight: 800; font-size: 14.5px; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.wc-tab.on { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
+
+/* ---- chart frame ---- */
+.wc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 14px 12px 12px; box-shadow: var(--shadow-sm); }
+.wc-chart { position: relative; width: 100%; }
+.wc-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+/* grid + axes */
+.wc-grid { stroke: var(--border); stroke-width: 1; }
+.wc-axis { stroke: var(--border-strong); stroke-width: 1.25; }
+.wc-axis-tick { stroke: var(--border-strong); stroke-width: 1; }
+.wc-axis-lbl { fill: var(--fg-muted); font-family: var(--font-sans); font-size: 9px; font-weight: 600; }
+.wc-axis-title { fill: var(--fg-muted); font-family: var(--font-sans); font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em; }
+
+/* percentile band fill (15–85) + curves */
+.wc-band { fill: var(--grow); opacity: 0.10; }
+.wc-curve { fill: none; stroke: var(--grow); opacity: 0.55; stroke-width: 1.2; }
+.wc-curve.outer { opacity: 0.42; stroke-width: 1; stroke-dasharray: 3 4; }
+.wc-curve.median { opacity: 0.85; stroke-width: 2; }
+.wc-curve-lbl { fill: var(--fg-muted); font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; }
+
+/* today's-age marker */
+.wc-today { stroke: var(--fg-muted); stroke-width: 1.25; stroke-dasharray: 3 3; opacity: 0.7; }
+.wc-today-flag { fill: var(--fg); }
+.wc-today-flag-tx { fill: var(--surface); font-family: var(--font-sans); font-size: 9px; font-weight: 800; }
+
+/* data series — --grow-strong (the only load-bearing data color) */
+.wc-trend { fill: none; stroke: var(--grow-strong); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wc-dot { fill: var(--grow-strong); stroke: var(--surface); stroke-width: 1.5; }
+.wc-dot.latest { stroke-width: 2.5; }
+.wc-dot-ring { fill: none; stroke: var(--grow-strong); stroke-width: 1.5; opacity: 0.35; }
+.wc-hit { fill: transparent; cursor: pointer; outline: none; }
+.wc-hit:focus-visible + .wc-dot, .wc-dot.active { stroke: var(--grow-strong); }
+
+/* dot tooltip */
+.wc-tip { position: absolute; transform: translate(-50%, -118%); background: var(--fg); color: var(--surface);
+  border-radius: var(--r-md); padding: 6px 9px; font-size: 11.5px; font-weight: 700; white-space: nowrap; pointer-events: none; box-shadow: var(--shadow-lg); }
+.wc-tip .pct { color: color-mix(in oklch, var(--surface) 72%, transparent); font-weight: 600; margin-left: 5px; }
+.wc-tip .d { display: block; font-size: 10px; font-weight: 600; color: color-mix(in oklch, var(--surface) 70%, transparent); margin-top: 1px; }
+
+/* ---- WHO citation ---- */
+.wc-cite { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 10px;
+  font-size: 11.5px; color: var(--fg-muted); }
+.wc-cite a { color: var(--fg-muted); text-decoration: underline; text-underline-offset: 2px; display: inline-flex; align-items: center; gap: 4px; }
+.wc-cite a:active { color: var(--grow-strong); }
+
+/* ---- sex-required prompt (graceful degrade) ---- */
+.wc-sexreq { display: flex; align-items: center; gap: 13px; background: color-mix(in oklch, var(--grow) 9%, var(--surface));
+  border: 1px solid color-mix(in oklch, var(--grow-strong) 28%, var(--border)); border-radius: var(--r-lg);
+  padding: 13px 15px; margin: 13px 0 2px; }
+.wc-sexreq-ic { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center;
+  background: var(--grow-tint); color: var(--grow-strong); }
+.wc-sexreq-meta { flex: 1; min-width: 0; }
+.wc-sexreq-t { font-size: 14px; font-weight: 800; color: var(--fg); }
+.wc-sexreq-b { font-size: 12px; color: var(--fg-muted); line-height: 1.45; margin-top: 2px; }
+.wc-sexreq-cta { flex: none; min-height: 40px; padding: 0 14px; border-radius: var(--r-md); border: none;
+  background: var(--grow-strong); color: var(--on-primary); font-weight: 800; font-size: 13px; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 6px; }
+.wc-sexreq-cta:active { transform: scale(0.97); }
+
+/* small caption under chart (age summary) */
+.wc-agecap { text-align: center; font-size: 12.5px; color: var(--fg-muted); margin-top: 2px; font-weight: 600; }
+.wc-agecap b { color: var(--fg); font-weight: 800; }
+
+/* ============================================================
+   doc-only chrome (shared with prior polish deliverables)
+   ============================================================ */
+.ba-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.03em;
+  padding: 5px 11px; border-radius: var(--r-pill); margin-bottom: 11px; text-transform: uppercase; }
+.ba-tag.before { background: var(--surface-sunken); color: var(--fg-muted); }
+.ba-tag.after { background: color-mix(in oklch, var(--grow-strong) 16%, transparent); color: var(--grow-strong); }
+.callout { border: 1px solid var(--border); border-left: 3px solid var(--grow-strong); border-radius: var(--r-md);
+  background: var(--surface); padding: 14px 17px; margin: 16px 0; max-width: 760px; box-shadow: var(--shadow-sm); }
+.callout .ct { font-weight: 800; font-size: 13.5px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+.callout .cb { font-size: 13.5px; color: var(--fg-muted); line-height: 1.6; }
+.callout .cb b { color: var(--page-fg); }
+.ep-twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+.aa-tbl tr.fixed td { background: color-mix(in oklch, var(--grow-strong) 7%, transparent); }

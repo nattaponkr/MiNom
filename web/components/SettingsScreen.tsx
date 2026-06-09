@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Baby, Profile, SessionUser } from "@/lib/types";
+import type { Baby, BabySex, Profile, SessionUser } from "@/lib/types";
 import { getRepo } from "@/lib/sync/repo";
 import { Avatar, Button } from "./ui";
 import { ConfirmSheet } from "./Sheets";
@@ -26,7 +26,23 @@ export default function SettingsScreen({
   const [notif, setNotif] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [exported, setExported] = useState(false);
+  const [savingSex, setSavingSex] = useState(false);
   const dirty = name.trim() && name.trim() !== profile?.display_name;
+
+  // #15: set the baby's sex → unlocks the WHO percentile curves. Tapping the
+  // active value again clears it (back to the graceful-degrade chart).
+  const setSex = async (next: BabySex) => {
+    if (savingSex) return;
+    setSavingSex(true);
+    try {
+      const repo = await getRepo();
+      await repo.updateBaby(baby.id, { sex: baby.sex === next ? null : next });
+      track("baby_sex_set", { set: baby.sex !== next });
+      onProfileChanged(); // re-fetches the baby → chart re-renders with curves
+    } finally {
+      setSavingSex(false);
+    }
+  };
 
   useEffect(() => {
     setName(profile?.display_name ?? "");
@@ -125,6 +141,20 @@ export default function SettingsScreen({
             <span className="lr-t">{t("settings.baby")}</span>
             <span className="lr-d">{baby.name}</span>
           </span>
+        </div>
+        <div className="list-row" style={{ borderTop: "1px solid var(--border)" }}>
+          <span className="lr-main">
+            <span className="lr-t">{t("settings.babySex")}</span>
+            <span className="lr-d">{t("settings.babySexHint")}</span>
+          </span>
+          <div className="seg" role="group" aria-label={t("settings.babySex")} style={{ flex: "none", minWidth: 168 }}>
+            <button type="button" className={"seg-opt" + (baby.sex === "boy" ? " on" : "")} style={{ minHeight: 40 }} aria-pressed={baby.sex === "boy"} disabled={savingSex} onClick={() => setSex("boy")}>
+              {t("setup.sex.boy")}
+            </button>
+            <button type="button" className={"seg-opt" + (baby.sex === "girl" ? " on" : "")} style={{ minHeight: 40 }} aria-pressed={baby.sex === "girl"} disabled={savingSex} onClick={() => setSex("girl")}>
+              {t("setup.sex.girl")}
+            </button>
+          </div>
         </div>
       </div>
 

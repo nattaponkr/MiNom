@@ -6,7 +6,7 @@ import { getRepo } from "@/lib/sync/repo";
 import { IcCheck, IcChevR, IcGrow, IcPlus, IcX } from "@/lib/icons";
 import { Button } from "./ui";
 import WhenCard from "./WhenCard";
-import PercentileChart from "./PercentileChart";
+import PercentileChart, { AgeCaption, Citation, SexPrompt, ageMonthsBetween, type ChartPoint } from "./PercentileChart";
 import GrowthDetailSheet from "./GrowthDetailSheet";
 import { ConfirmSheet } from "./Sheets";
 import { track } from "@/lib/analytics";
@@ -81,7 +81,7 @@ function MeasurementSheet({
   );
 }
 
-export default function GrowthScreen({ baby, me }: { baby: Baby; me: SessionUser }) {
+export default function GrowthScreen({ baby, me, onNavSettings }: { baby: Baby; me: SessionUser; onNavSettings?: () => void }) {
   const [kind, setKind] = useState<GrowthKind>("weight");
   const [rows, setRows] = useState<Measurement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,18 @@ export default function GrowthScreen({ baby, me }: { baby: Baby; me: SessionUser
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // Part 5 — realtime re-plot: a peer's new/edited/deleted measurement re-fetches
+  // the list (~1s), so the chart stays live. Measurements are their own table, so
+  // this is a dedicated subscription (separate from the activity realtime path).
+  useEffect(() => {
+    let unsub = () => {};
+    (async () => {
+      const repo = await getRepo();
+      unsub = repo.subscribeMeasurements(baby.id, () => void reload());
+    })();
+    return () => unsub();
+  }, [baby.id, reload]);
 
   // Caregiver id→name map for the detail sheet's "บันทึกโดย" field.
   useEffect(() => {
@@ -125,7 +137,10 @@ export default function GrowthScreen({ baby, me }: { baby: Baby; me: SessionUser
   const ofKind = rows.filter((m) => m.kind === kind);
   const unit = kind === "weight" ? t("growth.unit.kg") : t("growth.unit.cm");
   const chrono = [...ofKind].reverse(); // oldest→newest, matches the chart x-order
-  const chartValues = chrono.map((m) => m.value);
+  const sex = baby.sex ?? null;
+  const ageMoToday = ageMonthsBetween(baby.birthdate, new Date().toISOString());
+  // age at each measurement drives the x-position (real WHO chart is age-based, #15).
+  const chartPoints: ChartPoint[] = chrono.map((m) => ({ ageMo: ageMonthsBetween(baby.birthdate, m.measured_at), value: m.value, dateBE: formatDateBE(m.measured_at) }));
   const whoOf = (m: Measurement) => (m.logged_by_user_id === me.id ? t("timeline.you") : (nameMap[m.logged_by_user_id] ?? t("care.roleCaregiver")));
   const summaryOf = (m: Measurement) => `${num(m.value)} ${m.kind === "weight" ? t("growth.unit.kg") : t("growth.unit.cm")}`;
 
@@ -227,12 +242,13 @@ export default function GrowthScreen({ baby, me }: { baby: Baby; me: SessionUser
         </button>
       ) : (
         <>
-          <PercentileChart
-            values={chartValues}
-            onPointTap={(i) => setDetail(chrono[i])}
-            labels={chrono.map((m) => `${num(m.value)} ${unit} · ${formatDateBE(m.measured_at)}`)}
-          />
-          <div className="gr-caption">{t("growth.chartLabel")}</div>
+          <div className="wc-card">
+            <PercentileChart metric={kind} sex={sex} ageMo={ageMoToday} points={chartPoints} onPick={(i) => setDetail(chrono[i])} />
+          </div>
+          <AgeCaption ageMo={ageMoToday} />
+          <Citation />
+          {/* Part 4 — sex unset: chart degrades to points+axes+marker (no curves); prompt to set it. */}
+          {!sex && <SexPrompt onSetSex={() => onNavSettings?.()} />}
           <div className="tl-day gr-history-h">{t("growth.history")}</div>
           {ofKind.map((m) => (
             <button className="gr-row" key={m.id} onClick={() => setDetail(m)} type="button" lang="th">
