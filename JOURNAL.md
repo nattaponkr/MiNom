@@ -26,7 +26,7 @@ PM approved (`HANDOFF_dev_15_commit.md`). Committed the #15 working tree to bran
 
 **Not in this PR — CPO/hardware-owned (per closeout):** run `0007_measurements_realtime.sql` on prod; #12 two-device prod smoke check; visual canvas-resolved AA spot-check both themes.
 
-**Handoff → PM:** WHO chart code is on `feat/who-lms-growth-chart-15` (PR link + commit SHA appended below once pushed). Reviewable + locally runnable (`cd web && npm run dev`, โต tab). Open items are the three non-code prod gates above.
+**Handoff → PM:** WHO chart code is on `feat/who-lms-growth-chart-15` — commit `b2e9329`, **PR #1** (https://github.com/nattaponkr/MiNom/pull/1). Reviewable + locally runnable (`cd web && npm run dev`, โต tab). Open items are the three non-code prod gates above.
 
 ---
 
